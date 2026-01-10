@@ -1,59 +1,79 @@
 package com.kivojenko.spring.forge.processor;
 
 import com.kivojenko.spring.forge.annotation.HasJpaRepository;
-import com.kivojenko.spring.forge.jpa.JpaEntityModel;
+import com.kivojenko.spring.forge.annotation.HasRestController;
+import com.kivojenko.spring.forge.jpa.controller.JpaControllerGenerator;
+import com.kivojenko.spring.forge.jpa.model.JpaEntityModel;
 import com.kivojenko.spring.forge.jpa.repository.JpaRepositoryGenerator;
-import com.squareup.javapoet.JavaFile;
 
-import javax.annotation.processing.AbstractProcessor;
-import javax.annotation.processing.RoundEnvironment;
-import javax.annotation.processing.SupportedAnnotationTypes;
-import javax.annotation.processing.SupportedSourceVersion;
+import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.util.Elements;
 import javax.tools.Diagnostic;
-import java.io.IOException;
+import java.util.HashSet;
 import java.util.Set;
 
-@SupportedAnnotationTypes("com.kivojenko.spring.forge.annotation.HasJpaRepository")
+@SupportedAnnotationTypes("com.kivojenko.spring.forge.annotation.*")
 @SupportedSourceVersion(SourceVersion.RELEASE_21)
+@SupportedOptions({JpaForgeProcessor.REPOSITORY_PACKAGE_OPTION, JpaForgeProcessor.CONTROLLER_PACKAGE_OPTION})
 public final class JpaForgeProcessor extends AbstractProcessor {
+    public static final String REPOSITORY_PACKAGE_OPTION = "springforge.repository.package";
+    public static final String CONTROLLER_PACKAGE_OPTION = "springforge.controller.package";
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-        roundEnv.getElementsAnnotatedWith(HasJpaRepository.class)
-                .stream()
+        var entities = new HashSet<Element>();
+
+        entities.addAll(roundEnv.getElementsAnnotatedWith(HasJpaRepository.class));
+        entities.addAll(roundEnv.getElementsAnnotatedWith(HasRestController.class));
+
+        entities.stream()
                 .filter(TypeElement.class::isInstance)
                 .map(TypeElement.class::cast)
-                .forEach(this::addRepository);
-
+                .distinct()
+                .map(e -> JpaEntityModel.of(e, processingEnv))
+                .forEach(this::process);
         return true;
+
     }
 
+    private void process(JpaEntityModel model) {
+        addRepository(model);
 
-    private void addRepository(TypeElement entity) {
-        var model = JpaEntityModel.of(entity, processingEnv);
-        if (repositoryAlreadyExists(processingEnv.getElementUtils(), model)) return;
-
-        try {
-            writeRepository(model);
-        } catch (Exception e) {
-            error(entity, e.getMessage());
+        if (model.wantsController()) {
+            addController(model);
         }
     }
 
-    private void writeRepository(JpaEntityModel model) throws IOException {
-        var repository = JpaRepositoryGenerator.generate(model);
 
-        JavaFile.builder(model.packageName(), repository).build().writeTo(processingEnv.getFiler());
+    private void addRepository(JpaEntityModel model) {
+        if (repositoryAlreadyExists(model)) return;
+
+        try {
+            JpaRepositoryGenerator.generateFile(model).writeTo(processingEnv.getFiler());
+        } catch (Exception e) {
+            error(model.element(), e.getMessage());
+        }
     }
 
-    private boolean repositoryAlreadyExists(Elements elements, JpaEntityModel model) {
-        return elements.getTypeElement(model.repositoryFqn()) != null;
+    private boolean repositoryAlreadyExists(JpaEntityModel model) {
+        return processingEnv.getElementUtils().getTypeElement(model.repositoryFqn()) != null;
     }
 
+    private void addController(JpaEntityModel model) {
+        if (controllerAlreadyExists(model)) return;
+
+        try {
+            JpaControllerGenerator.generateFile(model).writeTo(processingEnv.getFiler());
+        } catch (Exception e) {
+            error(model.element(), e.getMessage());
+        }
+    }
+
+    private boolean controllerAlreadyExists(JpaEntityModel model) {
+        return processingEnv.getElementUtils().getTypeElement(model.controllerFqn()) != null;
+    }
 
     private void error(Element element, String message) {
         processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, message, element);

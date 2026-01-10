@@ -4,9 +4,14 @@ plugins {
 
 dependencies {
     implementation(project(":forge-annotations"))
-
     implementation("com.squareup:javapoet:1.13.0")
 
+    compileOnly("org.springframework:spring-web:7.0.1")
+    compileOnly("org.springframework:spring-context:7.0.1")
+    compileOnly("org.springframework.data:spring-data-jpa:4.0.1")
+
+    compileOnly("jakarta.validation:jakarta.validation-api:3.0.2")
+    compileOnly("jakarta.persistence:jakarta.persistence-api:3.2.0")
 }
 
 java {
