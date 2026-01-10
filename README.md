@@ -45,15 +45,14 @@ Spring Data picks it up automatically — exactly as if you had written it by ha
 
 ### Generated Endpoints
 
-| Method |     Path      |                 Description                  |
-|:------:|:-------------:|:--------------------------------------------:|
-|  GET   |    /entity    | List entities (paginated, iterable response) |
-|  POST  |    /entity    |             Create a new entity              |
-|  GET   | /entity/{id}  |               Get entity by ID               |
-|  PUT   | /entity/{id}  |             Update entity by ID              |
-| DELETE | /entity/{id}  |             Delete entity by ID              |
-|  GET   | /entity/count |            Get total entity count            |
-|  POST  | /entity/paged |       Get paged result (Page<_Entity>)       |
+| Method |              Path               |             Description              |
+|:------:|:-------------------------------:|:------------------------------------:|
+|  GET   | /entity?page={page}&size={size} | Paged entities - params are optional |
+|  POST  |             /entity             |         Create a new entity          |
+|  GET   |          /entity/{id}           |           Get entity by ID           |
+|  PUT   |          /entity/{id}           |         Update entity by ID          |
+| DELETE |          /entity/{id}           |         Delete entity by ID          |
+|  GET   |          /entity/count          |        Get total entity count        |
 
 ---
 
@@ -61,7 +60,7 @@ Spring Data picks it up automatically — exactly as if you had written it by ha
 
 Spring Forge can extend generated repositories based on **marker interfaces** implemented by your entities.
 
-### Example: `HasName`
+### HasName
 
 ```java
 public interface HasName {
@@ -103,6 +102,7 @@ public interface PersonRepository extends JpaRepository<Person, Long>, HasNameRe
 }
 ```
 
+Generated controller will accept optional `name` query parameters: `GET /entity?page={page}&size={size}&name={name}`.
 Spring Data will generate the query implementations automatically.
 
 
