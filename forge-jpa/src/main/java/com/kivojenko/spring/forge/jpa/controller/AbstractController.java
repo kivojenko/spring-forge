@@ -18,7 +18,9 @@ public abstract class AbstractController<E, _ID, R extends JpaRepository<E, _ID>
     }
 
     @GetMapping
-    public Iterable<E> getAll(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "25") int size) {
+    public Iterable<E> getAll(
+            @RequestParam(defaultValue = "0", name = "page") int page,
+            @RequestParam(defaultValue = "25", name = "size") int size) {
         var pageable = PageRequest.of(page, size);
         return repository.findAll(pageable);
     }
@@ -30,21 +32,21 @@ public abstract class AbstractController<E, _ID, R extends JpaRepository<E, _ID>
     }
 
     @GetMapping("/{id}")
-    public E getById(@PathVariable _ID id) {
+    public E getById(@PathVariable("id") _ID id) {
         return repository.findById(id).orElseThrow();
     }
 
     protected abstract void setId(E entity, _ID id);
 
     @PutMapping("/{id}")
-    public E update(@PathVariable _ID id, @RequestBody E entity) {
+    public E update(@PathVariable("id") _ID id, @RequestBody E entity) {
         setId(entity, id);
         return repository.save(entity);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(code = org.springframework.http.HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable _ID id) {
+    public void delete(@PathVariable("id") _ID id) {
         var entity = repository.findById(id).orElseThrow();
         repository.delete(entity);
     }

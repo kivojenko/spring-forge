@@ -1,5 +1,6 @@
 package com.kivojenko.spring.forge.jpa.model;
 
+import com.kivojenko.spring.forge.annotation.HasJpaRepository;
 import com.kivojenko.spring.forge.annotation.HasRestController;
 import com.squareup.javapoet.ClassName;
 
@@ -44,7 +45,6 @@ public record JpaEntityModel(TypeElement element,
 
     public static JpaEntityModel of(TypeElement entity, ProcessingEnvironment env) {
         var elements = env.getElementUtils();
-        var packageName = elements.getPackageOf(entity).getQualifiedName().toString();
         var entityType = ClassName.get(entity);
         var jpaId = JpaId.resolveId(entity);
 
@@ -52,16 +52,53 @@ public record JpaEntityModel(TypeElement element,
         var hasNameType = elements.getTypeElement("com.kivojenko.spring.forge.jpa.contract.HasName");
         var hasName = hasNameType != null && types.isAssignable(entity.asType(), hasNameType.asType());
 
-        var repositoryPackage = Optional.ofNullable(env.getOptions().get("springforge.repository.package"))
-                .filter(s -> !s.isBlank())
-                .orElse(packageName);
-        var controllerPackage = Optional.ofNullable(env.getOptions().get("springforge.controller.package"))
-                .filter(s -> !s.isBlank())
-                .orElse(packageName);
+        var packageName = resolvePackageName(entity);
+
+        var repositoryPackage = resolveRepositoryPackageName(entity, env);
+        var controllerPackage = resolveControllerPackageName(entity, env);
+
+        if (!packageName.isBlank()) {
+            repositoryPackage += "." + packageName;
+            controllerPackage += "." + packageName;
+        }
 
         var hasController = entity.getAnnotation(HasRestController.class) != null;
 
         return new JpaEntityModel(entity, entityType, jpaId, packageName, repositoryPackage, controllerPackage,
                 hasName, hasController);
+    }
+
+
+    private static String resolvePackageName(TypeElement entity) {
+        var hasJpaRepository = entity.getAnnotation(HasJpaRepository.class);
+        if (hasJpaRepository != null && !hasJpaRepository.packageName().isBlank()) {
+            return hasJpaRepository.packageName();
+        }
+
+        var hasRestController = entity.getAnnotation(HasRestController.class);
+        if (hasRestController != null && !hasRestController.packageName().isBlank()) {
+            return hasRestController.packageName();
+        }
+
+        return "";
+    }
+
+
+    private static String resolveRepositoryPackageName(TypeElement entity, ProcessingEnvironment env) {
+        var elements = env.getElementUtils();
+        var packageName = elements.getPackageOf(entity).getQualifiedName().toString();
+
+        return Optional.ofNullable(env.getOptions().get("springforge.repository.package"))
+                .filter(s -> !s.isBlank())
+                .orElse(packageName);
+    }
+
+    private static String resolveControllerPackageName(TypeElement entity, ProcessingEnvironment env) {
+        var elements = env.getElementUtils();
+        var packageName = elements.getPackageOf(entity).getQualifiedName().toString();
+
+        return Optional.ofNullable(env.getOptions().get("springforge.controller.package"))
+                .filter(s -> !s.isBlank())
+                .orElse(packageName);
     }
 }

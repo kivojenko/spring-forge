@@ -2,15 +2,15 @@ package com.kivojenko.spring.forge.jpa.controller;
 
 import com.kivojenko.spring.forge.jpa.model.JpaEntityModel;
 import com.squareup.javapoet.*;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 
 import javax.lang.model.element.Modifier;
 
 public final class JpaControllerGenerator {
 
-    private static final ClassName REST_CONTROLLER = ClassName.get(RestController.class);
-    private static final ClassName REQUEST_MAPPING = ClassName.get(RequestMapping.class);
+    private static final ClassName REST_CONTROLLER =
+            ClassName.get("org.springframework.web.bind.annotation", "RestController");
+    private static final ClassName REQUEST_MAPPING =
+            ClassName.get("org.springframework.web.bind.annotation", "RequestMapping");
 
     private static final ClassName ABSTRACT_CONTROLLER = ClassName.get(AbstractController.class);
     private static final ClassName HAS_NAME_CONTROLLER = ClassName.get(HasNameController.class);
