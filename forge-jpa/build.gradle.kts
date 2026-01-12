@@ -12,6 +12,8 @@ dependencies {
 
     compileOnly("jakarta.validation:jakarta.validation-api:3.0.2")
     compileOnly("jakarta.persistence:jakarta.persistence-api:3.2.0")
+
+    compileOnly("org.projectlombok:lombok:1.18.42")
 }
 
 java {

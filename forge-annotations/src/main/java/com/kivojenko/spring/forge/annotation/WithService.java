@@ -8,6 +8,6 @@ import java.lang.annotation.Target;
 @ForgeTargetPackage
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.SOURCE)
-public @interface HasJpaRepository {
+public @interface WithService {
     String packageName() default "";
 }

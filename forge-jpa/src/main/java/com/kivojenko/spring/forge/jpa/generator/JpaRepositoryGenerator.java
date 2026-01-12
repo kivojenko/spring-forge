@@ -1,7 +1,8 @@
-package com.kivojenko.spring.forge.jpa.repository;
+package com.kivojenko.spring.forge.jpa.generator;
 
 
 import com.kivojenko.spring.forge.jpa.model.JpaEntityModel;
+import com.kivojenko.spring.forge.jpa.repository.HasNameRepository;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.ParameterizedTypeName;
@@ -11,7 +12,8 @@ import javax.lang.model.element.Modifier;
 
 public final class JpaRepositoryGenerator {
 
-    private static final ClassName JPA_REPOSITORY = ClassName.get("org.springframework.data.jpa.repository", "JpaRepository");
+    private static final ClassName JPA_REPOSITORY =
+            ClassName.get("org.springframework.data.jpa.repository", "JpaRepository");
     private static final ClassName HAS_NAME_REPOSITORY = ClassName.get(HasNameRepository.class);
 
     public static JavaFile generateFile(JpaEntityModel model) {

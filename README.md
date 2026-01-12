@@ -1,23 +1,109 @@
 # Spring Forge
 
 Spring Forge is a **compile-time code generation toolkit** for Spring Boot applications.
-It uses **annotation processing (APT)** to generate repositories, REST controllers, and
+It uses **annotation processing (APT)** to generate repositories, REST controllers and
 other boilerplate **before your application starts**.
-
-No reflection.  
-No runtime magic.  
-No Spring context hacks.
 
 ---
 
-## What Spring Forge Does (Today)
+## What Spring Forge Does
 
-Given this entity:
+### @WithJpaRepository
+
+For
 
 ```java
 
 @Entity
-@HasJpaRepository
+@WithJpaRepository
+public class Person {
+    @Id
+    Long id;
+}
+```
+
+Spring Forge generates **at compile time**:
+
+```java
+public interface PersonForgeRepository extends JpaRepository<Person, Long> {
+}
+```
+
+---
+
+### @WithService
+
+For
+
+```java
+
+@Entity
+@WithService
+public class Person {
+    @Id
+    Long id;
+}
+```
+
+Spring Forge generates **at compile time**:
+
+```java
+
+@Service
+public class PersonForgeService extends ForgeService<Person, Long, PersonForgeRepository> {
+}
+```
+
+If `@WithService` is used along with `@WithRestController`, the generated controller will use the service instead of the
+repository:
+
+```java
+
+@RestController
+@RequestMapping("/person")
+public class PersonForgeController extends ForgeControllerWithService<Person, Long, PersonForgeRepository, PersonForgeService> {
+}
+```
+
+---
+
+### @GetOrCreate
+
+If an entity implements `HasName`, you can use `@GetOrCreate` to generate a `getOrCreate(String name)` method in the
+service.
+
+```java
+
+@Entity
+@GetOrCreate
+public class Person implements HasName {
+    @Id
+    Long id;
+    String name;
+}
+```
+
+This will automatically enable `@WithService` and generate:
+
+```java
+
+@Service
+public class PersonForgeService extends HasNameForgeServiceWithGetOrCreate<Person, Long, PersonForgeRepository> {
+    @Override
+    protected Person create(String name) {
+        return Person.builder().name(name).build(); // Uses Lombok @Builder or empty constructor + setter
+    }
+}
+```
+
+### @WithRestController
+
+For
+
+```java
+
+@Entity
+@WithRestController
 public class Person {
     @Id
     Long id;
@@ -35,28 +121,28 @@ public interface PersonRepository extends JpaRepository<Person, Long> {
 
 @RestController
 @RequestMapping("/person")
-public class PersonController extends AbstractController<Person, PersonRepository> {
+public class PersonForgeController extends ForgeController<Person, Long, PersonForgeRepository> {
 }
 ```
-
-Spring Data picks it up automatically — exactly as if you had written it by hand.
 
 ---
 
 ### Generated Endpoints
 
+path = decapitalized entity name + "s"
+
 | Method |              Path               |             Description              |
 |:------:|:-------------------------------:|:------------------------------------:|
-|  GET   | /entity?page={page}&size={size} | Paged entities - params are optional |
-|  POST  |             /entity             |         Create a new entity          |
-|  GET   |          /entity/{id}           |           Get entity by ID           |
-|  PUT   |          /entity/{id}           |         Update entity by ID          |
-| DELETE |          /entity/{id}           |         Delete entity by ID          |
-|  GET   |          /entity/count          |        Get total entity count        |
+|  GET   | /{path}?page={page}&size={size} | Paged entities - params are optional |
+|  POST  |             /{path}             |         Create a new entity          |
+|  GET   |          /{path}/{id}           |           Get entity by ID           |
+|  PUT   |          /{path}/{id}           |         Update entity by ID          |
+| DELETE |          /{path}/{id}           |         Delete entity by ID          |
+|  GET   |          /{path}/count          |        Get total entity count        |
 
 ---
 
-## Optional Domain Traits
+## Optional Traits
 
 Spring Forge can extend generated repositories based on **marker interfaces** implemented by your entities.
 
@@ -75,7 +161,7 @@ If an entity implements `HasName`:
 ```java
 
 @Entity
-@HasJpaRepository
+@WithJpaRepository
 public class Person implements HasName {
     @Id
     Long id;
@@ -89,16 +175,22 @@ The generated repository will also extend:
 public interface HasNameRepository<E> {
     boolean existsByName(String name);
 
+    boolean existsByNameIgnoreCase(String name);
+
     Optional<E> findByName(String name);
 
     Optional<E> findByNameIgnoreCase(String name);
+
+    Iterable<E> findAllByNameContaining(String name);
+
+    Iterable<E> findAllByNameContainingIgnoreCase(String name, Pageable pageable);
 }
 ```
 
 Resulting in:
 
 ```java
-public interface PersonRepository extends JpaRepository<Person, Long>, HasNameRepository<Person> {
+public interface PersonForgeRepository extends JpaRepository<Person, Long>, HasNameRepository<Person> {
 }
 ```
 
@@ -123,6 +215,7 @@ Spring Forge is configured **at compile time** via `gradle.properties`.
 
 ```properties
 springforge.repository.package=com.example.repository
+springforge.service.package=com.example.service
 springforge.controller.package=com.example.controller
 ```
 
@@ -133,18 +226,19 @@ springforge.controller.package=com.example.controller
 ```kotlin
 tasks.withType<JavaCompile>().configureEach {
     val repoPackage = project.findProperty("springforge.repository.package") as String?
+    val servicePackage = project.findProperty("springforge.service.package") as String?
     val controllerPackage = project.findProperty("springforge.controller.package") as String?
 
     if (!repoPackage.isNullOrBlank()) {
-        options.compilerArgs.add(
-            "-Aspringforge.repository.package=$repoPackage"
-        )
+        options.compilerArgs.add("-Aspringforge.repository.package=$repoPackage")
+    }
+
+    if (!servicePackage.isNullOrBlank()) {
+        options.compilerArgs.add("-Aspringforge.service.package=$servicePackage")
     }
 
     if (!controllerPackage.isNullOrBlank()) {
-        options.compilerArgs.add(
-            "-Aspringforge.controller.package=$controllerPackage"
-        )
+        options.compilerArgs.add("-Aspringforge.controller.package=$controllerPackage")
     }
 }
 ```
@@ -156,10 +250,15 @@ tasks.withType<JavaCompile>().configureEach {
 ```groovy
 tasks.withType(JavaCompile).configureEach {
     def repoPackage = project.findProperty("springforge.repository.package")
+    def servicePackage = project.findProperty("springforge.service.package")
     def controllerPackage = project.findProperty("springforge.controller.package")
 
     if (repoPackage) {
         options.compilerArgs << "-Aspringforge.repository.package=${repoPackage}"
+    }
+
+    if (servicePackage) {
+        options.compilerArgs << "-Aspringforge.service.package=${servicePackage}"
     }
 
     if (controllerPackage) {
@@ -174,15 +273,4 @@ tasks.withType(JavaCompile).configureEach {
 > it should be generated.
 
 Spring Forge trades flexibility for **clarity, safety, and maintainability**.
-
----
-
-## Modules
-
-| Module              | Purpose                                                        |
-|---------------------|----------------------------------------------------------------|
-| `forge-annotations` | Public annotations (`@HasJpaRepository`, `@HasRestController`) |
-| `forge-processor`   | Annotation processor (generation logic)                        |
-| `forge-jpa`         | JPA-related models and generators                              |
-| `forge-web-api`     | Runtime API (e.g. `AbstractController`)                        |
 

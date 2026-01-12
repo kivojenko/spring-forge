@@ -8,7 +8,7 @@ import java.lang.annotation.Target;
 @ForgeTargetPackage
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.SOURCE)
-public @interface HasRestController {
+public @interface WithRestController {
     String path() default "";
     String packageName() default "";
 }
