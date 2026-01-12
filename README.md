@@ -48,6 +48,11 @@ public class Person {
 Spring Forge generates **at compile time**:
 
 ```java
+public interface PersonForgeRepository extends JpaRepository<Person, Long> {
+}
+```
+
+```java
 
 @Service
 public class PersonForgeService extends ForgeService<Person, Long, PersonForgeRepository> {
