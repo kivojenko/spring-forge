@@ -18,6 +18,10 @@ public abstract class ForgeService<E, ID, R extends JpaRepository<E, ID>> {
         return repository.findById(id).orElseThrow(EntityNotFoundException::new);
     }
 
+    public boolean exists(ID id) {
+        return repository.existsById(id);
+    }
+
     @Transactional
     public E create(E entity) {
         entity = fixParameters(entity);

@@ -1,4 +1,4 @@
-package com.kivojenko.spring.forge.jpa.utils;
+package com.kivojenko.spring.forge.jpa.generator;
 
 import com.kivojenko.spring.forge.jpa.model.JpaEntityModel;
 import com.squareup.javapoet.MethodSpec;
@@ -6,7 +6,7 @@ import com.squareup.javapoet.TypeName;
 
 import javax.lang.model.element.Modifier;
 
-public class MethodUtils {
+public class MethodGenerator {
     public static MethodSpec getSetIdMethod(JpaEntityModel model) {
         return MethodSpec.methodBuilder("setId")
                 .addAnnotation(Override.class)

@@ -34,6 +34,11 @@ public abstract class ForgeController<E, ID, R extends JpaRepository<E, ID>> imp
     }
 
     @Override
+    public boolean exists(ID id) {
+        return repository.existsById(id);
+    }
+
+    @Override
     public E update(ID id, E entity) {
         if (!repository.existsById(id)) {
             throw new EntityNotFoundException();

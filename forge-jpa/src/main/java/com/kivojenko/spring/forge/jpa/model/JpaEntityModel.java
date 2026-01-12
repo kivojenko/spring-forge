@@ -1,16 +1,12 @@
 package com.kivojenko.spring.forge.jpa.model;
 
-import com.kivojenko.spring.forge.annotation.GetOrCreate;
-import com.kivojenko.spring.forge.annotation.WithJpaRepository;
-import com.kivojenko.spring.forge.annotation.WithRestController;
-import com.kivojenko.spring.forge.annotation.WithService;
-import com.kivojenko.spring.forge.jpa.utils.LoggingUtils;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.MethodSpec;
 import jakarta.persistence.MappedSuperclass;
 import lombok.Builder;
 
 import javax.annotation.processing.ProcessingEnvironment;
+import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
@@ -18,13 +14,15 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
-import java.util.Optional;
+
+import java.util.List;
 
 import static java.beans.Introspector.decapitalize;
 
 public record JpaEntityModel(TypeElement element,
                              ClassName entityType,
                              JpaId jpaId,
+                             List<EndpointRelation> endpointRelations,
 
                              String packageName,
                              String repositoryPackageName,
@@ -36,7 +34,8 @@ public record JpaEntityModel(TypeElement element,
                              boolean wantsController,
                              boolean wantsGetOrCreate,
 
-                             ProcessingEnvironment env) {
+                             ProcessingEnvironment env,
+                             RoundEnvironment roundEnv) {
 
     public String repositoryName() {
         return element.getSimpleName() + "ForgeRepository";
@@ -93,8 +92,7 @@ public record JpaEntityModel(TypeElement element,
             return createViaCtor();
         }
 
-        throw new IllegalStateException("Cannot generate getOrCreate for " +
-                element().getSimpleName());
+        throw new IllegalStateException("Cannot generate getOrCreate for " + element().getSimpleName());
     }
 
 
@@ -186,93 +184,6 @@ public record JpaEntityModel(TypeElement element,
                 .map(ExecutableElement.class::cast)
                 .filter(m -> m.getModifiers().contains(Modifier.STATIC))
                 .anyMatch(m -> m.getSimpleName().contentEquals("builder"));
-    }
-
-    public static JpaEntityModel of(TypeElement entity, ProcessingEnvironment env) {
-        var elements = env.getElementUtils();
-        var entityType = ClassName.get(entity);
-        var jpaId = JpaId.resolveId(entity);
-
-        var types = env.getTypeUtils();
-        var hasNameType = elements.getTypeElement("com.kivojenko.spring.forge.jpa.contract.HasName");
-        var hasName = hasNameType != null && types.isAssignable(entity.asType(), hasNameType.asType());
-
-        var packageName = resolvePackageName(entity);
-
-        var repositoryPackage = resolveRepositoryPackageName(entity, env);
-        var servicePackage = resolveServicePackageName(entity, env);
-        var controllerPackage = resolveControllerPackageName(entity, env);
-
-        if (!packageName.isBlank()) {
-            repositoryPackage += "." + packageName;
-            servicePackage += "." + packageName;
-            controllerPackage += "." + packageName;
-        }
-
-        var wantsService = entity.getAnnotation(WithService.class) != null;
-        var wantsController = entity.getAnnotation(WithRestController.class) != null;
-        var wantsGetOrCreate = entity.getAnnotation(GetOrCreate.class) != null;
-
-        if (wantsGetOrCreate && !hasName) {
-            LoggingUtils.warn(env,
-                    entity,
-                    "Entity " +
-                            entityType +
-                            " is annotated with @WithGetOrCreate but does not implement HasName interface");
-            wantsGetOrCreate = false;
-        }
-        if (wantsGetOrCreate && !wantsService) {
-            LoggingUtils.info(env, entity, "Enabling service for entity with @WithGetOrCreate annotation");
-            wantsService = true;
-        }
-
-        return new JpaEntityModel(entity, entityType, jpaId,
-
-                packageName, repositoryPackage, servicePackage, controllerPackage,
-
-                hasName, wantsService, wantsController, wantsGetOrCreate,
-
-                env);
-    }
-
-
-    private static String resolvePackageName(TypeElement entity) {
-        var withJpaRepository = entity.getAnnotation(WithJpaRepository.class);
-        if (withJpaRepository != null && !withJpaRepository.packageName().isBlank()) {
-            return withJpaRepository.packageName();
-        }
-
-        var withService = entity.getAnnotation(WithService.class);
-        if (withService != null && !withService.packageName().isBlank()) {
-            return withService.packageName();
-        }
-
-        var withRestController = entity.getAnnotation(WithRestController.class);
-        if (withRestController != null && !withRestController.packageName().isBlank()) {
-            return withRestController.packageName();
-        }
-
-        return "";
-    }
-
-
-    private static String resolveRepositoryPackageName(TypeElement entity, ProcessingEnvironment env) {
-        return resolvePackageName(entity, env, "springforge.repository.package");
-    }
-
-    private static String resolveServicePackageName(TypeElement entity, ProcessingEnvironment env) {
-        return resolvePackageName(entity, env, "springforge.service.package");
-    }
-
-    private static String resolveControllerPackageName(TypeElement entity, ProcessingEnvironment env) {
-        return resolvePackageName(entity, env, "springforge.controller.package");
-    }
-
-    private static String resolvePackageName(TypeElement entity, ProcessingEnvironment env, String optionName) {
-        var elements = env.getElementUtils();
-        var packageName = elements.getPackageOf(entity).getQualifiedName().toString();
-
-        return Optional.ofNullable(env.getOptions().get(optionName)).filter(s -> !s.isBlank()).orElse(packageName);
     }
 
 }

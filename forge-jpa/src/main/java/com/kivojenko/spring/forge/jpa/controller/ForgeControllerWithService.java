@@ -36,6 +36,11 @@ public abstract class ForgeControllerWithService<E, ID, R extends JpaRepository<
     }
 
     @Override
+    public boolean exists(ID id) {
+        return service.exists(id);
+    }
+
+    @Override
     public E update(ID id, E entity) {
         return service.update(id, entity);
     }

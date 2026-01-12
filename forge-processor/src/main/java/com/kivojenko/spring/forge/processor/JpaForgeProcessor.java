@@ -8,6 +8,7 @@ import com.kivojenko.spring.forge.jpa.generator.JpaControllerGenerator;
 import com.kivojenko.spring.forge.jpa.generator.JpaRepositoryGenerator;
 import com.kivojenko.spring.forge.jpa.generator.JpaServiceGenerator;
 import com.kivojenko.spring.forge.jpa.model.JpaEntityModel;
+import com.kivojenko.spring.forge.jpa.model.JpaEntityModelFactory;
 import com.kivojenko.spring.forge.jpa.utils.LoggingUtils;
 import com.squareup.javapoet.JavaFile;
 
@@ -42,7 +43,7 @@ public final class JpaForgeProcessor extends AbstractProcessor {
                 .filter(TypeElement.class::isInstance)
                 .map(TypeElement.class::cast)
                 .distinct()
-                .map(e -> JpaEntityModel.of(e, processingEnv))
+                .map(e -> JpaEntityModelFactory.create(e, processingEnv, roundEnv))
                 .forEach(this::process);
         return true;
     }

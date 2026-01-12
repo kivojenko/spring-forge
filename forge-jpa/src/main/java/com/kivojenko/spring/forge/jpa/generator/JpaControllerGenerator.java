@@ -4,12 +4,13 @@ import com.kivojenko.spring.forge.jpa.controller.ForgeController;
 import com.kivojenko.spring.forge.jpa.controller.HasNameForgeController;
 import com.kivojenko.spring.forge.jpa.controller.HasNameForgeControllerWithService;
 import com.kivojenko.spring.forge.jpa.controller.ForgeControllerWithService;
+import com.kivojenko.spring.forge.jpa.model.EndpointRelation;
 import com.kivojenko.spring.forge.jpa.model.JpaEntityModel;
 import com.squareup.javapoet.*;
 
 import javax.lang.model.element.Modifier;
 
-import static com.kivojenko.spring.forge.jpa.utils.MethodUtils.getSetIdMethod;
+import static com.kivojenko.spring.forge.jpa.generator.MethodGenerator.getSetIdMethod;
 
 public final class JpaControllerGenerator {
 
@@ -42,6 +43,8 @@ public final class JpaControllerGenerator {
             spec.addMethod(getSetIdMethod(model));
         }
 
+        model.endpointRelations().forEach(r -> addRelationEndpoints(spec, model, r));
+
         return spec.build();
     }
 
@@ -64,5 +67,20 @@ public final class JpaControllerGenerator {
 
         return ParameterizedTypeName.get(superClass, model.entityType(), model.jpaId().type(), model.repositoryType());
     }
+
+    private static void addRelationEndpoints(TypeSpec.Builder spec, JpaEntityModel model, EndpointRelation relation) {
+        if (relation.read()) {
+            spec.addMethod(RelationEndpointMethodsGenerator.read(model, relation));
+        }
+//
+//        if (relation.add()) {
+//            spec.addMethod(RelationEndpointMethodsGenerator.add(model, relation));
+//        }
+//
+//        if (relation.remove()) {
+//            spec.addMethod(RelationEndpointMethodsGenerator.remove(model, relation));
+//        }
+    }
+
 
 }

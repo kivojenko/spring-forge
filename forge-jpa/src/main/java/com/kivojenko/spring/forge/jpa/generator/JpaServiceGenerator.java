@@ -11,7 +11,7 @@ import com.squareup.javapoet.TypeSpec;
 
 import javax.lang.model.element.Modifier;
 
-import static com.kivojenko.spring.forge.jpa.utils.MethodUtils.getSetIdMethod;
+import static com.kivojenko.spring.forge.jpa.generator.MethodGenerator.getSetIdMethod;
 
 public final class JpaServiceGenerator {
 

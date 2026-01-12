@@ -21,6 +21,9 @@ public interface CrudController<E, ID> {
     @GetMapping("/{id}")
     E getById(@PathVariable("id") ID id);
 
+    @RequestMapping(method = RequestMethod.HEAD, path = "/{id}")
+    boolean exists(@PathVariable("id") ID id);
+
     @PutMapping("/{id}")
     E update(@PathVariable("id") ID id, @RequestBody E entity);
 
