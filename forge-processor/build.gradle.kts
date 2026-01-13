@@ -4,7 +4,7 @@ plugins {
 
 dependencies {
     implementation(project(":forge-annotations"))
-    implementation(project(":forge-jpa"))
+    implementation(project(":forge-runtime"))
 
     implementation("com.squareup:javapoet:1.13.0")
 }

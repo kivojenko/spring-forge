@@ -271,7 +271,7 @@ Spring Forge will **reuse it instead of generating a new one**.
 
 ```kotlin
     compileOnly("com.kivojenko.spring.forge:forge-annotations")
-    implementation("com.kivojenko.spring.forge:forge-jpa")
+    implementation("com.kivojenko.spring.forge:forge-runtime")
     annotationProcessor("com.kivojenko.spring.forge:forge-processor")
 ```
 
