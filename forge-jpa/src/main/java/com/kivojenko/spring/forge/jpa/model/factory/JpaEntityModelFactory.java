@@ -1,5 +1,6 @@
 package com.kivojenko.spring.forge.jpa.model.factory;
 
+import com.kivojenko.spring.forge.config.SpringForgeConfig;
 import com.kivojenko.spring.forge.jpa.model.model.JpaEntityModel;
 import com.squareup.javapoet.ClassName;
 
@@ -17,19 +18,22 @@ import static com.kivojenko.spring.forge.jpa.model.model.JpaId.resolveId;
 public final class JpaEntityModelFactory {
 
     private static final Map<TypeElement, JpaEntityModel> CACHE = new HashMap<>();
+    private static SpringForgeConfig config;
 
     public static List<JpaEntityModel> getAll() {
         return CACHE.values().stream().toList();
     }
 
     public static JpaEntityModel get(TypeElement entity, ProcessingEnvironment env) {
+        if (config == null) config = SpringForgeConfig.load(env);
+
         var cached = CACHE.get(entity);
         if (cached != null) return cached;
 
         var entityType = ClassName.get(entity);
 
         var entityId = resolveId(entity);
-        var packages = resolvePackageNames(entity, env);
+        var packages = resolvePackageNames(entity, config, env);
         var requirements = resolveRequirements(entity, env);
         var model = new JpaEntityModel(entity, entityType, entityId, packages, requirements, env);
 

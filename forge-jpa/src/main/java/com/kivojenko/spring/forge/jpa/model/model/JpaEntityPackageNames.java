@@ -3,6 +3,7 @@ package com.kivojenko.spring.forge.jpa.model.model;
 import com.kivojenko.spring.forge.annotation.WithJpaRepository;
 import com.kivojenko.spring.forge.annotation.WithRestController;
 import com.kivojenko.spring.forge.annotation.WithService;
+import com.kivojenko.spring.forge.config.SpringForgeConfig;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.TypeElement;
@@ -13,12 +14,14 @@ public record JpaEntityPackageNames(String packageName,
                                     String servicePackageName,
                                     String controllerPackageName) {
 
-    public static JpaEntityPackageNames resolvePackageNames(TypeElement entity, ProcessingEnvironment env) {
+    public static JpaEntityPackageNames resolvePackageNames(TypeElement entity,
+                                                            SpringForgeConfig config,
+                                                            ProcessingEnvironment e) {
         var packageName = resolvePackageName(entity);
 
-        var repositoryPackage = resolveRepositoryPackageName(entity, env);
-        var servicePackage = resolveServicePackageName(entity, env);
-        var controllerPackage = resolveControllerPackageName(entity, env);
+        var repositoryPackage = resolvePackageName(entity, config.getRepositoryPackage(), e);
+        var servicePackage = resolvePackageName(entity, config.getServicePackage(), e);
+        var controllerPackage = resolvePackageName(entity, config.getControllerPackage(), e);
 
         if (!packageName.isBlank()) {
             repositoryPackage += "." + packageName;
@@ -49,23 +52,10 @@ public record JpaEntityPackageNames(String packageName,
         return "";
     }
 
-
-    private static String resolveRepositoryPackageName(TypeElement entity, ProcessingEnvironment env) {
-        return resolvePackageName(entity, env, "springforge.repository.package");
-    }
-
-    private static String resolveServicePackageName(TypeElement entity, ProcessingEnvironment env) {
-        return resolvePackageName(entity, env, "springforge.service.package");
-    }
-
-    private static String resolveControllerPackageName(TypeElement entity, ProcessingEnvironment env) {
-        return resolvePackageName(entity, env, "springforge.controller.package");
-    }
-
-    private static String resolvePackageName(TypeElement entity, ProcessingEnvironment env, String optionName) {
+    private static String resolvePackageName(TypeElement entity, String defaultPackageName, ProcessingEnvironment env) {
         var elements = env.getElementUtils();
         var packageName = elements.getPackageOf(entity).getQualifiedName().toString();
 
-        return Optional.ofNullable(env.getOptions().get(optionName)).filter(s -> !s.isBlank()).orElse(packageName);
+        return Optional.ofNullable(defaultPackageName).filter(s -> !s.isBlank()).orElse(packageName);
     }
 }

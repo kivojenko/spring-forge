@@ -67,24 +67,14 @@ public record JpaEntityModel(TypeElement element,
         return decapitalize(entityType.simpleName()) + "s";
     }
 
-
     public MethodSpec resolveCreateMethod() {
-
         if (hasBuilder()) {
-            if (builderHasNameSetter()) {
-                return createViaBuilder();
-            }
+            if (builderHasNameSetter()) return createViaBuilder();
             return createViaBuilderAndSetter();
         }
 
-
-        if (hasEmptyCtor()) {
-            return createViaEmptyCtorAndSetter();
-        }
-
-        if (hasStringCtor()) {
-            return createViaCtor();
-        }
+        if (hasEmptyCtor()) return createViaEmptyCtorAndSetter();
+        if (hasStringCtor()) return createViaCtor();
 
         throw new IllegalStateException("Cannot generate getOrCreate for " + element().getSimpleName());
     }

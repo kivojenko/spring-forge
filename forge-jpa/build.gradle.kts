@@ -4,6 +4,8 @@ plugins {
 
 dependencies {
     implementation(project(":forge-annotations"))
+    implementation(project(":forge-config"))
+
     implementation("com.squareup:javapoet:1.13.0")
 
     compileOnly("org.springframework:spring-web:7.0.1")

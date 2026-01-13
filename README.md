@@ -275,64 +275,18 @@ Spring Forge will **reuse it instead of generating a new one**.
     annotationProcessor("com.kivojenko.spring.forge:forge-processor")
 ```
 
-## Global configuration (recommended)
+## Optional configuration (recommended)
 
-Spring Forge is configured **at compile time** via `gradle.properties`.
+Spring Forge is configured **at compile time** via `resources/springforge.yml`
 
-### gradle.properties
+```yml
+repository:
+  package: com.example.repository
+service:
+  package: com.example.service
+controller:
+  package: com.example.controller
 
-```properties
-springforge.repository.package=com.example.repository
-springforge.service.package=com.example.service
-springforge.controller.package=com.example.controller
-```
-
----
-
-### Gradle – Kotlin DSL (`build.gradle.kts`)
-
-```kotlin
-tasks.withType<JavaCompile>().configureEach {
-    val repoPackage = project.findProperty("springforge.repository.package") as String?
-    val servicePackage = project.findProperty("springforge.service.package") as String?
-    val controllerPackage = project.findProperty("springforge.controller.package") as String?
-
-    if (!repoPackage.isNullOrBlank()) {
-        options.compilerArgs.add("-Aspringforge.repository.package=$repoPackage")
-    }
-
-    if (!servicePackage.isNullOrBlank()) {
-        options.compilerArgs.add("-Aspringforge.service.package=$servicePackage")
-    }
-
-    if (!controllerPackage.isNullOrBlank()) {
-        options.compilerArgs.add("-Aspringforge.controller.package=$controllerPackage")
-    }
-}
-```
-
----
-
-### Gradle – Groovy DSL (`build.gradle`)
-
-```groovy
-tasks.withType(JavaCompile).configureEach {
-    def repoPackage = project.findProperty("springforge.repository.package")
-    def servicePackage = project.findProperty("springforge.service.package")
-    def controllerPackage = project.findProperty("springforge.controller.package")
-
-    if (repoPackage) {
-        options.compilerArgs << "-Aspringforge.repository.package=${repoPackage}"
-    }
-
-    if (servicePackage) {
-        options.compilerArgs << "-Aspringforge.service.package=${servicePackage}"
-    }
-
-    if (controllerPackage) {
-        options.compilerArgs << "-Aspringforge.controller.package=${controllerPackage}"
-    }
-}
 ```
 
 ## Design philosophy

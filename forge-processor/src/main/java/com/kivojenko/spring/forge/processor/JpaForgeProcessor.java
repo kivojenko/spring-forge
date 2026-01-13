@@ -8,8 +8,8 @@ import com.kivojenko.spring.forge.jpa.generator.JpaControllerGenerator;
 import com.kivojenko.spring.forge.jpa.generator.JpaRepositoryGenerator;
 import com.kivojenko.spring.forge.jpa.generator.JpaServiceGenerator;
 import com.kivojenko.spring.forge.jpa.model.factory.EndpointRelationFactory;
-import com.kivojenko.spring.forge.jpa.model.model.JpaEntityModel;
 import com.kivojenko.spring.forge.jpa.model.factory.JpaEntityModelFactory;
+import com.kivojenko.spring.forge.jpa.model.model.JpaEntityModel;
 import com.kivojenko.spring.forge.jpa.utils.LoggingUtils;
 import com.squareup.javapoet.JavaFile;
 
@@ -25,13 +25,7 @@ import java.util.stream.Collectors;
 
 @SupportedAnnotationTypes("com.kivojenko.spring.forge.annotation.*")
 @SupportedSourceVersion(SourceVersion.RELEASE_21)
-@SupportedOptions({JpaForgeProcessor.REPOSITORY_PACKAGE_OPTION,
-        JpaForgeProcessor.SERVICE_PACKAGE_OPTION,
-        JpaForgeProcessor.CONTROLLER_PACKAGE_OPTION})
 public final class JpaForgeProcessor extends AbstractProcessor {
-    public static final String REPOSITORY_PACKAGE_OPTION = "springforge.repository.package";
-    public static final String SERVICE_PACKAGE_OPTION = "springforge.service.package";
-    public static final String CONTROLLER_PACKAGE_OPTION = "springforge.controller.package";
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
