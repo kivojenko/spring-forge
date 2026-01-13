@@ -1,12 +1,13 @@
-package com.kivojenko.spring.forge.jpa.model;
+package com.kivojenko.spring.forge.jpa.model.model;
 
+import com.kivojenko.spring.forge.jpa.model.factory.EndpointRelationFactory;
+import com.kivojenko.spring.forge.jpa.model.relation.EndpointRelation;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.MethodSpec;
 import jakarta.persistence.MappedSuperclass;
 import lombok.Builder;
 
 import javax.annotation.processing.ProcessingEnvironment;
-import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
@@ -14,7 +15,6 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
-
 import java.util.List;
 
 import static java.beans.Introspector.decapitalize;
@@ -22,31 +22,25 @@ import static java.beans.Introspector.decapitalize;
 public record JpaEntityModel(TypeElement element,
                              ClassName entityType,
                              JpaId jpaId,
-                             List<EndpointRelation> endpointRelations,
+                             JpaEntityPackageNames packages,
+                             JpaEntityModelRequirements requirements,
+                             ProcessingEnvironment env) {
 
-                             String packageName,
-                             String repositoryPackageName,
-                             String servicePackageName,
-                             String controllerPackageName,
+    public List<EndpointRelation> endpointRelations() {
+        return EndpointRelationFactory.resolve(element(), env);
+    }
 
-                             boolean hasName,
-                             boolean wantsService,
-                             boolean wantsController,
-                             boolean wantsGetOrCreate,
-
-                             ProcessingEnvironment env,
-                             RoundEnvironment roundEnv) {
 
     public String repositoryName() {
         return element.getSimpleName() + "ForgeRepository";
     }
 
     public String repositoryFqn() {
-        return repositoryPackageName + "." + repositoryName();
+        return packages().repositoryPackageName() + "." + repositoryName();
     }
 
     public ClassName repositoryType() {
-        return ClassName.get(repositoryPackageName, repositoryName());
+        return ClassName.get(packages().repositoryPackageName(), repositoryName());
     }
 
     public String serviceName() {
@@ -54,11 +48,11 @@ public record JpaEntityModel(TypeElement element,
     }
 
     public String serviceFqn() {
-        return servicePackageName + "." + serviceName();
+        return packages().servicePackageName() + "." + serviceName();
     }
 
     public ClassName serviceType() {
-        return ClassName.get(servicePackageName, serviceName());
+        return ClassName.get(packages().servicePackageName(), serviceName());
     }
 
     public String controllerName() {
@@ -66,7 +60,7 @@ public record JpaEntityModel(TypeElement element,
     }
 
     public String controllerFqn() {
-        return controllerPackageName + "." + controllerName();
+        return packages().controllerPackageName() + "." + controllerName();
     }
 
     public String controllerPath() {

@@ -1,4 +1,4 @@
-package com.kivojenko.spring.forge.jpa.model;
+package com.kivojenko.spring.forge.jpa.model.model;
 
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.TypeName;
@@ -10,6 +10,8 @@ import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import java.util.Optional;
+
+import static com.kivojenko.spring.forge.jpa.utils.StringUtils.decapitalize;
 
 public record JpaId(String name, TypeName type) {
     public static JpaId resolveId(TypeElement entity) {
@@ -60,8 +62,8 @@ public record JpaId(String name, TypeName type) {
 
         if (getter.isPresent()) {
             var m = getter.get();
-            return Optional.of(new JpaId(inferPropertyName(m.getSimpleName()
-                    .toString()), ClassName.get(m.getReturnType())));
+            return Optional.of(new JpaId(inferPropertyName(m.getSimpleName().toString()),
+                    ClassName.get(m.getReturnType())));
         }
 
         return Optional.empty();
@@ -76,10 +78,6 @@ public record JpaId(String name, TypeName type) {
             return decapitalize(getterName.substring(2));
         }
         throw new IllegalStateException("Unsupported @Id getter name: " + getterName);
-    }
-
-    private static String decapitalize(String s) {
-        return Character.toLowerCase(s.charAt(0)) + s.substring(1);
     }
 
 }

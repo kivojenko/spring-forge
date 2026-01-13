@@ -1,6 +1,7 @@
 package com.kivojenko.spring.forge.jpa.generator;
 
-import com.kivojenko.spring.forge.jpa.model.JpaEntityModel;
+import com.kivojenko.spring.forge.jpa.model.model.JpaEntityModel;
+import com.kivojenko.spring.forge.jpa.model.relation.EndpointRelation;
 import com.kivojenko.spring.forge.jpa.service.ForgeService;
 import com.kivojenko.spring.forge.jpa.service.HasNameForgeService;
 import com.kivojenko.spring.forge.jpa.service.HasNameForgeServiceWithGetOrCreate;
@@ -23,19 +24,19 @@ public final class JpaServiceGenerator {
             ClassName.get(HasNameForgeServiceWithGetOrCreate.class);
 
     public static JavaFile generateFile(JpaEntityModel model) {
-        return JavaFile.builder(model.servicePackageName(), generate(model)).build();
+        return JavaFile.builder(model.packages().servicePackageName(), generate(model)).build();
     }
 
     public static TypeSpec generate(JpaEntityModel model) {
-        var builder = TypeSpec.classBuilder(model.serviceName()).addModifiers(Modifier.PUBLIC).addAnnotation(SERVICE);
+        var spec = TypeSpec.classBuilder(model.serviceName()).addModifiers(Modifier.PUBLIC).addAnnotation(SERVICE);
 
         var superClassName = FORGE_SERVICE;
-        if (model.hasName()) {
+        if (model.requirements().hasName()) {
             superClassName = HAS_NAME_FORGE_SERVICE;
 
-            if (model.wantsGetOrCreate()) {
+            if (model.requirements().wantsGetOrCreate()) {
                 superClassName = HAS_NAME_FORGE_SERVICE_WITH_GET_OR_CREATE;
-                builder.addMethod(model.resolveCreateMethod());
+                spec.addMethod(model.resolveCreateMethod());
             }
         }
 
@@ -44,7 +45,16 @@ public final class JpaServiceGenerator {
                 model.jpaId().type(),
                 model.repositoryType());
 
-        return builder.superclass(superClass).addMethod(getSetIdMethod(model)).build();
+        model.endpointRelations().forEach(r -> addRelationEndpoints(spec, r));
+
+        return spec.superclass(superClass).addMethod(getSetIdMethod(model)).build();
+    }
+
+    private static void addRelationEndpoints(TypeSpec.Builder spec, EndpointRelation relation) {
+        var serviceMethod = relation.getServiceMethod();
+        if (serviceMethod != null) spec.addMethod(serviceMethod);
+        var field = relation.getServiceField();
+        if (field != null) spec.addField(field);
     }
 
 }

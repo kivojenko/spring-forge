@@ -4,8 +4,8 @@ import com.kivojenko.spring.forge.jpa.controller.ForgeController;
 import com.kivojenko.spring.forge.jpa.controller.HasNameForgeController;
 import com.kivojenko.spring.forge.jpa.controller.HasNameForgeControllerWithService;
 import com.kivojenko.spring.forge.jpa.controller.ForgeControllerWithService;
-import com.kivojenko.spring.forge.jpa.model.EndpointRelation;
-import com.kivojenko.spring.forge.jpa.model.JpaEntityModel;
+import com.kivojenko.spring.forge.jpa.model.relation.EndpointRelation;
+import com.kivojenko.spring.forge.jpa.model.model.JpaEntityModel;
 import com.squareup.javapoet.*;
 
 import javax.lang.model.element.Modifier;
@@ -26,7 +26,7 @@ public final class JpaControllerGenerator {
             ClassName.get(HasNameForgeControllerWithService.class);
 
     public static JavaFile generateFile(JpaEntityModel model) {
-        return JavaFile.builder(model.controllerPackageName(), generate(model)).build();
+        return JavaFile.builder(model.packages().controllerPackageName(), generate(model)).build();
     }
 
     public static TypeSpec generate(JpaEntityModel model) {
@@ -39,21 +39,21 @@ public final class JpaControllerGenerator {
                 .addAnnotation(mappingAnnotation)
                 .superclass(getSuperClass(model));
 
-        if (!model.wantsService()) {
+        if (!model.requirements().wantsService()) {
             spec.addMethod(getSetIdMethod(model));
         }
 
-        model.endpointRelations().forEach(r -> addRelationEndpoints(spec, model, r));
+        model.endpointRelations().forEach(r -> addRelationEndpoints(spec, r));
 
         return spec.build();
     }
 
     public static ParameterizedTypeName getSuperClass(JpaEntityModel model) {
-        return model.wantsService() ? withService(model) : withoutService(model);
+        return model.requirements().wantsService() ? withService(model) : withoutService(model);
     }
 
     private static ParameterizedTypeName withService(JpaEntityModel model) {
-        var superClass = model.hasName() ? HAS_NAME_WITH_SERVICE_CONTROLLER : HAS_SERVICE_CONTROLLER;
+        var superClass = model.requirements().hasName() ? HAS_NAME_WITH_SERVICE_CONTROLLER : HAS_SERVICE_CONTROLLER;
 
         return ParameterizedTypeName.get(superClass,
                 model.entityType(),
@@ -63,24 +63,15 @@ public final class JpaControllerGenerator {
     }
 
     private static ParameterizedTypeName withoutService(JpaEntityModel model) {
-        var superClass = model.hasName() ? HAS_NAME_CONTROLLER : ABSTRACT_CONTROLLER;
+        var superClass = model.requirements().hasName() ? HAS_NAME_CONTROLLER : ABSTRACT_CONTROLLER;
 
         return ParameterizedTypeName.get(superClass, model.entityType(), model.jpaId().type(), model.repositoryType());
     }
 
-    private static void addRelationEndpoints(TypeSpec.Builder spec, JpaEntityModel model, EndpointRelation relation) {
-        if (relation.read()) {
-            spec.addMethod(RelationEndpointMethodsGenerator.read(model, relation));
-        }
-//
-//        if (relation.add()) {
-//            spec.addMethod(RelationEndpointMethodsGenerator.add(model, relation));
-//        }
-//
-//        if (relation.remove()) {
-//            spec.addMethod(RelationEndpointMethodsGenerator.remove(model, relation));
-//        }
+    private static void addRelationEndpoints(TypeSpec.Builder spec, EndpointRelation relation) {
+        var method = relation.getControllerMethod();
+        if (method != null) spec.addMethod(method);
+        var field = relation.getControllerField();
+        if (field != null) spec.addField(field);
     }
-
-
 }

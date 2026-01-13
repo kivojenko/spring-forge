@@ -7,8 +7,9 @@ import com.kivojenko.spring.forge.annotation.WithService;
 import com.kivojenko.spring.forge.jpa.generator.JpaControllerGenerator;
 import com.kivojenko.spring.forge.jpa.generator.JpaRepositoryGenerator;
 import com.kivojenko.spring.forge.jpa.generator.JpaServiceGenerator;
-import com.kivojenko.spring.forge.jpa.model.JpaEntityModel;
-import com.kivojenko.spring.forge.jpa.model.JpaEntityModelFactory;
+import com.kivojenko.spring.forge.jpa.model.factory.EndpointRelationFactory;
+import com.kivojenko.spring.forge.jpa.model.model.JpaEntityModel;
+import com.kivojenko.spring.forge.jpa.model.factory.JpaEntityModelFactory;
 import com.kivojenko.spring.forge.jpa.utils.LoggingUtils;
 import com.squareup.javapoet.JavaFile;
 
@@ -16,8 +17,10 @@ import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
+import java.util.ArrayDeque;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 
 @SupportedAnnotationTypes("com.kivojenko.spring.forge.annotation.*")
@@ -39,20 +42,43 @@ public final class JpaForgeProcessor extends AbstractProcessor {
         entities.addAll(roundEnv.getElementsAnnotatedWith(GetOrCreate.class));
         entities.addAll(roundEnv.getElementsAnnotatedWith(WithRestController.class));
 
-        entities.stream()
+        var rootEntities = entities.stream()
                 .filter(TypeElement.class::isInstance)
                 .map(TypeElement.class::cast)
-                .distinct()
-                .map(e -> JpaEntityModelFactory.create(e, processingEnv, roundEnv))
-                .forEach(this::process);
+                .collect(Collectors.toSet());
+
+        expandEntityGraph(rootEntities, processingEnv);
+        rootEntities.forEach(element -> JpaEntityModelFactory.get(element, processingEnv));
+
+        var jpaEntities = JpaEntityModelFactory.getAll();
+
+        jpaEntities.forEach(this::addRepository);
+        jpaEntities.forEach(this::addService);
+        jpaEntities.forEach(this::addController);
+
         return true;
     }
 
-    private void process(JpaEntityModel model) {
-        addRepository(model);
-        addService(model);
-        addController(model);
+    void expandEntityGraph(Set<TypeElement> roots, ProcessingEnvironment env) {
+        var result = new HashSet<TypeElement>();
+
+        var queue = new ArrayDeque<>(roots);
+
+        while (!queue.isEmpty()) {
+            var entity = queue.poll();
+            if (!result.add(entity)) continue;
+
+            var relations = EndpointRelationFactory.resolve(entity, env);
+
+            for (var rel : relations) {
+                var related = rel.getEntityModel().element();
+                if (related != null) {
+                    queue.add(related);
+                }
+            }
+        }
     }
+
 
     private void addRepository(JpaEntityModel model) {
         if (alreadyExists(model.repositoryFqn())) return;
@@ -62,14 +88,14 @@ public final class JpaForgeProcessor extends AbstractProcessor {
     }
 
     private void addService(JpaEntityModel model) {
-        if (!model.wantsService() || alreadyExists(model.serviceFqn())) return;
+        if (!model.requirements().wantsService() || alreadyExists(model.serviceFqn())) return;
 
         var file = JpaServiceGenerator.generateFile(model);
         tryWriteTo(file, model.element());
     }
 
     private void addController(JpaEntityModel model) {
-        if (!model.wantsController() || alreadyExists(model.controllerFqn())) return;
+        if (!model.requirements().wantsController() || alreadyExists(model.controllerFqn())) return;
 
         var file = JpaControllerGenerator.generateFile(model);
         tryWriteTo(file, model.element());

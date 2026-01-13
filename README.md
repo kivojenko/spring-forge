@@ -81,7 +81,7 @@ service.
 
 @Entity
 @GetOrCreate
-public class Person implements HasName {
+public class Role implements HasName {
     @Id
     Long id;
     String name;
@@ -93,10 +93,10 @@ This will automatically enable `@WithService` and generate:
 ```java
 
 @Service
-public class PersonForgeService extends HasNameForgeServiceWithGetOrCreate<Person, Long, PersonForgeRepository> {
+public class RoleForgeService extends HasNameForgeServiceWithGetOrCreate<Role, Long, RoleForgeRepository> {
     @Override
-    protected Person create(String name) {
-        return Person.builder().name(name).build(); // Uses Lombok @Builder or empty constructor + setter
+    protected Role create(String name) {
+        return Role.builder().name(name).build(); // Uses Lombok @Builder or empty constructor + setter
     }
 }
 ```
@@ -125,7 +125,7 @@ public interface PersonRepository extends JpaRepository<Person, Long> {
 ```java
 
 @RestController
-@RequestMapping("/person")
+@RequestMapping("/persons")
 public class PersonForgeController extends ForgeController<Person, Long, PersonForgeRepository> {
 }
 ```
@@ -141,9 +141,62 @@ path = decapitalized entity name + "s"
 |  GET   | /{path}?page={page}&size={size} | Paged entities - params are optional |
 |  POST  |             /{path}             |         Create a new entity          |
 |  GET   |          /{path}/{id}           |           Get entity by ID           |
+|  HEAD  |          /{path}/{id}           |         Check if entity exists       |
 |  PUT   |          /{path}/{id}           |         Update entity by ID          |
 | DELETE |          /{path}/{id}           |         Delete entity by ID          |
 |  GET   |          /{path}/count          |        Get total entity count        |
+
+---
+
+### Endpoint Annotations
+
+Spring Forge can generate additional endpoints for associations or custom service methods.
+
+#### @WithEndpoints
+
+Used on association fields in entities. It supports the following attributes:
+- `read` (default: `true`): Generates a GET endpoint.
+- `remove` (default: `false`): Generates a DELETE endpoint (requires `mappedBy`).
+- `path`: Custom path for the association (defaults to field name).
+- `getMethodName`: Custom name of the getter method in the service (defaults to `get` + CapitalizedFieldName).
+
+```java
+@Entity
+public class Company {
+    @Id
+    Long id;
+
+    @OneToMany(mappedBy = "company")
+    @WithEndpoints(read = true, remove = true)
+    List<Employee> employees;
+}
+```
+
+This generates:
+- `GET /companies/{id}/employees` - returns a list of employees for the company.
+- `DELETE /companies/{id}/employees/{employeeId}` - removes an employee from the company (sets the association to `null`).
+
+#### @WithGetEndpoint
+
+Used on custom getter methods in service to expose them as GET endpoints.
+
+```java
+@RestController
+@RequestMapping("/persons")
+public class PersonForgeController extends ForgeController<Person, Long, PersonForgeRepository> {
+    
+    @WithGetEndpoint
+    public List<Person> getRecent() {
+        // custom logic
+    }
+}
+```
+
+This generates:
+- `GET /people/recent` - returns the list of people from the custom service method.
+
+Attributes:
+- `path`: Custom path for the GET endpoint. If empty, it's derived from the method name (e.g., `getRecent` -> `recent`).
 
 ---
 
@@ -211,6 +264,16 @@ If a repository already exists **in the configured repository package**,
 Spring Forge will **reuse it instead of generating a new one**.
 
 ---
+
+## Installation
+
+### Dependencies
+
+```kotlin
+    compileOnly("com.kivojenko.spring.forge:forge-annotations")
+    implementation("com.kivojenko.spring.forge:forge-jpa")
+    annotationProcessor("com.kivojenko.spring.forge:forge-processor")
+```
 
 ## Global configuration (recommended)
 

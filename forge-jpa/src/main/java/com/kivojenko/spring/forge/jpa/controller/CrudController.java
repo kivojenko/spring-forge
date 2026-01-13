@@ -1,6 +1,7 @@
 package com.kivojenko.spring.forge.jpa.controller;
 
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 public interface CrudController<E, ID> {
@@ -15,7 +16,7 @@ public interface CrudController<E, ID> {
     );
 
     @PostMapping
-    @ResponseStatus(org.springframework.http.HttpStatus.CREATED)
+    @ResponseStatus(HttpStatus.CREATED)
     E create(@Valid @RequestBody E entity);
 
     @GetMapping("/{id}")
@@ -28,6 +29,6 @@ public interface CrudController<E, ID> {
     E update(@PathVariable("id") ID id, @RequestBody E entity);
 
     @DeleteMapping("/{id}")
-    @ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     void delete(@PathVariable("id") ID id);
 }

@@ -10,4 +10,9 @@ public class StringUtils {
                 .append(s.substring(len))
                 .toString();
     }
+
+    public static String decapitalize(String s) {
+        return Character.toLowerCase(s.charAt(0)) + s.substring(1);
+    }
+
 }
