@@ -18,7 +18,7 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - run: ./gradlew javadoc
+      - run: ./gradlew aggregateJavadoc
 
       - run: |
           git config user.name "github-actions"
