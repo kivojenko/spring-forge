@@ -10,16 +10,31 @@ import com.squareup.javapoet.TypeSpec;
 
 import javax.lang.model.element.Modifier;
 
+/**
+ * Generator for Spring Data JPA repositories.
+ */
 public final class JpaRepositoryGenerator {
 
     private static final ClassName JPA_REPOSITORY =
             ClassName.get("org.springframework.data.jpa.repository", "JpaRepository");
     private static final ClassName HAS_NAME_REPOSITORY = ClassName.get(HasNameRepository.class);
 
+    /**
+     * Generates a {@link JavaFile} containing the JPA repository for the given model.
+     *
+     * @param model the entity model
+     * @return the generated Java file
+     */
     public static JavaFile generateFile(JpaEntityModel model) {
         return JavaFile.builder(model.packages().repositoryPackageName(), generate(model)).build();
     }
 
+    /**
+     * Generates the {@link TypeSpec} for the JPA repository.
+     *
+     * @param model the entity model
+     * @return the type specification
+     */
     public static TypeSpec generate(JpaEntityModel model) {
         var builder = TypeSpec.interfaceBuilder(model.repositoryName())
                 .addModifiers(Modifier.PUBLIC)

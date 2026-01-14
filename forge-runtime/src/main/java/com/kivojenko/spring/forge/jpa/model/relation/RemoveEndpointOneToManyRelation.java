@@ -13,6 +13,9 @@ import static com.kivojenko.spring.forge.jpa.generator.MethodGenerator.getterNam
 import static com.kivojenko.spring.forge.jpa.utils.StringUtils.capitalize;
 import static com.kivojenko.spring.forge.jpa.utils.StringUtils.decapitalize;
 
+/**
+ * Represents a relation that generates a DELETE endpoint to remove an entity from a OneToMany association.
+ */
 @SuperBuilder
 public class RemoveEndpointOneToManyRelation extends EndpointRelation {
     public static final ClassName AUTOWIRED =

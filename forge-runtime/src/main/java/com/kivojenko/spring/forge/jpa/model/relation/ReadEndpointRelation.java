@@ -10,6 +10,9 @@ import javax.lang.model.element.Modifier;
 
 import static com.kivojenko.spring.forge.jpa.generator.MethodGenerator.GET_MAPPING;
 
+/**
+ * Represents a relation that generates a GET endpoint to read associated entities.
+ */
 @SuperBuilder
 public class ReadEndpointRelation extends EndpointRelation {
     @Override

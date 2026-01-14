@@ -7,8 +7,19 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Abstract base implementation of {@link CrudController} that interacts directly with a {@link JpaRepository}.
+ * Used when a service layer is not requested.
+ *
+ * @param <E> the entity type
+ * @param <ID> the ID type
+ * @param <R> the repository type
+ */
 @RestController
 public abstract class ForgeController<E, ID, R extends JpaRepository<E, ID>> implements CrudController<E, ID> {
+    /**
+     * The repository used for data access.
+     */
     @Autowired
     protected R repository;
 

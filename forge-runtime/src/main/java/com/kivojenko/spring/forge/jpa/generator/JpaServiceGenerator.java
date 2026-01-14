@@ -14,6 +14,9 @@ import javax.lang.model.element.Modifier;
 
 import static com.kivojenko.spring.forge.jpa.generator.MethodGenerator.getSetIdMethod;
 
+/**
+ * Generator for Spring services.
+ */
 public final class JpaServiceGenerator {
 
     private static final ClassName SERVICE = ClassName.get("org.springframework.stereotype", "Service");
@@ -23,10 +26,22 @@ public final class JpaServiceGenerator {
     private static final ClassName HAS_NAME_FORGE_SERVICE_WITH_GET_OR_CREATE =
             ClassName.get(HasNameForgeServiceWithGetOrCreate.class);
 
+    /**
+     * Generates a {@link JavaFile} containing the service for the given model.
+     *
+     * @param model the entity model
+     * @return the generated Java file
+     */
     public static JavaFile generateFile(JpaEntityModel model) {
         return JavaFile.builder(model.packages().servicePackageName(), generate(model)).build();
     }
 
+    /**
+     * Generates the {@link TypeSpec} for the service.
+     *
+     * @param model the entity model
+     * @return the type specification
+     */
     public static TypeSpec generate(JpaEntityModel model) {
         var spec = TypeSpec.classBuilder(model.serviceName()).addModifiers(Modifier.PUBLIC).addAnnotation(SERVICE);
 

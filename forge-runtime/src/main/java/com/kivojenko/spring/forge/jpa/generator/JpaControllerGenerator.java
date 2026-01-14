@@ -12,6 +12,9 @@ import javax.lang.model.element.Modifier;
 
 import static com.kivojenko.spring.forge.jpa.generator.MethodGenerator.getSetIdMethod;
 
+/**
+ * Generator for Spring REST controllers.
+ */
 public final class JpaControllerGenerator {
 
     private static final ClassName REST_CONTROLLER =
@@ -25,10 +28,22 @@ public final class JpaControllerGenerator {
     private static final ClassName HAS_NAME_WITH_SERVICE_CONTROLLER =
             ClassName.get(HasNameForgeControllerWithService.class);
 
+    /**
+     * Generates a {@link JavaFile} containing the REST controller for the given model.
+     *
+     * @param model the entity model
+     * @return the generated Java file
+     */
     public static JavaFile generateFile(JpaEntityModel model) {
         return JavaFile.builder(model.packages().controllerPackageName(), generate(model)).build();
     }
 
+    /**
+     * Generates the {@link TypeSpec} for the REST controller.
+     *
+     * @param model the entity model
+     * @return the type specification
+     */
     public static TypeSpec generate(JpaEntityModel model) {
         var mappingAnnotation =
                 AnnotationSpec.builder(REQUEST_MAPPING).addMember("value", "$S", model.controllerPath()).build();

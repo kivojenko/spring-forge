@@ -9,11 +9,27 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.TypeElement;
 import java.util.Optional;
 
+/**
+ * Package names for generated classes related to a JPA entity.
+ *
+ * @param packageName the custom sub-package name
+ * @param repositoryPackageName the package for repositories
+ * @param servicePackageName the package for services
+ * @param controllerPackageName the package for controllers
+ */
 public record JpaEntityPackageNames(String packageName,
                                     String repositoryPackageName,
                                     String servicePackageName,
                                     String controllerPackageName) {
 
+    /**
+     * Resolves package names for the given entity, considering configuration and annotations.
+     *
+     * @param entity the entity type element
+     * @param config the Spring Forge configuration
+     * @param e the processing environment
+     * @return the resolved package names
+     */
     public static JpaEntityPackageNames resolvePackageNames(TypeElement entity,
                                                             SpringForgeConfig config,
                                                             ProcessingEnvironment e) {

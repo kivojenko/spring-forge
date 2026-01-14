@@ -22,8 +22,19 @@ import java.util.List;
 import static com.kivojenko.spring.forge.jpa.utils.StringUtils.capitalize;
 import static java.beans.Introspector.decapitalize;
 
+/**
+ * Factory for resolving {@link EndpointRelation}s from entity elements.
+ */
 public class EndpointRelationFactory {
 
+    /**
+     * Resolves all endpoint relations for the given entity.
+     * It scans for fields annotated with {@link WithEndpoints} and methods annotated with {@link WithGetEndpoint}.
+     *
+     * @param entity the entity type element
+     * @param env the processing environment
+     * @return a list of resolved endpoint relations
+     */
     public static List<EndpointRelation> resolve(TypeElement entity, ProcessingEnvironment env) {
         var endpointRelations = new ArrayList<EndpointRelation>();
 

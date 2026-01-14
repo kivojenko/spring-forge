@@ -23,6 +23,11 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 
+/**
+ * Annotation processor for generating JPA repositories, services, and REST controllers.
+ * It processes entities annotated with {@link WithJpaRepository}, {@link WithService},
+ * {@link WithRestController}, or {@link GetOrCreate}.
+ */
 @SupportedAnnotationTypes("com.kivojenko.spring.forge.annotation.*")
 @SupportedSourceVersion(SourceVersion.RELEASE_21)
 public final class JpaForgeProcessor extends AbstractProcessor {
@@ -53,6 +58,13 @@ public final class JpaForgeProcessor extends AbstractProcessor {
         return true;
     }
 
+    /**
+     * Expands the entity graph by following relationships defined on the root entities.
+     * This ensures that related entities also have models generated if they are part of an endpoint.
+     * 
+     * @param roots the set of initial entity type elements
+     * @param env the processing environment
+     */
     void expandEntityGraph(Set<TypeElement> roots, ProcessingEnvironment env) {
         var result = new HashSet<TypeElement>();
 
@@ -74,6 +86,11 @@ public final class JpaForgeProcessor extends AbstractProcessor {
     }
 
 
+    /**
+     * Generates a repository for the given entity model if it doesn't exist.
+     * 
+     * @param model the entity model
+     */
     private void addRepository(JpaEntityModel model) {
         if (alreadyExists(model.repositoryFqn())) return;
 
@@ -81,6 +98,11 @@ public final class JpaForgeProcessor extends AbstractProcessor {
         tryWriteTo(file, model.element());
     }
 
+    /**
+     * Generates a service for the given entity model if requested and doesn't exist.
+     * 
+     * @param model the entity model
+     */
     private void addService(JpaEntityModel model) {
         if (!model.requirements().wantsService() || alreadyExists(model.serviceFqn())) return;
 
@@ -88,6 +110,11 @@ public final class JpaForgeProcessor extends AbstractProcessor {
         tryWriteTo(file, model.element());
     }
 
+    /**
+     * Generates a REST controller for the given entity model if requested and doesn't exist.
+     * 
+     * @param model the entity model
+     */
     private void addController(JpaEntityModel model) {
         if (!model.requirements().wantsController() || alreadyExists(model.controllerFqn())) return;
 
@@ -95,10 +122,22 @@ public final class JpaForgeProcessor extends AbstractProcessor {
         tryWriteTo(file, model.element());
     }
 
+    /**
+     * Checks if a type with the given fully qualified name already exists.
+     * 
+     * @param fqn the fully qualified name to check
+     * @return true if exists, false otherwise
+     */
     private boolean alreadyExists(String fqn) {
         return processingEnv.getElementUtils().getTypeElement(fqn) != null;
     }
 
+    /**
+     * Attempts to write the generated Java file using the filer.
+     * 
+     * @param file the JavaPoet JavaFile
+     * @param element the source element for error logging
+     */
     private void tryWriteTo(JavaFile file, Element element) {
         try {
             file.writeTo(processingEnv.getFiler());

@@ -13,7 +13,21 @@ import java.util.Optional;
 
 import static com.kivojenko.spring.forge.jpa.utils.StringUtils.decapitalize;
 
+/**
+ * Represents the ID of a JPA entity.
+ *
+ * @param name the name of the ID property
+ * @param type the type of the ID property
+ */
 public record JpaId(String name, TypeName type) {
+    /**
+     * Resolves the ID of the given entity by scanning for {@link jakarta.persistence.Id} annotation.
+     * It searches both fields and methods, and scans superclasses.
+     *
+     * @param entity the entity type element
+     * @return the resolved JPA ID
+     * @throws IllegalStateException if no ID is found
+     */
     public static JpaId resolveId(TypeElement entity) {
         return resolveIdRecursive(entity).orElseThrow(() -> new IllegalStateException("Entity " +
                 entity.getQualifiedName() +

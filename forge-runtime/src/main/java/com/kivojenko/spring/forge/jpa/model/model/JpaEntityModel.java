@@ -19,6 +19,16 @@ import java.util.List;
 
 import static java.beans.Introspector.decapitalize;
 
+/**
+ * Represents a JPA entity model with information needed for code generation.
+ *
+ * @param element the entity type element
+ * @param entityType the JavaPoet class name of the entity
+ * @param jpaId information about the entity's ID field
+ * @param packages package names for generated classes
+ * @param requirements configuration requirements for the entity
+ * @param env the processing environment
+ */
 public record JpaEntityModel(TypeElement element,
                              ClassName entityType,
                              JpaId jpaId,
@@ -26,47 +36,94 @@ public record JpaEntityModel(TypeElement element,
                              JpaEntityModelRequirements requirements,
                              ProcessingEnvironment env) {
 
+    /**
+     * Resolves and returns all endpoint relations for this entity.
+     * @return a list of endpoint relations
+     */
     public List<EndpointRelation> endpointRelations() {
         return EndpointRelationFactory.resolve(element(), env);
     }
 
 
+    /**
+     * Gets the simple name of the generated repository interface.
+     * @return the repository name
+     */
     public String repositoryName() {
         return element.getSimpleName() + "ForgeRepository";
     }
 
+    /**
+     * Gets the fully qualified name of the generated repository interface.
+     * @return the repository FQN
+     */
     public String repositoryFqn() {
         return packages().repositoryPackageName() + "." + repositoryName();
     }
 
+    /**
+     * Gets the {@link ClassName} of the generated repository interface.
+     * @return the repository type
+     */
     public ClassName repositoryType() {
         return ClassName.get(packages().repositoryPackageName(), repositoryName());
     }
 
+    /**
+     * Gets the simple name of the generated service class.
+     * @return the service name
+     */
     public String serviceName() {
         return entityType.simpleName() + "ForgeService";
     }
 
+    /**
+     * Gets the fully qualified name of the generated service class.
+     * @return the service FQN
+     */
     public String serviceFqn() {
         return packages().servicePackageName() + "." + serviceName();
     }
 
+    /**
+     * Gets the {@link ClassName} of the generated service class.
+     * @return the service type
+     */
     public ClassName serviceType() {
         return ClassName.get(packages().servicePackageName(), serviceName());
     }
 
+    /**
+     * Gets the simple name of the generated REST controller class.
+     * @return the controller name
+     */
     public String controllerName() {
         return entityType.simpleName() + "ForgeController";
     }
 
+    /**
+     * Gets the fully qualified name of the generated REST controller class.
+     * @return the controller FQN
+     */
     public String controllerFqn() {
         return packages().controllerPackageName() + "." + controllerName();
     }
 
+    /**
+     * Gets the base path for the generated REST controller.
+     * @return the controller path
+     */
     public String controllerPath() {
         return decapitalize(entityType.simpleName()) + "s";
     }
 
+    /**
+     * Resolves the {@link MethodSpec} for creating a new entity instance,
+     * considering available constructors and builders.
+     *
+     * @return the create method specification
+     * @throws IllegalStateException if no suitable creation method is found
+     */
     public MethodSpec resolveCreateMethod() {
         if (hasBuilder()) {
             if (builderHasNameSetter()) return createViaBuilder();

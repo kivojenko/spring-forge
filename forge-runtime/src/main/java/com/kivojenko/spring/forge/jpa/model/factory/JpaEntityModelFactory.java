@@ -15,15 +15,30 @@ import static com.kivojenko.spring.forge.jpa.model.model.JpaEntityPackageNames.r
 import static com.kivojenko.spring.forge.jpa.model.model.JpaId.resolveId;
 
 
+/**
+ * Factory for creating and caching {@link JpaEntityModel} instances.
+ */
 public final class JpaEntityModelFactory {
 
     private static final Map<TypeElement, JpaEntityModel> CACHE = new HashMap<>();
     private static SpringForgeConfig config;
 
+    /**
+     * Returns all cached entity models.
+     *
+     * @return a list of all entity models
+     */
     public static List<JpaEntityModel> getAll() {
         return CACHE.values().stream().toList();
     }
 
+    /**
+     * Gets or creates the entity model for the given type element.
+     *
+     * @param entity the entity type element
+     * @param env the processing environment
+     * @return the entity model
+     */
     public static JpaEntityModel get(TypeElement entity, ProcessingEnvironment env) {
         if (config == null) config = SpringForgeConfig.load(env);
 
