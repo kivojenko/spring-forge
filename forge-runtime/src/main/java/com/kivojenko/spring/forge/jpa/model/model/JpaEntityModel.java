@@ -181,6 +181,11 @@ public record JpaEntityModel(TypeElement element,
                 .build();
     }
 
+    /**
+     * Checks if the entity class has a constructor that accepts a single String argument.
+     *
+     * @return true if it has a string constructor, false otherwise
+     */
     public boolean hasStringCtor() {
         return element().getEnclosedElements()
                 .stream()
@@ -190,6 +195,11 @@ public record JpaEntityModel(TypeElement element,
                 .anyMatch(c -> isString(c.getParameters().getFirst().asType()));
     }
 
+    /**
+     * Checks if the entity class has a no-argument constructor.
+     *
+     * @return true if it has an empty constructor, false otherwise
+     */
     public boolean hasEmptyCtor() {
         return element().getEnclosedElements()
                 .stream()
@@ -199,6 +209,11 @@ public record JpaEntityModel(TypeElement element,
     }
 
 
+    /**
+     * Checks if the entity's builder has a {@code name} setter method (or field).
+     *
+     * @return true if it has a name setter, false otherwise
+     */
     public boolean builderHasNameSetter() {
         return element().getEnclosedElements()
                 .stream()
@@ -207,17 +222,33 @@ public record JpaEntityModel(TypeElement element,
     }
 
 
+    /**
+     * Checks if the given type is a String.
+     *
+     * @param type the type mirror to check
+     * @return true if it is a String, false otherwise
+     */
     public static boolean isString(TypeMirror type) {
         return type.getKind() == TypeKind.DECLARED &&
                 ((TypeElement) ((DeclaredType) type).asElement()).getQualifiedName().contentEquals("java.lang.String");
     }
 
+    /**
+     * Checks if the entity class has a builder (either via {@code @Builder} or a static builder method).
+     *
+     * @return true if it has a builder, false otherwise
+     */
     public boolean hasBuilder() {
         return hasBuilderFactory() ||
                 element().getAnnotation(Builder.class) != null ||
                 element().getAnnotation(MappedSuperclass.class) != null;
     }
 
+    /**
+     * Checks if the entity class has a static {@code builder()} method.
+     *
+     * @return true if it has a builder factory method, false otherwise
+     */
     public boolean hasBuilderFactory() {
         return element().getEnclosedElements()
                 .stream()

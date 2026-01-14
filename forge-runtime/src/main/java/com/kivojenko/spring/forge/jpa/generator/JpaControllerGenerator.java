@@ -63,6 +63,12 @@ public final class JpaControllerGenerator {
         return spec.build();
     }
 
+    /**
+     * Determines the superclass for the generated controller.
+     * 
+     * @param model the entity model
+     * @return the parameterized type name of the superclass
+     */
     public static ParameterizedTypeName getSuperClass(JpaEntityModel model) {
         return model.requirements().wantsService() ? withService(model) : withoutService(model);
     }

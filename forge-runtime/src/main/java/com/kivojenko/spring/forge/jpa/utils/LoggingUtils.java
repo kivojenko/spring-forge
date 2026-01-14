@@ -7,7 +7,7 @@ import javax.tools.Diagnostic;
 /**
  * Utility for logging diagnostic messages during annotation processing.
  */
-public class LoggingUtils {
+public final class LoggingUtils {
     /**
      * Prints an informational message.
      * @param processingEnv the processing environment

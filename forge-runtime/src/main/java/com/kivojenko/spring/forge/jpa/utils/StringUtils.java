@@ -3,7 +3,7 @@ package com.kivojenko.spring.forge.jpa.utils;
 /**
  * Utility for string manipulations.
  */
-public class StringUtils {
+public final class StringUtils {
     /**
      * Capitalizes the first character of a string.
      * @param s the string to capitalize
