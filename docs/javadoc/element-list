@@ -1,0 +1,13 @@
+com.kivojenko.spring.forge.annotation
+com.kivojenko.spring.forge.annotation.endpoint
+com.kivojenko.spring.forge.config
+com.kivojenko.spring.forge.jpa.contract
+com.kivojenko.spring.forge.jpa.controller
+com.kivojenko.spring.forge.jpa.generator
+com.kivojenko.spring.forge.jpa.model.factory
+com.kivojenko.spring.forge.jpa.model.model
+com.kivojenko.spring.forge.jpa.model.relation
+com.kivojenko.spring.forge.jpa.repository
+com.kivojenko.spring.forge.jpa.service
+com.kivojenko.spring.forge.jpa.utils
+com.kivojenko.spring.forge.processor
