@@ -1,3 +1,35 @@
+### Release Notes - Version 0.1.1 (2026-01-15)
+
+This release introduces the Bill of Materials (BOM) for easier dependency management and includes several improvements and bug fixes.
+
+#### New Features
+
+- **Bill of Materials (BOM)**: Added `spring-forge-bom` to simplify dependency management across multiple modules.
+- **Improved Configuration Handling**: The processor now handles missing or malformed `springforge.yml` more gracefully, issuing a warning instead of a compilation error.
+
+#### Improvements & Bug Fixes
+
+- **Repository API Alignment**: Updated `HasNameRepository` to return `List` instead of `Iterable` for better compatibility with common Spring Data JPA patterns and easier usage in services.
+- **Documentation**: Refreshed Javadoc documentation across all modules.
+
+#### Installation
+
+Add the BOM to your `build.gradle.kts`:
+
+```kotlin
+implementation(platform("com.kivojenko.spring.forge:spring-forge-bom:0.1.1"))
+```
+
+Then add the required dependencies without versions:
+
+```kotlin
+compileOnly("com.kivojenko.spring.forge:forge-annotations")
+implementation("com.kivojenko.spring.forge:forge-runtime")
+annotationProcessor("com.kivojenko.spring.forge:forge-processor")
+```
+
+---
+
 ### Release Notes - Version 0.1.0 (2026-01-15)
 
 It is the first release of **Spring Forge**, an annotation-driven boilerplate generator for Spring Data JPA applications. Spring Forge simplifies development by generating repositories, services, and REST controllers at compile-time based on your entity definitions.
