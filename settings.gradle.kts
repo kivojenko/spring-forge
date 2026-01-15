@@ -6,3 +6,5 @@ include(
     "forge-runtime",
     "forge-config"
 )
+
+include("forge-bom")

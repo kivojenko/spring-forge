@@ -3,6 +3,7 @@ package com.kivojenko.spring.forge.jpa.repository;
 import com.kivojenko.spring.forge.jpa.contract.HasName;
 import org.springframework.data.domain.Pageable;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -45,7 +46,7 @@ public interface HasNameRepository<E extends HasName> {
      * @param name the substring to search for
      * @return an iterable of matching entities
      */
-    Iterable<E> findAllByNameContaining(String name);
+    List<E> findAllByNameContaining(String name);
 
     /**
      * Finds a page of entities whose name contains the given string, ignoring case.
@@ -53,5 +54,5 @@ public interface HasNameRepository<E extends HasName> {
      * @param pageable the pagination information
      * @return an iterable of matching entities
      */
-    Iterable<E> findAllByNameContainingIgnoreCase(String name, Pageable pageable);
+    List<E> findAllByNameContainingIgnoreCase(String name, Pageable pageable);
 }

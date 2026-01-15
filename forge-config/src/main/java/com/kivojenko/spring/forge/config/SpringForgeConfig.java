@@ -8,7 +8,6 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.tools.Diagnostic;
 import javax.tools.StandardLocation;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.nio.file.Path;
 import java.util.Map;
 
@@ -67,14 +66,12 @@ public final class SpringForgeConfig {
             var properties = Path.of(projectRoot.toString(), "src", "main", "resources", "springforge.yml");
             return new Yaml().load(new FileInputStream(properties.toFile()));
 
-        } catch (FileNotFoundException e) {
-            return Map.of();
         } catch (Exception e) {
             env.getMessager()
-                    .printMessage(Diagnostic.Kind.ERROR,
+                    .printMessage(Diagnostic.Kind.WARNING,
                             "Failed to read springforge.yml: " + e.getClass().getName() + ": " + e.getMessage());
 
-            throw e;
+            return Map.of();
         }
     }
 

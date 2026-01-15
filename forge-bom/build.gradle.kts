@@ -1,21 +1,10 @@
-import org.gradle.api.publish.maven.MavenPublication
-
-
 plugins {
-    `java-library`
+    `java-platform`
 }
 
-java {
-    toolchain.languageVersion.set(JavaLanguageVersion.of(21))
-    withSourcesJar()
-    withJavadocJar()
+javaPlatform {
+    allowDependencies()
 }
-
-tasks.withType<Javadoc>().configureEach {
-    (options as StandardJavadocDocletOptions).addStringOption("Xdoclint:none", "-quiet")
-}
-
-
 publishing {
     repositories {
         maven {
@@ -27,13 +16,19 @@ publishing {
             }
         }
     }
+
     publications {
-        register<MavenPublication>("mavenJava") {
-            from(components["java"])
+        register<MavenPublication>("mavenBom") {
+            from(components["javaPlatform"])
+
+            groupId = "com.kivojenko.spring.forge"
+            artifactId = "spring-forge-bom"
+            version = project.version.toString()
 
             pom {
-                name.set("forge-processor")
-                description.set("Spring Forge processor")
+                packaging = "pom"
+                name.set("Spring Forge BOM")
+                description.set("Bill of Materials for Spring Forge modules")
                 url.set("https://github.com/kivojenko/spring-forge")
 
                 licenses {
@@ -47,8 +42,8 @@ publishing {
                     developer {
                         id.set("kivojenko")
                         name.set("Ksenija Kivojenko")
-                        url.set("https://github.com/kivojenko")
                         email.set("kivojenko@gmail.com")
+                        url.set("https://github.com/kivojenko")
                     }
                 }
 
@@ -62,15 +57,18 @@ publishing {
     }
 }
 
+
 signing {
     useGpgCmd()
-    sign(publishing.publications["mavenJava"])
+    sign(publishing.publications["mavenBom"])
 }
 
 
 dependencies {
-    implementation(project(":forge-annotations"))
-    implementation(project(":forge-runtime"))
-
-    implementation("com.squareup:javapoet:1.13.0")
+    constraints {
+        api("com.kivojenko.spring.forge:forge-annotations:0.1.1")
+        api("com.kivojenko.spring.forge:forge-config:0.1.1")
+        api("com.kivojenko.spring.forge:forge-jpa:0.1.1")
+        api("com.kivojenko.spring.forge:forge-runtime:0.1.1")
+    }
 }

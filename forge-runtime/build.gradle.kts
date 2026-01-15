@@ -1,6 +1,21 @@
 import org.gradle.api.publish.maven.MavenPublication
 
 
+plugins {
+    `java-library`
+}
+
+java {
+    toolchain.languageVersion.set(JavaLanguageVersion.of(21))
+    withSourcesJar()
+    withJavadocJar()
+}
+
+tasks.withType<Javadoc>().configureEach {
+    (options as StandardJavadocDocletOptions).addStringOption("Xdoclint:none", "-quiet")
+}
+
+
 publishing {
     repositories {
         maven {
@@ -60,7 +75,6 @@ dependencies {
     implementation("com.squareup:javapoet:1.13.0")
 
     compileOnly("org.springframework:spring-web:7.0.1")
-    compileOnly("org.springframework:spring-context:7.0.1")
     compileOnly("org.springframework.data:spring-data-jpa:4.0.1")
 
     compileOnly("jakarta.validation:jakarta.validation-api:3.0.2")

@@ -18,7 +18,7 @@ tasks.register<Javadoc>("aggregateJavadoc") {
 
 allprojects {
     group = "com.kivojenko.spring.forge"
-    version = "0.1.0"
+    version = "0.1.1"
 
     repositories {
         mavenCentral()
@@ -26,19 +26,7 @@ allprojects {
 }
 
 subprojects {
-
-    apply(plugin = "java-library")
     apply(plugin = "maven-publish")
     apply(plugin = "signing")
 
-    extensions.configure<JavaPluginExtension> {
-        toolchain.languageVersion.set(JavaLanguageVersion.of(21))
-        withSourcesJar()
-        withJavadocJar()
-    }
-
-    tasks.withType<Javadoc>().configureEach {
-        (options as StandardJavadocDocletOptions)
-            .addStringOption("Xdoclint:none", "-quiet")
-    }
 }
