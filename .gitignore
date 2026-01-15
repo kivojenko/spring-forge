@@ -1,6 +1,7 @@
 .gradle
 .idea
 build/
+docs/javadoc/**
 !**/src/main/**/build/
 !**/src/test/**/build/
 .kotlin

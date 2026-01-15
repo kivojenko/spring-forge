@@ -1,8 +1,3 @@
-import org.gradle.api.tasks.javadoc.Javadoc
-import org.gradle.api.tasks.SourceSetContainer
-import org.gradle.api.plugins.JavaPlugin
-import org.gradle.external.javadoc.StandardJavadocDocletOptions
-
 tasks.register<Javadoc>("aggregateJavadoc") {
     destinationDir = file("$rootDir/docs/javadoc")
 
@@ -27,5 +22,23 @@ allprojects {
 
     repositories {
         mavenCentral()
+    }
+}
+
+subprojects {
+
+    apply(plugin = "java-library")
+    apply(plugin = "maven-publish")
+    apply(plugin = "signing")
+
+    extensions.configure<JavaPluginExtension> {
+        toolchain.languageVersion.set(JavaLanguageVersion.of(21))
+        withSourcesJar()
+        withJavadocJar()
+    }
+
+    tasks.withType<Javadoc>().configureEach {
+        (options as StandardJavadocDocletOptions)
+            .addStringOption("Xdoclint:none", "-quiet")
     }
 }
