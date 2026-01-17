@@ -1,6 +1,7 @@
 package com.kivojenko.spring.forge.jpa.model.model;
 
 import com.kivojenko.spring.forge.annotation.GetOrCreate;
+import com.kivojenko.spring.forge.annotation.WithJpaRepository;
 import com.kivojenko.spring.forge.annotation.WithRestController;
 import com.kivojenko.spring.forge.annotation.WithService;
 import com.kivojenko.spring.forge.jpa.utils.LoggingUtils;
@@ -12,13 +13,16 @@ import javax.lang.model.element.TypeElement;
  * Requirements and configuration flags for a JPA entity model.
  *
  * @param hasName                    whether the entity has name property
- * @param wantsService               whether a service should be generated
+ * @param wantsAbstractService       whether an abstract service should be generated
+ * @param wantsImplementedService    whether an implemented service should be generated
  * @param wantsAbstractController    whether an abstract controller should be generated
  * @param wantsImplementedController whether an implemented controller should be generated
  * @param wantsGetOrCreate           whether a "get or create" operation should be generated
  */
 public record JpaEntityRequirements(boolean hasName,
-                                    boolean wantsService,
+                                    boolean wantsAbstractRepository,
+                                    boolean wantsAbstractService,
+                                    boolean wantsImplementedService,
                                     boolean wantsAbstractController,
                                     boolean wantsImplementedController,
                                     boolean wantsGetOrCreate) {
@@ -37,27 +41,51 @@ public record JpaEntityRequirements(boolean hasName,
         var hasName = hasNameType != null && types.isAssignable(entity.asType(), hasNameType.asType());
 
         var controllerAnnotation = entity.getAnnotation(WithRestController.class);
-
         var wantsAbstractController = controllerAnnotation != null && controllerAnnotation.makeAbstract();
         var wantsImplementedController = controllerAnnotation != null && !controllerAnnotation.makeAbstract();
 
-        var wantsService = entity.getAnnotation(WithService.class) != null;
+        var serviceAnnotation = entity.getAnnotation(WithService.class);
+        var wantsAbstractService = serviceAnnotation != null && serviceAnnotation.makeAbstract();
+        var wantsImplementedService = serviceAnnotation != null && !serviceAnnotation.makeAbstract();
+
+        var repositoryAnnotation = entity.getAnnotation(WithJpaRepository.class);
+        var wantsAbstractRepository = repositoryAnnotation != null && repositoryAnnotation.makeAbstract();
 
         var wantsGetOrCreate = entity.getAnnotation(GetOrCreate.class) != null;
 
         if (wantsGetOrCreate && !hasName) {
-            LoggingUtils.warn(env, entity, "Entity " +
-                    entity.getSimpleName() +
-                    " is annotated with @WithGetOrCreate but does not implement HasName");
+            LoggingUtils.warn(
+                    env,
+                    entity,
+                    "Entity " +
+                            entity.getSimpleName() +
+                            " is annotated with @WithGetOrCreate but does not implement HasName"
+            );
             wantsGetOrCreate = false;
         }
 
-        if (wantsGetOrCreate && !wantsService) {
-            wantsService = true;
+        if (wantsGetOrCreate && !(wantsAbstractService || wantsImplementedService)) {
+            wantsImplementedService = true;
         }
 
-        return new JpaEntityRequirements(hasName, wantsService, wantsAbstractController, wantsImplementedController,
-                wantsGetOrCreate);
+        return new JpaEntityRequirements(
+                hasName,
+                wantsAbstractRepository,
+                wantsAbstractService,
+                wantsImplementedService,
+                wantsAbstractController,
+                wantsImplementedController,
+                wantsGetOrCreate
+        );
+    }
+
+    /**
+     * Checks if a service should be generated for the entity.
+     *
+     * @return true if a service should be generated, false otherwise
+     */
+    public boolean wantsService() {
+        return wantsAbstractService || wantsImplementedService;
     }
 
     /**

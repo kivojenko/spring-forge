@@ -1,3 +1,28 @@
+### Release Notes - Version 0.1.3 (2026-01-17)
+
+This release introduces the ability to generate abstract repositories and services, and fixes an issue where `@RequestMapping` was added to abstract controllers.
+
+#### New Features
+
+- **Abstract Repositories**: Added `makeAbstract` attribute to `@WithJpaRepository`. When set to `true`, the generated repository will be abstract.
+- **Abstract Services**: Added `makeAbstract` attribute to `@WithService`. When set to `true`, the generated service will be abstract and won't have the `@Service` annotation, allowing for custom implementations while keeping the generated CRUD logic.
+
+#### Improvements & Bug Fixes
+
+- **Controller Generation**: Fixed a bug where abstract controllers (generated with `@WithRestController(makeAbstract = true)`) were incorrectly annotated with `@RestController` and `@RequestMapping`. These annotations are now only applied to non-abstract (implemented) controllers.
+- **Service Generation**: Fixed a bug where in entities with non-string type name services still tried to use string for getOrCreate
+- **Requirements Model**: Updated internal `JpaEntityRequirements` to properly distinguish between abstract and implemented states for repositories, services, and controllers.
+
+#### Installation
+
+Update the version in your `build.gradle.kts`:
+
+```kotlin
+implementation(platform("com.kivojenko.spring.forge:spring-forge-bom:0.1.3"))
+```
+
+---
+
 ### Release Notes - Version 0.1.2 (2026-01-15)
 
 This release introduces the ability to generate abstract controllers and includes internal refactorings and documentation improvements.

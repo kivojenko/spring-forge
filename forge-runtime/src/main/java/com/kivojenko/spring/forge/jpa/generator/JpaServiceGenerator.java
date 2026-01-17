@@ -43,7 +43,13 @@ public final class JpaServiceGenerator {
      * @return the type specification
      */
     public static TypeSpec generate(JpaEntityModel model) {
-        var spec = TypeSpec.classBuilder(model.serviceName()).addModifiers(Modifier.PUBLIC).addAnnotation(SERVICE);
+        var spec = TypeSpec.classBuilder(model.serviceName()).addModifiers(Modifier.PUBLIC);
+
+        if (model.requirements().wantsAbstractService()) {
+            spec.addModifiers(Modifier.ABSTRACT);
+        } else if (model.requirements().wantsImplementedService()) {
+            spec.addAnnotation(SERVICE);
+        }
 
         var superClassName = FORGE_SERVICE;
         if (model.requirements().hasName()) {

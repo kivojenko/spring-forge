@@ -45,9 +45,6 @@ public final class JpaControllerGenerator {
      * @return the type specification
      */
     public static TypeSpec generate(JpaEntityModel model) {
-        var mappingAnnotation =
-                AnnotationSpec.builder(REQUEST_MAPPING).addMember("value", "$S", model.controllerPath()).build();
-
         var spec = TypeSpec.classBuilder(model.controllerName())
                 .addModifiers(Modifier.PUBLIC)
                 .superclass(getSuperClass(model));
@@ -55,6 +52,10 @@ public final class JpaControllerGenerator {
         if (model.requirements().wantsAbstractController()) {
             spec.addModifiers(Modifier.ABSTRACT);
         } else if (model.requirements().wantsImplementedController()) {
+            var mappingAnnotation = AnnotationSpec
+                            .builder(REQUEST_MAPPING)
+                            .addMember("value", "$S", model.controllerPath())
+                            .build();
             spec.addAnnotation(REST_CONTROLLER).addAnnotation(mappingAnnotation);
         }
 

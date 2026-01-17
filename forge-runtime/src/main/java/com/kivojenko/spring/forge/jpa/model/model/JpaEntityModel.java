@@ -229,7 +229,7 @@ public record JpaEntityModel(TypeElement element,
         return element().getEnclosedElements()
                 .stream()
                 .filter(c -> c.getKind() == ElementKind.FIELD)
-                .anyMatch(c -> c.getSimpleName().contentEquals("name"));
+                .anyMatch(c -> c.getSimpleName().contentEquals("name") && isNameType(c.asType()));
     }
 
 

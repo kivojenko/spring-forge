@@ -40,6 +40,9 @@ public final class JpaRepositoryGenerator {
                 .addModifiers(Modifier.PUBLIC)
                 .addSuperinterface(jpaRepositoryOf(model));
 
+        if (model.requirements().wantsAbstractRepository()) {
+            builder.addModifiers(Modifier.ABSTRACT);
+        }
         if (model.requirements().hasName()) {
             builder.addSuperinterface(hasNameRepositoryOf(model));
         }
