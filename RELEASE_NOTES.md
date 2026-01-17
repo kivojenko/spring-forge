@@ -1,3 +1,27 @@
+### Release Notes - Version 0.1.2 (2026-01-15)
+
+This release introduces the ability to generate abstract controllers and includes internal refactorings and documentation improvements.
+
+#### New Features
+
+- **Abstract Controllers**: Added `makeAbstract` attribute to `@WithRestController`. When set to `true`, the generated controller will be abstract, allowing developers to extend it and provide custom implementation logic while still benefiting from the generated boilerplate.
+
+#### Improvements & Internal Changes
+
+- **Javadoc Enhancements**: Added missing `@return` tags and other Javadoc improvements to the annotation classes for better IDE support and documentation clarity.
+- **Internal Refactoring**: Refactored the internal model structure by renaming `JpaEntityModelRequirements` to `JpaEntityRequirements` for better naming consistency.
+- **Processor Reliability**: Improved package scanning in the annotation processor to ensure better entity detection in certain project structures.
+
+#### Installation
+
+Update the version in your `build.gradle.kts`:
+
+```kotlin
+implementation(platform("com.kivojenko.spring.forge:spring-forge-bom:0.1.2"))
+```
+
+---
+
 ### Release Notes - Version 0.1.1 (2026-01-15)
 
 This release introduces the Bill of Materials (BOM) for easier dependency management and includes several improvements and bug fixes.

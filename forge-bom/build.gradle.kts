@@ -66,9 +66,9 @@ signing {
 
 dependencies {
     constraints {
-        api("com.kivojenko.spring.forge:forge-annotations:0.1.1")
-        api("com.kivojenko.spring.forge:forge-config:0.1.1")
-        api("com.kivojenko.spring.forge:forge-jpa:0.1.1")
-        api("com.kivojenko.spring.forge:forge-runtime:0.1.1")
+        api("com.kivojenko.spring.forge:forge-annotations:0.1.2")
+        api("com.kivojenko.spring.forge:forge-config:0.1.2")
+        api("com.kivojenko.spring.forge:forge-processor:0.1.2")
+        api("com.kivojenko.spring.forge:forge-runtime:0.1.2")
     }
 }

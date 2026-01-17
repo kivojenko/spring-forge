@@ -43,17 +43,17 @@ public final class SpringForgeConfig {
      */
     public static SpringForgeConfig load(ProcessingEnvironment env) {
         var yaml = loadYaml(env);
-        var options = env.getOptions();
 
-        return new SpringForgeConfig(firstNonNull(fromYaml(yaml, "repository.package"),
-                options.get("springforge.repository.package")),
-                firstNonNull(fromYaml(yaml, "service.package"), options.get("springforge.service.package")),
-                firstNonNull(fromYaml(yaml, "controller.package"), options.get("springforge.controller.package")));
+        return new SpringForgeConfig(
+                fromYaml(yaml, "repository.package"),
+                fromYaml(yaml, "service.package"),
+                fromYaml(yaml, "controller.package")
+        );
     }
 
     /**
      * Loads the YAML configuration from the project resources.
-     * 
+     *
      * @param env the processing environment
      * @return a map representing the YAML content, or an empty map if not found
      */
@@ -67,9 +67,10 @@ public final class SpringForgeConfig {
             return new Yaml().load(new FileInputStream(properties.toFile()));
 
         } catch (Exception e) {
-            env.getMessager()
-                    .printMessage(Diagnostic.Kind.WARNING,
-                            "Failed to read springforge.yml: " + e.getClass().getName() + ": " + e.getMessage());
+            env.getMessager().printMessage(
+                    Diagnostic.Kind.WARNING,
+                    "Failed to read springforge.yml: " + e.getClass().getName() + ": " + e.getMessage()
+            );
 
             return Map.of();
         }
@@ -78,7 +79,7 @@ public final class SpringForgeConfig {
 
     /**
      * Retrieves a string value from a nested map based on a dot-separated path.
-     * 
+     *
      * @param yaml the configuration map
      * @param path the dot-separated path (e.g., "service.package")
      * @return the string value if found and is a string, {@code null} otherwise
@@ -92,18 +93,5 @@ public final class SpringForgeConfig {
             current = map.get(key);
         }
         return current instanceof String s ? s : null;
-    }
-
-    /**
-     * Returns the first non-null and non-blank string from the provided values.
-     * 
-     * @param values the strings to check
-     * @return the first non-null/non-blank string, or {@code null} if none found
-     */
-    private static String firstNonNull(String... values) {
-        for (var v : values) {
-            if (v != null && !v.isBlank()) return v;
-        }
-        return null;
     }
 }

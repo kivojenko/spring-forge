@@ -10,7 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.kivojenko.spring.forge.jpa.model.model.JpaEntityModelRequirements.resolveRequirements;
+import static com.kivojenko.spring.forge.jpa.model.model.JpaEntityRequirements.resolveRequirements;
 import static com.kivojenko.spring.forge.jpa.model.model.JpaEntityPackageNames.resolvePackageNames;
 import static com.kivojenko.spring.forge.jpa.model.model.JpaId.resolveId;
 

@@ -16,6 +16,8 @@ public @interface GetOrCreate {
     /**
      * The custom path for the "get or create" endpoint.
      * If empty, a default path based on the entity name will be used.
+     *
+     * @return the custom path
      */
     String path() default "";
 }

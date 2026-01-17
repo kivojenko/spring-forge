@@ -14,6 +14,8 @@ public @interface WithGetEndpoint {
     /**
      * The custom path for the GET endpoint.
      * If empty, a default path based on the method name will be used.
+     *
+     * @return the custom path
      */
     String path() default "";
 }

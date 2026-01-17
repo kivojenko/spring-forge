@@ -14,6 +14,8 @@ public @interface WithService {
     /**
      * The package name where the generated service should be placed.
      * If empty, it will be placed in a default service package.
+     *
+     * @return the package name
      */
     String packageName() default "";
 }

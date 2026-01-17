@@ -22,22 +22,23 @@ import static java.beans.Introspector.decapitalize;
 /**
  * Represents a JPA entity model with information needed for code generation.
  *
- * @param element the entity type element
- * @param entityType the JavaPoet class name of the entity
- * @param jpaId information about the entity's ID field
- * @param packages package names for generated classes
+ * @param element      the entity type element
+ * @param entityType   the JavaPoet class name of the entity
+ * @param jpaId        information about the entity's ID field
+ * @param packages     package names for generated classes
  * @param requirements configuration requirements for the entity
- * @param env the processing environment
+ * @param env          the processing environment
  */
 public record JpaEntityModel(TypeElement element,
                              ClassName entityType,
                              JpaId jpaId,
                              JpaEntityPackageNames packages,
-                             JpaEntityModelRequirements requirements,
+                             JpaEntityRequirements requirements,
                              ProcessingEnvironment env) {
 
     /**
      * Resolves and returns all endpoint relations for this entity.
+     *
      * @return a list of endpoint relations
      */
     public List<EndpointRelation> endpointRelations() {
@@ -47,6 +48,7 @@ public record JpaEntityModel(TypeElement element,
 
     /**
      * Gets the simple name of the generated repository interface.
+     *
      * @return the repository name
      */
     public String repositoryName() {
@@ -55,6 +57,7 @@ public record JpaEntityModel(TypeElement element,
 
     /**
      * Gets the fully qualified name of the generated repository interface.
+     *
      * @return the repository FQN
      */
     public String repositoryFqn() {
@@ -63,6 +66,7 @@ public record JpaEntityModel(TypeElement element,
 
     /**
      * Gets the {@link ClassName} of the generated repository interface.
+     *
      * @return the repository type
      */
     public ClassName repositoryType() {
@@ -71,6 +75,7 @@ public record JpaEntityModel(TypeElement element,
 
     /**
      * Gets the simple name of the generated service class.
+     *
      * @return the service name
      */
     public String serviceName() {
@@ -79,6 +84,7 @@ public record JpaEntityModel(TypeElement element,
 
     /**
      * Gets the fully qualified name of the generated service class.
+     *
      * @return the service FQN
      */
     public String serviceFqn() {
@@ -87,6 +93,7 @@ public record JpaEntityModel(TypeElement element,
 
     /**
      * Gets the {@link ClassName} of the generated service class.
+     *
      * @return the service type
      */
     public ClassName serviceType() {
@@ -95,6 +102,7 @@ public record JpaEntityModel(TypeElement element,
 
     /**
      * Gets the simple name of the generated REST controller class.
+     *
      * @return the controller name
      */
     public String controllerName() {
@@ -103,6 +111,7 @@ public record JpaEntityModel(TypeElement element,
 
     /**
      * Gets the fully qualified name of the generated REST controller class.
+     *
      * @return the controller FQN
      */
     public String controllerFqn() {
@@ -111,11 +120,13 @@ public record JpaEntityModel(TypeElement element,
 
     /**
      * Gets the base path for the generated REST controller.
+     *
      * @return the controller path
      */
     public String controllerPath() {
         return decapitalize(entityType.simpleName()) + "s";
     }
+
 
     /**
      * Resolves the {@link MethodSpec} for creating a new entity instance,
@@ -131,7 +142,7 @@ public record JpaEntityModel(TypeElement element,
         }
 
         if (hasEmptyCtor()) return createViaEmptyCtorAndSetter();
-        if (hasStringCtor()) return createViaCtor();
+        if (hasNameCtor()) return createViaCtor();
 
         throw new IllegalStateException("Cannot generate getOrCreate for " + element().getSimpleName());
     }
@@ -186,13 +197,13 @@ public record JpaEntityModel(TypeElement element,
      *
      * @return true if it has a string constructor, false otherwise
      */
-    public boolean hasStringCtor() {
+    public boolean hasNameCtor() {
         return element().getEnclosedElements()
                 .stream()
                 .filter(e -> e.getKind() == ElementKind.CONSTRUCTOR)
                 .map(ExecutableElement.class::cast)
                 .filter(c -> c.getParameters().size() == 1)
-                .anyMatch(c -> isString(c.getParameters().getFirst().asType()));
+                .anyMatch(c -> isNameType(c.getParameters().getFirst().asType()));
     }
 
     /**
@@ -228,7 +239,7 @@ public record JpaEntityModel(TypeElement element,
      * @param type the type mirror to check
      * @return true if it is a String, false otherwise
      */
-    public static boolean isString(TypeMirror type) {
+    public boolean isNameType(TypeMirror type) {
         return type.getKind() == TypeKind.DECLARED &&
                 ((TypeElement) ((DeclaredType) type).asElement()).getQualifiedName().contentEquals("java.lang.String");
     }

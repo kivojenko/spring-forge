@@ -14,6 +14,8 @@ public @interface WithJpaRepository {
     /**
      * The package name where the generated repository should be placed.
      * If empty, it will be placed in a default repository package.
+     *
+     * @return the package name
      */
     String packageName() default "";
 }

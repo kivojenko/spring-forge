@@ -61,9 +61,9 @@ public final class JpaForgeProcessor extends AbstractProcessor {
     /**
      * Expands the entity graph by following relationships defined on the root entities.
      * This ensures that related entities also have models generated if they are part of an endpoint.
-     * 
+     *
      * @param roots the set of initial entity type elements
-     * @param env the processing environment
+     * @param env   the processing environment
      */
     void expandEntityGraph(Set<TypeElement> roots, ProcessingEnvironment env) {
         var result = new HashSet<TypeElement>();
@@ -88,7 +88,7 @@ public final class JpaForgeProcessor extends AbstractProcessor {
 
     /**
      * Generates a repository for the given entity model if it doesn't exist.
-     * 
+     *
      * @param model the entity model
      */
     private void addRepository(JpaEntityModel model) {
@@ -100,7 +100,7 @@ public final class JpaForgeProcessor extends AbstractProcessor {
 
     /**
      * Generates a service for the given entity model if requested and doesn't exist.
-     * 
+     *
      * @param model the entity model
      */
     private void addService(JpaEntityModel model) {
@@ -112,7 +112,7 @@ public final class JpaForgeProcessor extends AbstractProcessor {
 
     /**
      * Generates a REST controller for the given entity model if requested and doesn't exist.
-     * 
+     *
      * @param model the entity model
      */
     private void addController(JpaEntityModel model) {
@@ -124,7 +124,7 @@ public final class JpaForgeProcessor extends AbstractProcessor {
 
     /**
      * Checks if a type with the given fully qualified name already exists.
-     * 
+     *
      * @param fqn the fully qualified name to check
      * @return true if exists, false otherwise
      */
@@ -134,8 +134,8 @@ public final class JpaForgeProcessor extends AbstractProcessor {
 
     /**
      * Attempts to write the generated Java file using the filer.
-     * 
-     * @param file the JavaPoet JavaFile
+     *
+     * @param file    the JavaPoet JavaFile
      * @param element the source element for error logging
      */
     private void tryWriteTo(JavaFile file, Element element) {

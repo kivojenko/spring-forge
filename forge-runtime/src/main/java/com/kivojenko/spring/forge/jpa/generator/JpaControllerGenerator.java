@@ -50,9 +50,13 @@ public final class JpaControllerGenerator {
 
         var spec = TypeSpec.classBuilder(model.controllerName())
                 .addModifiers(Modifier.PUBLIC)
-                .addAnnotation(REST_CONTROLLER)
-                .addAnnotation(mappingAnnotation)
                 .superclass(getSuperClass(model));
+
+        if (model.requirements().wantsAbstractController()) {
+            spec.addModifiers(Modifier.ABSTRACT);
+        } else if (model.requirements().wantsImplementedController()) {
+            spec.addAnnotation(REST_CONTROLLER).addAnnotation(mappingAnnotation);
+        }
 
         if (!model.requirements().wantsService()) {
             spec.addMethod(getSetIdMethod(model));
@@ -65,7 +69,7 @@ public final class JpaControllerGenerator {
 
     /**
      * Determines the superclass for the generated controller.
-     * 
+     *
      * @param model the entity model
      * @return the parameterized type name of the superclass
      */
