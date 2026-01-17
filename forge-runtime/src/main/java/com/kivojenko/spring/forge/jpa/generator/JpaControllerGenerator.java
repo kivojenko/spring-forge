@@ -17,10 +17,14 @@ import static com.kivojenko.spring.forge.jpa.generator.MethodGenerator.getSetIdM
  */
 public final class JpaControllerGenerator {
 
-    private static final ClassName REST_CONTROLLER =
-            ClassName.get("org.springframework.web.bind.annotation", "RestController");
-    private static final ClassName REQUEST_MAPPING =
-            ClassName.get("org.springframework.web.bind.annotation", "RequestMapping");
+    private static final ClassName REST_CONTROLLER = ClassName.get(
+            "org.springframework.web.bind.annotation",
+            "RestController"
+    );
+    private static final ClassName REQUEST_MAPPING = ClassName.get(
+            "org.springframework.web.bind.annotation",
+            "RequestMapping"
+    );
 
     private static final ClassName ABSTRACT_CONTROLLER = ClassName.get(ForgeController.class);
     private static final ClassName HAS_NAME_CONTROLLER = ClassName.get(HasNameForgeController.class);
@@ -45,23 +49,22 @@ public final class JpaControllerGenerator {
      * @return the type specification
      */
     public static TypeSpec generate(JpaEntityModel model) {
-        var spec = TypeSpec.classBuilder(model.controllerName())
+        var spec = TypeSpec
+                .classBuilder(model.controllerName())
                 .addModifiers(Modifier.PUBLIC)
                 .superclass(getSuperClass(model));
 
         if (model.requirements().wantsAbstractController()) {
             spec.addModifiers(Modifier.ABSTRACT);
-        } else if (model.requirements().wantsImplementedController()) {
+        } else {
             var mappingAnnotation = AnnotationSpec
-                            .builder(REQUEST_MAPPING)
-                            .addMember("value", "$S", model.controllerPath())
-                            .build();
+                    .builder(REQUEST_MAPPING)
+                    .addMember("value", "$S", model.controllerPath())
+                    .build();
             spec.addAnnotation(REST_CONTROLLER).addAnnotation(mappingAnnotation);
         }
 
-        if (!model.requirements().wantsService()) {
-            spec.addMethod(getSetIdMethod(model));
-        }
+        if (!model.requirements().wantsService()) spec.addMethod(getSetIdMethod(model));
 
         model.endpointRelations().forEach(r -> addRelationEndpoints(spec, r));
 
@@ -81,11 +84,13 @@ public final class JpaControllerGenerator {
     private static ParameterizedTypeName withService(JpaEntityModel model) {
         var superClass = model.requirements().hasName() ? HAS_NAME_WITH_SERVICE_CONTROLLER : HAS_SERVICE_CONTROLLER;
 
-        return ParameterizedTypeName.get(superClass,
+        return ParameterizedTypeName.get(
+                superClass,
                 model.entityType(),
                 model.jpaId().type(),
                 model.repositoryType(),
-                model.serviceType());
+                model.serviceType()
+        );
     }
 
     private static ParameterizedTypeName withoutService(JpaEntityModel model) {

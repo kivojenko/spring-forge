@@ -29,12 +29,14 @@ import static java.beans.Introspector.decapitalize;
  * @param requirements configuration requirements for the entity
  * @param env          the processing environment
  */
-public record JpaEntityModel(TypeElement element,
-                             ClassName entityType,
-                             JpaId jpaId,
-                             JpaEntityPackageNames packages,
-                             JpaEntityRequirements requirements,
-                             ProcessingEnvironment env) {
+public record JpaEntityModel(
+        TypeElement element,
+        ClassName entityType,
+        JpaId jpaId,
+        JpaEntityPackageNames packages,
+        JpaEntityRequirements requirements,
+        ProcessingEnvironment env
+) {
 
     /**
      * Resolves and returns all endpoint relations for this entity.
@@ -124,6 +126,12 @@ public record JpaEntityModel(TypeElement element,
      * @return the controller path
      */
     public String controllerPath() {
+        var annotation = requirements().controllerAnnotation();
+        if (annotation != null && !annotation.path().isEmpty()) return annotation.path();
+
+        if (entityType.simpleName().endsWith("y")) {
+            return decapitalize(entityType.simpleName()).substring(0, entityType.simpleName().length() - 1) + "ies";
+        }
         return decapitalize(entityType.simpleName()) + "s";
     }
 
@@ -144,12 +152,13 @@ public record JpaEntityModel(TypeElement element,
         if (hasEmptyCtor()) return createViaEmptyCtorAndSetter();
         if (hasNameCtor()) return createViaCtor();
 
-        throw new IllegalStateException("Cannot generate getOrCreate for " + element().getSimpleName());
+        throw new IllegalStateException("Cannot generate getOrCreateAnnotation for " + element().getSimpleName());
     }
 
 
     private MethodSpec createViaCtor() {
-        return MethodSpec.methodBuilder("create")
+        return MethodSpec
+                .methodBuilder("create")
                 .addAnnotation(Override.class)
                 .addModifiers(Modifier.PROTECTED)
                 .returns(entityType())
@@ -159,7 +168,8 @@ public record JpaEntityModel(TypeElement element,
     }
 
     private MethodSpec createViaBuilder() {
-        return MethodSpec.methodBuilder("create")
+        return MethodSpec
+                .methodBuilder("create")
                 .addAnnotation(Override.class)
                 .addModifiers(Modifier.PROTECTED)
                 .returns(entityType())
@@ -169,7 +179,8 @@ public record JpaEntityModel(TypeElement element,
     }
 
     private MethodSpec createViaEmptyCtorAndSetter() {
-        return MethodSpec.methodBuilder("create")
+        return MethodSpec
+                .methodBuilder("create")
                 .addAnnotation(Override.class)
                 .addModifiers(Modifier.PROTECTED)
                 .returns(entityType())
@@ -181,7 +192,8 @@ public record JpaEntityModel(TypeElement element,
     }
 
     private MethodSpec createViaBuilderAndSetter() {
-        return MethodSpec.methodBuilder("create")
+        return MethodSpec
+                .methodBuilder("create")
                 .addAnnotation(Override.class)
                 .addModifiers(Modifier.PROTECTED)
                 .returns(entityType())
@@ -198,7 +210,8 @@ public record JpaEntityModel(TypeElement element,
      * @return true if it has a string constructor, false otherwise
      */
     public boolean hasNameCtor() {
-        return element().getEnclosedElements()
+        return element()
+                .getEnclosedElements()
                 .stream()
                 .filter(e -> e.getKind() == ElementKind.CONSTRUCTOR)
                 .map(ExecutableElement.class::cast)
@@ -212,7 +225,8 @@ public record JpaEntityModel(TypeElement element,
      * @return true if it has an empty constructor, false otherwise
      */
     public boolean hasEmptyCtor() {
-        return element().getEnclosedElements()
+        return element()
+                .getEnclosedElements()
                 .stream()
                 .filter(e -> e.getKind() == ElementKind.CONSTRUCTOR)
                 .map(ExecutableElement.class::cast)
@@ -226,7 +240,8 @@ public record JpaEntityModel(TypeElement element,
      * @return true if it has a name setter, false otherwise
      */
     public boolean builderHasNameSetter() {
-        return element().getEnclosedElements()
+        return element()
+                .getEnclosedElements()
                 .stream()
                 .filter(c -> c.getKind() == ElementKind.FIELD)
                 .anyMatch(c -> c.getSimpleName().contentEquals("name") && isNameType(c.asType()));
@@ -261,7 +276,8 @@ public record JpaEntityModel(TypeElement element,
      * @return true if it has a builder factory method, false otherwise
      */
     public boolean hasBuilderFactory() {
-        return element().getEnclosedElements()
+        return element()
+                .getEnclosedElements()
                 .stream()
                 .filter(e -> e.getKind() == ElementKind.METHOD)
                 .map(ExecutableElement.class::cast)

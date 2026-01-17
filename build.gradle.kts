@@ -18,7 +18,7 @@ tasks.register<Javadoc>("aggregateJavadoc") {
 
 allprojects {
     group = "com.kivojenko.spring.forge"
-    version = "0.1.3"
+    version = "0.1.4"
 
     repositories {
         mavenCentral()
@@ -28,5 +28,4 @@ allprojects {
 subprojects {
     apply(plugin = "maven-publish")
     apply(plugin = "signing")
-
 }

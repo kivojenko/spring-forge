@@ -12,20 +12,18 @@ import javax.lang.model.element.TypeElement;
 /**
  * Requirements and configuration flags for a JPA entity model.
  *
- * @param hasName                    whether the entity has name property
- * @param wantsAbstractService       whether an abstract service should be generated
- * @param wantsImplementedService    whether an implemented service should be generated
- * @param wantsAbstractController    whether an abstract controller should be generated
- * @param wantsImplementedController whether an implemented controller should be generated
- * @param wantsGetOrCreate           whether a "get or create" operation should be generated
+ * @param hasName               whether the entity has name property
+ * @param repositoryAnnotation  annotation for repository configuration
+ * @param serviceAnnotation     annotation for service configuration
+ * @param controllerAnnotation  annotation for controller configuration
+ * @param getOrCreateAnnotation annotation for "get or create" operation configuration
  */
 public record JpaEntityRequirements(boolean hasName,
-                                    boolean wantsAbstractRepository,
-                                    boolean wantsAbstractService,
-                                    boolean wantsImplementedService,
-                                    boolean wantsAbstractController,
-                                    boolean wantsImplementedController,
-                                    boolean wantsGetOrCreate) {
+                                    WithJpaRepository repositoryAnnotation,
+                                    WithService serviceAnnotation,
+                                    WithRestController controllerAnnotation,
+                                    GetOrCreate getOrCreateAnnotation)
+{
     /**
      * Resolves requirements for the given entity by checking its annotations and implemented interfaces.
      *
@@ -41,19 +39,12 @@ public record JpaEntityRequirements(boolean hasName,
         var hasName = hasNameType != null && types.isAssignable(entity.asType(), hasNameType.asType());
 
         var controllerAnnotation = entity.getAnnotation(WithRestController.class);
-        var wantsAbstractController = controllerAnnotation != null && controllerAnnotation.makeAbstract();
-        var wantsImplementedController = controllerAnnotation != null && !controllerAnnotation.makeAbstract();
-
         var serviceAnnotation = entity.getAnnotation(WithService.class);
-        var wantsAbstractService = serviceAnnotation != null && serviceAnnotation.makeAbstract();
-        var wantsImplementedService = serviceAnnotation != null && !serviceAnnotation.makeAbstract();
-
         var repositoryAnnotation = entity.getAnnotation(WithJpaRepository.class);
-        var wantsAbstractRepository = repositoryAnnotation != null && repositoryAnnotation.makeAbstract();
 
-        var wantsGetOrCreate = entity.getAnnotation(GetOrCreate.class) != null;
+        var getOrCreateAnnotation = entity.getAnnotation(GetOrCreate.class);
 
-        if (wantsGetOrCreate && !hasName) {
+        if (getOrCreateAnnotation != null && !hasName) {
             LoggingUtils.warn(
                     env,
                     entity,
@@ -61,22 +52,26 @@ public record JpaEntityRequirements(boolean hasName,
                             entity.getSimpleName() +
                             " is annotated with @WithGetOrCreate but does not implement HasName"
             );
-            wantsGetOrCreate = false;
-        }
-
-        if (wantsGetOrCreate && !(wantsAbstractService || wantsImplementedService)) {
-            wantsImplementedService = true;
+            getOrCreateAnnotation = null;
         }
 
         return new JpaEntityRequirements(
                 hasName,
-                wantsAbstractRepository,
-                wantsAbstractService,
-                wantsImplementedService,
-                wantsAbstractController,
-                wantsImplementedController,
-                wantsGetOrCreate
+                repositoryAnnotation,
+                serviceAnnotation,
+                controllerAnnotation,
+                getOrCreateAnnotation
         );
+    }
+
+    /**
+     * Determines if the repository for the entity should be abstract.
+     * An abstract repository allows for custom implementation later.
+     *
+     * @return true if the repository should be abstract, false otherwise
+     */
+    public boolean wantsAbstractRepository() {
+        return repositoryAnnotation != null && repositoryAnnotation.makeAbstract();
     }
 
     /**
@@ -85,7 +80,17 @@ public record JpaEntityRequirements(boolean hasName,
      * @return true if a service should be generated, false otherwise
      */
     public boolean wantsService() {
-        return wantsAbstractService || wantsImplementedService;
+        return serviceAnnotation != null || getOrCreateAnnotation != null;
+    }
+
+    /**
+     * Determines if the service for the entity should be abstract.
+     * An abstract service allows for custom implementation later.
+     *
+     * @return true if the service should be abstract, false otherwise
+     */
+    public boolean wantsAbstractService() {
+        return serviceAnnotation != null && serviceAnnotation.makeAbstract();
     }
 
     /**
@@ -94,7 +99,17 @@ public record JpaEntityRequirements(boolean hasName,
      * @return true if a controller should be generated, false otherwise
      */
     public boolean wantsController() {
-        return wantsAbstractController || wantsImplementedController;
+        return controllerAnnotation != null;
+    }
+
+    /**
+     * Determines if the controller for the entity should be abstract.
+     * An abstract controller allows for custom implementation later.
+     *
+     * @return true if the controller should be abstract, false otherwise
+     */
+    public boolean wantsAbstractController() {
+        return controllerAnnotation != null && controllerAnnotation.makeAbstract();
     }
 
 }

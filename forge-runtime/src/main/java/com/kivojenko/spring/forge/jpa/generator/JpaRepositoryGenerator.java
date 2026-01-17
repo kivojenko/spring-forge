@@ -15,8 +15,10 @@ import javax.lang.model.element.Modifier;
  */
 public final class JpaRepositoryGenerator {
 
-    private static final ClassName JPA_REPOSITORY =
-            ClassName.get("org.springframework.data.jpa.repository", "JpaRepository");
+    private static final ClassName JPA_REPOSITORY = ClassName.get(
+            "org.springframework.data.jpa.repository",
+            "JpaRepository"
+    );
     private static final ClassName HAS_NAME_REPOSITORY = ClassName.get(HasNameRepository.class);
 
     /**
@@ -36,16 +38,13 @@ public final class JpaRepositoryGenerator {
      * @return the type specification
      */
     public static TypeSpec generate(JpaEntityModel model) {
-        var builder = TypeSpec.interfaceBuilder(model.repositoryName())
+        var builder = TypeSpec
+                .interfaceBuilder(model.repositoryName())
                 .addModifiers(Modifier.PUBLIC)
                 .addSuperinterface(jpaRepositoryOf(model));
 
-        if (model.requirements().wantsAbstractRepository()) {
-            builder.addModifiers(Modifier.ABSTRACT);
-        }
-        if (model.requirements().hasName()) {
-            builder.addSuperinterface(hasNameRepositoryOf(model));
-        }
+        if (model.requirements().wantsAbstractRepository()) builder.addModifiers(Modifier.ABSTRACT);
+        if (model.requirements().hasName()) builder.addSuperinterface(hasNameRepositoryOf(model));
 
         return builder.build();
     }

@@ -23,8 +23,8 @@ public final class JpaServiceGenerator {
 
     private static final ClassName FORGE_SERVICE = ClassName.get(ForgeService.class);
     private static final ClassName HAS_NAME_FORGE_SERVICE = ClassName.get(HasNameForgeService.class);
-    private static final ClassName HAS_NAME_FORGE_SERVICE_WITH_GET_OR_CREATE =
-            ClassName.get(HasNameForgeServiceWithGetOrCreate.class);
+    private static final ClassName HAS_NAME_FORGE_SERVICE_WITH_GET_OR_CREATE = ClassName.get(
+            HasNameForgeServiceWithGetOrCreate.class);
 
     /**
      * Generates a {@link JavaFile} containing the service for the given model.
@@ -47,7 +47,7 @@ public final class JpaServiceGenerator {
 
         if (model.requirements().wantsAbstractService()) {
             spec.addModifiers(Modifier.ABSTRACT);
-        } else if (model.requirements().wantsImplementedService()) {
+        } else {
             spec.addAnnotation(SERVICE);
         }
 
@@ -55,16 +55,18 @@ public final class JpaServiceGenerator {
         if (model.requirements().hasName()) {
             superClassName = HAS_NAME_FORGE_SERVICE;
 
-            if (model.requirements().wantsGetOrCreate()) {
+            if (model.requirements().getOrCreateAnnotation() != null) {
                 superClassName = HAS_NAME_FORGE_SERVICE_WITH_GET_OR_CREATE;
                 spec.addMethod(model.resolveCreateMethod());
             }
         }
 
-        var superClass = ParameterizedTypeName.get(superClassName,
+        var superClass = ParameterizedTypeName.get(
+                superClassName,
                 model.entityType(),
                 model.jpaId().type(),
-                model.repositoryType());
+                model.repositoryType()
+        );
 
         model.endpointRelations().forEach(r -> addRelationEndpoints(spec, r));
 

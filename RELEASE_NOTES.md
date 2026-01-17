@@ -1,3 +1,28 @@
+### Release Notes - Version 0.1.4 (2026-01-17)
+
+This release focuses on internal refactoring for better annotation handling and improved REST controller path generation.
+
+#### New Features
+
+- **Custom REST Path Support**: The `@WithRestController` annotation now supports a `path` attribute to specify a custom base path for the generated controller.
+- **Improved Pluralization**: REST controller paths now handle entities ending in "y" more correctly (e.g., `Category` -> `/categories`).
+
+#### Improvements & Internal Changes
+
+- **Annotation-Driven Requirements**: Refactored `JpaEntityRequirements` to store actual annotation instances. This improves the robustness of the generation logic and simplifies internal checks.
+- **Code Generation Cleanup**: Improved formatting and consistency in the generated Java code across repositories, services, and controllers.
+- **Enhanced Type Safety**: Better internal handling of entity types and IDs during the code generation process.
+
+#### Installation
+
+Update the version in your `build.gradle.kts`:
+
+```kotlin
+implementation(platform("com.kivojenko.spring.forge:spring-forge-bom:0.1.4"))
+```
+
+---
+
 ### Release Notes - Version 0.1.3 (2026-01-17)
 
 This release introduces the ability to generate abstract repositories and services, and fixes an issue where `@RequestMapping` was added to abstract controllers.
