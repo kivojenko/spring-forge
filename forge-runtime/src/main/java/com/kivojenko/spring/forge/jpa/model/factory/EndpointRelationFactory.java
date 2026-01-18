@@ -3,9 +3,13 @@ package com.kivojenko.spring.forge.jpa.model.factory;
 import com.kivojenko.spring.forge.annotation.endpoint.WithEndpoints;
 import com.kivojenko.spring.forge.annotation.endpoint.WithGetEndpoint;
 import com.kivojenko.spring.forge.jpa.model.relation.EndpointRelation;
-import com.kivojenko.spring.forge.jpa.model.relation.ReadEndpointRelation;
-import com.kivojenko.spring.forge.jpa.model.relation.RemoveEndpointOneToManyRelation;
+import com.kivojenko.spring.forge.jpa.model.relation.manyToOne.ReadManyToOneEndpointRelation;
+import com.kivojenko.spring.forge.jpa.model.relation.oneToMany.ReadOneToManyEndpointRelation;
+import com.kivojenko.spring.forge.jpa.model.relation.manyToOne.AddExistingManyToOneEndpointRelation;
+import com.kivojenko.spring.forge.jpa.model.relation.manyToOne.RemoveManyToOneEndpointRelation;
+import com.kivojenko.spring.forge.jpa.model.relation.oneToMany.RemoveOneToManyEndpointRelation;
 import com.kivojenko.spring.forge.jpa.utils.LoggingUtils;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import org.jspecify.annotations.NonNull;
 
@@ -32,7 +36,7 @@ public class EndpointRelationFactory {
      * It scans for fields annotated with {@link WithEndpoints} and methods annotated with {@link WithGetEndpoint}.
      *
      * @param entity the entity type element
-     * @param env the processing environment
+     * @param env    the processing environment
      * @return a list of resolved endpoint relations
      */
     public static List<EndpointRelation> resolve(TypeElement entity, ProcessingEnvironment env) {
@@ -52,8 +56,10 @@ public class EndpointRelationFactory {
 
     }
 
-    private static @NonNull List<EndpointRelation> resolveFieldEndpointRelation(VariableElement field,
-                                                                                ProcessingEnvironment env) {
+    private static @NonNull List<EndpointRelation> resolveFieldEndpointRelation(
+            VariableElement field,
+            ProcessingEnvironment env
+    ) {
         var result = new ArrayList<EndpointRelation>();
 
         var withEndpoints = field.getAnnotation(WithEndpoints.class);
@@ -65,34 +71,78 @@ public class EndpointRelationFactory {
         var path = withEndpoints.path();
         if (path.isBlank()) path = field.getSimpleName().toString();
 
-        var elementType = getElementType(field.asType(), field, env);
+        var oneToMany = field.getAnnotation(OneToMany.class);
+        if (oneToMany != null) {
+            var mappedBy = oneToMany.mappedBy();
+            if (mappedBy.isBlank()) {
+                LoggingUtils.warn(
+                        env,
+                        field,
+                        "@WithEndpoints.remove() can only be used on OneToMany associations with mappedBy"
+                );
+                oneToMany = null;
+            }
+        }
+        var manyToOne = field.getAnnotation(ManyToOne.class);
 
+        TypeElement elementType;
+        if (manyToOne == null) {
+            elementType = getElementTypeFromList(field.asType(), field, env);
+        } else {
+            elementType = (TypeElement) env.getTypeUtils().asElement(field.asType());
+        }
 
         if (withEndpoints.read()) {
-            result.add(ReadEndpointRelation.builder()
-                    .path(path)
-                    .methodName(methodName)
-                    .targetEntityModel(JpaEntityModelFactory.get(elementType, env))
-                    .build());
+            if (oneToMany != null) {
+                result.add(ReadOneToManyEndpointRelation
+                        .builder()
+                        .path(path)
+                        .methodName(methodName)
+                        .targetEntityModel(JpaEntityModelFactory.get(elementType, env))
+                        .build());
+            }
+            if (manyToOne != null) {
+                result.add(ReadManyToOneEndpointRelation
+                        .builder()
+                        .path(path)
+                        .methodName(methodName)
+                        .targetEntityModel(JpaEntityModelFactory.get(elementType, env))
+                        .build());
+            }
+        }
+
+        if (withEndpoints.add()) {
+            if (manyToOne != null) {
+                result.add(AddExistingManyToOneEndpointRelation
+                        .builder()
+                        .path(path)
+                        .methodName(methodName)
+                        .fieldName(field.getSimpleName().toString())
+                        .targetEntityModel(JpaEntityModelFactory.get(elementType, env))
+                        .build());
+            }
         }
 
         if (withEndpoints.remove()) {
-            var oneToMany = field.getAnnotation(OneToMany.class);
             if (oneToMany != null) {
-                var mappedBy = oneToMany.mappedBy();
-                if (mappedBy.isBlank()) {
-                    LoggingUtils.warn(env,
-                            field,
-                            "@WithEndpoints.remove() can only be used on associations with mappedBy");
-                } else {
-                    result.add(RemoveEndpointOneToManyRelation.builder()
-                            .path(path)
-                            .methodName(methodName)
-                            .fieldName(field.getSimpleName().toString())
-                            .targetEntityModel(JpaEntityModelFactory.get(elementType, env))
-                            .mappedBy(mappedBy)
-                            .build());
-                }
+                result.add(RemoveOneToManyEndpointRelation
+                        .builder()
+                        .path(path)
+                        .methodName(methodName)
+                        .fieldName(field.getSimpleName().toString())
+                        .targetEntityModel(JpaEntityModelFactory.get(elementType, env))
+                        .mappedBy(oneToMany.mappedBy())
+                        .build());
+            }
+
+            if (manyToOne != null) {
+                result.add(RemoveManyToOneEndpointRelation
+                        .builder()
+                        .path(path)
+                        .methodName(methodName)
+                        .fieldName(field.getSimpleName().toString())
+                        .targetEntityModel(JpaEntityModelFactory.get(elementType, env))
+                        .build());
             }
         }
 
@@ -112,16 +162,21 @@ public class EndpointRelationFactory {
                 path = decapitalize(path.substring(3));
             }
         }
-        var elementType = getElementType(getter.getReturnType(), getter, env);
+        var elementType = getElementTypeFromList(getter.getReturnType(), getter, env);
 
-        return ReadEndpointRelation.builder()
+        return ReadOneToManyEndpointRelation
+                .builder()
                 .path(path)
                 .methodName(getter.getSimpleName().toString())
                 .targetEntityModel(JpaEntityModelFactory.get(elementType, env))
                 .build();
     }
 
-    private static TypeElement getElementType(TypeMirror returnType, Element element, ProcessingEnvironment env) {
+    private static TypeElement getElementTypeFromList(
+            TypeMirror returnType,
+            Element element,
+            ProcessingEnvironment env
+    ) {
 
         if (!(returnType instanceof DeclaredType declaredReturnType)) {
             LoggingUtils.warn(env, element, "Generating endpoints can only be used on declared return types");
@@ -134,9 +189,7 @@ public class EndpointRelationFactory {
             return null;
         }
 
-        var elementTypeMirror = typeArgs.getFirst();
-
-        if (!(elementTypeMirror instanceof DeclaredType elementDeclaredType)) {
+        if (!(typeArgs.getFirst() instanceof DeclaredType elementDeclaredType)) {
             LoggingUtils.warn(env, element, "Generating endpoints collection element type must be a declared type");
             return null;
         }

@@ -1,3 +1,31 @@
+### Release Notes - Version 0.1.5 (2026-01-18)
+
+This release introduces support for `@ManyToOne` associations in `@WithEndpoints` and restructures internal relation handling.
+
+#### New Features
+
+- **Many-to-One Association Support**: `@WithEndpoints` now supports `@ManyToOne` associations, allowing for:
+    - **Read**: Fetch the associated entity.
+    - **Add**: Link an existing entity to the association.
+    - **Remove**: Unlink (set to null) the associated entity.
+- **Improved Association Handling**: Internal refactoring of how associations (One-to-Many and Many-to-One) are handled during code generation, leading to more robust and consistent endpoint generation.
+
+#### Improvements & Internal Changes
+
+- **Relation Model Restructuring**: Endpoint relation classes have been moved to specialized packages (`manyToOne` and `oneToMany`) and now inherit from a common `ServiceRepositoryEndpointRelation` base class.
+- **Enhanced Code Generation**: Improved the logic for generating repository, service, and controller methods for associations, including better parameter handling and transaction management.
+- **Documentation**: Significant updates to Javadoc across the project for better developer experience.
+
+#### Installation
+
+Update the version in your `build.gradle.kts`:
+
+```kotlin
+implementation(platform("com.kivojenko.spring.forge:spring-forge-bom:0.1.5"))
+```
+
+---
+
 ### Release Notes - Version 0.1.4 (2026-01-17)
 
 This release focuses on internal refactoring for better annotation handling and improved REST controller path generation.

@@ -1,6 +1,6 @@
-package com.kivojenko.spring.forge.jpa.model.relation;
+package com.kivojenko.spring.forge.jpa.model.relation.oneToMany;
 
-import com.squareup.javapoet.AnnotationSpec;
+import com.kivojenko.spring.forge.jpa.model.relation.EndpointRelation;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
@@ -14,15 +14,16 @@ import static com.kivojenko.spring.forge.jpa.generator.MethodGenerator.GET_MAPPI
  * Represents a relation that generates a GET endpoint to read associated entities.
  */
 @SuperBuilder
-public class ReadEndpointRelation extends EndpointRelation {
+public class ReadOneToManyEndpointRelation extends EndpointRelation {
     @Override
     public MethodSpec getControllerMethod() {
-        return MethodSpec.methodBuilder(methodName)
+        return MethodSpec
+                .methodBuilder(methodName)
                 .addModifiers(Modifier.PUBLIC)
-                .addAnnotation(AnnotationSpec.builder(GET_MAPPING).addMember("value", "$S", "/{id}/" + path).build())
+                .addAnnotation(annotation(GET_MAPPING))
                 .returns(ParameterizedTypeName.get(ClassName.get(Iterable.class), targetEntityModel.entityType()))
-                .addParameter(entityModel.jpaId().type(), "id")
-                .addStatement("return getById(id).$L()", methodName)
+                .addParameter(baseParamSpec())
+                .addStatement("return getById($L).$L()", BASE_ID_PARAM_NAME, methodName)
                 .build();
     }
 

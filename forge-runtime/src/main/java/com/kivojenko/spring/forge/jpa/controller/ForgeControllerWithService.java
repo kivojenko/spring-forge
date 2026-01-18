@@ -3,7 +3,7 @@ package com.kivojenko.spring.forge.jpa.controller;
 
 import com.kivojenko.spring.forge.jpa.service.ForgeService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -11,15 +11,16 @@ import org.springframework.web.bind.annotation.RestController;
  * Abstract base implementation of {@link CrudController} that delegates to a {@link ForgeService}.
  * Used when a service layer is requested.
  *
- * @param <E> the entity type
+ * @param <E>  the entity type
  * @param <ID> the ID type
- * @param <R> the repository type
- * @param <S> the service type
+ * @param <R>  the repository type
+ * @param <S>  the service type
  */
 @RestController
 public abstract class ForgeControllerWithService<E, ID, R extends JpaRepository<E, ID>, S extends ForgeService<E, ID,
         R>> implements
-        CrudController<E, ID> {
+        CrudController<E, ID>
+{
 
     /**
      * The service used for business logic and data access.
@@ -33,8 +34,8 @@ public abstract class ForgeControllerWithService<E, ID, R extends JpaRepository<
     }
 
     @Override
-    public Iterable<E> findAll(int page, int size) {
-        return service.findAll(PageRequest.of(page, size));
+    public Iterable<E> findAll(Pageable pageable) {
+        return service.findAll(pageable);
     }
 
     @Override

@@ -69,15 +69,14 @@ public final class JpaServiceGenerator {
         );
 
         model.endpointRelations().forEach(r -> addRelationEndpoints(spec, r));
-
         return spec.superclass(superClass).addMethod(getSetIdMethod(model)).build();
     }
 
     private static void addRelationEndpoints(TypeSpec.Builder spec, EndpointRelation relation) {
         var serviceMethod = relation.getServiceMethod();
         if (serviceMethod != null) spec.addMethod(serviceMethod);
-        var field = relation.getServiceField();
-        if (field != null) spec.addField(field);
-    }
 
+        var field = relation.getServiceField();
+        if (field != null && spec.fieldSpecs.stream().noneMatch(s -> s.type.equals(field.type))) spec.addField(field);
+    }
 }

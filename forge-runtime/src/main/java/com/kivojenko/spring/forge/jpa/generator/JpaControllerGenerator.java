@@ -103,6 +103,6 @@ public final class JpaControllerGenerator {
         var method = relation.getControllerMethod();
         if (method != null) spec.addMethod(method);
         var field = relation.getControllerField();
-        if (field != null) spec.addField(field);
+        if (field != null && spec.fieldSpecs.stream().noneMatch(s -> s.type.equals(field.type))) spec.addField(field);
     }
 }

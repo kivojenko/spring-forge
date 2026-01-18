@@ -3,7 +3,7 @@ package com.kivojenko.spring.forge.jpa.controller;
 
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -30,8 +30,8 @@ public abstract class ForgeController<E, ID, R extends JpaRepository<E, ID>> imp
     }
 
     @Override
-    public Iterable<E> findAll(int page, int size) {
-        return repository.findAll(PageRequest.of(page, size));
+    public Iterable<E> findAll(Pageable pageable) {
+        return repository.findAll(pageable);
     }
 
     @Override
