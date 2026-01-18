@@ -1,4 +1,4 @@
-package com.kivojenko.spring.forge.jpa.model.model;
+package com.kivojenko.spring.forge.jpa.model.base;
 
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.TypeName;

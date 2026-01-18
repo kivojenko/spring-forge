@@ -13,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
  * @param <ID> the ID type
  * @param <R> the repository type
  */
-public abstract class HasNameForgeServiceWithGetOrCreate<E extends HasName, ID,
+public abstract class ForgeServiceWithGetOrCreate<E extends HasName, ID,
         R extends JpaRepository<E, ID> & HasNameRepository<E>> extends
         HasNameForgeService<E, ID, R> {
 

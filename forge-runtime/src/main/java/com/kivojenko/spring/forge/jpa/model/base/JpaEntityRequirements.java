@@ -1,4 +1,4 @@
-package com.kivojenko.spring.forge.jpa.model.model;
+package com.kivojenko.spring.forge.jpa.model.base;
 
 import com.kivojenko.spring.forge.annotation.GetOrCreate;
 import com.kivojenko.spring.forge.annotation.WithJpaRepository;
@@ -18,11 +18,13 @@ import javax.lang.model.element.TypeElement;
  * @param controllerAnnotation  annotation for controller configuration
  * @param getOrCreateAnnotation annotation for "get or create" operation configuration
  */
-public record JpaEntityRequirements(boolean hasName,
-                                    WithJpaRepository repositoryAnnotation,
-                                    WithService serviceAnnotation,
-                                    WithRestController controllerAnnotation,
-                                    GetOrCreate getOrCreateAnnotation)
+public record JpaEntityRequirements(
+        boolean hasName,
+        WithJpaRepository repositoryAnnotation,
+        WithService serviceAnnotation,
+        WithRestController controllerAnnotation,
+        GetOrCreate getOrCreateAnnotation
+)
 {
     /**
      * Resolves requirements for the given entity by checking its annotations and implemented interfaces.
@@ -62,6 +64,10 @@ public record JpaEntityRequirements(boolean hasName,
                 controllerAnnotation,
                 getOrCreateAnnotation
         );
+    }
+
+    public boolean wantsRepository() {
+        return repositoryAnnotation != null || wantsService() || wantsController();
     }
 
     /**

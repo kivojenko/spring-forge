@@ -1,7 +1,7 @@
 package com.kivojenko.spring.forge.jpa.generator;
 
 
-import com.kivojenko.spring.forge.jpa.model.model.JpaEntityModel;
+import com.kivojenko.spring.forge.jpa.model.base.JpaEntityModel;
 import com.kivojenko.spring.forge.jpa.repository.HasNameRepository;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
@@ -13,7 +13,7 @@ import javax.lang.model.element.Modifier;
 /**
  * Generator for Spring Data JPA repositories.
  */
-public final class JpaRepositoryGenerator {
+public final class RepositoryGenerator {
 
     private static final ClassName JPA_REPOSITORY = ClassName.get(
             "org.springframework.data.jpa.repository",

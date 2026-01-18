@@ -1,6 +1,6 @@
 package com.kivojenko.spring.forge.jpa.generator;
 
-import com.kivojenko.spring.forge.jpa.model.model.JpaEntityModel;
+import com.kivojenko.spring.forge.jpa.model.base.JpaEntityModel;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeName;

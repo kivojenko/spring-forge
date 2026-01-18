@@ -1,3 +1,21 @@
+### Release Notes - Version 0.1.6 (2026-01-19)
+
+This release introduces the `@FilterField` generation logic.
+
+#### New Features
+
+- **Generic Filter Generation**: `@FilterField` generates more generic filter classes. For associations, it automatically uses the ID type of the related entity, facilitating filtering by foreign keys.
+
+#### Installation
+
+Update the version in your `build.gradle.kts`:
+
+```kotlin
+implementation(platform("com.kivojenko.spring.forge:spring-forge-bom:0.1.6"))
+```
+
+---
+
 ### Release Notes - Version 0.1.5 (2026-01-18)
 
 This release introduces support for `@ManyToOne` associations in `@WithEndpoints` and restructures internal relation handling.
@@ -14,7 +32,6 @@ This release introduces support for `@ManyToOne` associations in `@WithEndpoints
 
 - **Relation Model Restructuring**: Endpoint relation classes have been moved to specialized packages (`manyToOne` and `oneToMany`) and now inherit from a common `ServiceRepositoryEndpointRelation` base class.
 - **Enhanced Code Generation**: Improved the logic for generating repository, service, and controller methods for associations, including better parameter handling and transaction management.
-- **Documentation**: Significant updates to Javadoc across the project for better developer experience.
 
 #### Installation
 

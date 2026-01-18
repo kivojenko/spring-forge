@@ -1,10 +1,10 @@
 package com.kivojenko.spring.forge.jpa.generator;
 
-import com.kivojenko.spring.forge.jpa.model.model.JpaEntityModel;
+import com.kivojenko.spring.forge.jpa.model.base.JpaEntityModel;
 import com.kivojenko.spring.forge.jpa.model.relation.EndpointRelation;
 import com.kivojenko.spring.forge.jpa.service.ForgeService;
 import com.kivojenko.spring.forge.jpa.service.HasNameForgeService;
-import com.kivojenko.spring.forge.jpa.service.HasNameForgeServiceWithGetOrCreate;
+import com.kivojenko.spring.forge.jpa.service.ForgeServiceWithGetOrCreate;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.ParameterizedTypeName;
@@ -17,14 +17,13 @@ import static com.kivojenko.spring.forge.jpa.generator.MethodGenerator.getSetIdM
 /**
  * Generator for Spring services.
  */
-public final class JpaServiceGenerator {
+public final class ServiceGenerator {
 
     private static final ClassName SERVICE = ClassName.get("org.springframework.stereotype", "Service");
 
     private static final ClassName FORGE_SERVICE = ClassName.get(ForgeService.class);
     private static final ClassName HAS_NAME_FORGE_SERVICE = ClassName.get(HasNameForgeService.class);
-    private static final ClassName HAS_NAME_FORGE_SERVICE_WITH_GET_OR_CREATE = ClassName.get(
-            HasNameForgeServiceWithGetOrCreate.class);
+    private static final ClassName SERVICE_WITH_GET_OR_CREATE = ClassName.get(ForgeServiceWithGetOrCreate.class);
 
     /**
      * Generates a {@link JavaFile} containing the service for the given model.
@@ -56,7 +55,7 @@ public final class JpaServiceGenerator {
             superClassName = HAS_NAME_FORGE_SERVICE;
 
             if (model.requirements().getOrCreateAnnotation() != null) {
-                superClassName = HAS_NAME_FORGE_SERVICE_WITH_GET_OR_CREATE;
+                superClassName = SERVICE_WITH_GET_OR_CREATE;
                 spec.addMethod(model.resolveCreateMethod());
             }
         }

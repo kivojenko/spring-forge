@@ -1,4 +1,4 @@
-package com.kivojenko.spring.forge.jpa.model.factory;
+package com.kivojenko.spring.forge.jpa.factory;
 
 import com.kivojenko.spring.forge.annotation.endpoint.WithEndpoints;
 import com.kivojenko.spring.forge.annotation.endpoint.WithGetEndpoint;
@@ -51,11 +51,18 @@ public class EndpointRelationFactory {
             }
 
         }
-        endpointRelations.forEach(r -> r.setEntityModel(JpaEntityModelFactory.get(entity, env)));
+        endpointRelations.forEach(r -> r.setEntityModel(JpaEntityModelFactory.get(entity)));
         return endpointRelations;
 
     }
 
+    /**
+     * Resolves all endpoint relations for the given field.
+     *
+     * @param field the field element
+     * @param env   the processing environment
+     * @return a list of resolved endpoint relations
+     */
     private static @NonNull List<EndpointRelation> resolveFieldEndpointRelation(
             VariableElement field,
             ProcessingEnvironment env
@@ -98,7 +105,7 @@ public class EndpointRelationFactory {
                         .builder()
                         .path(path)
                         .methodName(methodName)
-                        .targetEntityModel(JpaEntityModelFactory.get(elementType, env))
+                        .targetEntityModel(JpaEntityModelFactory.get(elementType))
                         .build());
             }
             if (manyToOne != null) {
@@ -106,7 +113,7 @@ public class EndpointRelationFactory {
                         .builder()
                         .path(path)
                         .methodName(methodName)
-                        .targetEntityModel(JpaEntityModelFactory.get(elementType, env))
+                        .targetEntityModel(JpaEntityModelFactory.get(elementType))
                         .build());
             }
         }
@@ -118,7 +125,7 @@ public class EndpointRelationFactory {
                         .path(path)
                         .methodName(methodName)
                         .fieldName(field.getSimpleName().toString())
-                        .targetEntityModel(JpaEntityModelFactory.get(elementType, env))
+                        .targetEntityModel(JpaEntityModelFactory.get(elementType))
                         .build());
             }
         }
@@ -130,7 +137,7 @@ public class EndpointRelationFactory {
                         .path(path)
                         .methodName(methodName)
                         .fieldName(field.getSimpleName().toString())
-                        .targetEntityModel(JpaEntityModelFactory.get(elementType, env))
+                        .targetEntityModel(JpaEntityModelFactory.get(elementType))
                         .mappedBy(oneToMany.mappedBy())
                         .build());
             }
@@ -141,7 +148,7 @@ public class EndpointRelationFactory {
                         .path(path)
                         .methodName(methodName)
                         .fieldName(field.getSimpleName().toString())
-                        .targetEntityModel(JpaEntityModelFactory.get(elementType, env))
+                        .targetEntityModel(JpaEntityModelFactory.get(elementType))
                         .build());
             }
         }
@@ -150,6 +157,13 @@ public class EndpointRelationFactory {
     }
 
 
+    /**
+     * Resolves an endpoint relation for the given getter method.
+     *
+     * @param getter the getter method element
+     * @param env    the processing environment
+     * @return the resolved endpoint relation, or null if none
+     */
     private static EndpointRelation resolveGetterEndpointRelation(ExecutableElement getter, ProcessingEnvironment env) {
         var withGetEndpoint = getter.getAnnotation(WithGetEndpoint.class);
         if (withGetEndpoint == null) return null;
@@ -168,10 +182,18 @@ public class EndpointRelationFactory {
                 .builder()
                 .path(path)
                 .methodName(getter.getSimpleName().toString())
-                .targetEntityModel(JpaEntityModelFactory.get(elementType, env))
+                .targetEntityModel(JpaEntityModelFactory.get(elementType))
                 .build();
     }
 
+    /**
+     * Extracts the element type from a collection type (e.g., List<ElementType> -> ElementType).
+     *
+     * @param returnType the type mirror to extract from
+     * @param element    the element associated with the type (for logging)
+     * @param env        the processing environment
+     * @return the extracted type element, or null if it's not a valid collection
+     */
     private static TypeElement getElementTypeFromList(
             TypeMirror returnType,
             Element element,

@@ -32,6 +32,11 @@ public final class SpringForgeConfig {
      */
     private final String controllerPackage;
 
+    /**
+     * The base package for generated filters.
+     */
+    private final String filterPackage;
+
 
     /**
      * Loads the configuration using the provided processing environment.
@@ -47,7 +52,8 @@ public final class SpringForgeConfig {
         return new SpringForgeConfig(
                 fromYaml(yaml, "repository.package"),
                 fromYaml(yaml, "service.package"),
-                fromYaml(yaml, "controller.package")
+                fromYaml(yaml, "controller.package"),
+                fromYaml(yaml, "filter.package")
         );
     }
 

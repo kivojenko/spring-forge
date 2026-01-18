@@ -1,4 +1,4 @@
-package com.kivojenko.spring.forge.jpa.model.model;
+package com.kivojenko.spring.forge.jpa.model.base;
 
 import com.kivojenko.spring.forge.annotation.WithJpaRepository;
 import com.kivojenko.spring.forge.annotation.WithRestController;
@@ -12,40 +12,49 @@ import java.util.Optional;
 /**
  * Package names for generated classes related to a JPA entity.
  *
- * @param packageName the custom sub-package name
+ * @param packageName           the custom sub-package name
  * @param repositoryPackageName the package for repositories
- * @param servicePackageName the package for services
+ * @param servicePackageName    the package for services
  * @param controllerPackageName the package for controllers
+ * @param filterPackageName     the package for filters
  */
-public record JpaEntityPackageNames(String packageName,
-                                    String repositoryPackageName,
-                                    String servicePackageName,
-                                    String controllerPackageName) {
+public record JpaEntityPackageNames(
+        String packageName,
+        String repositoryPackageName,
+        String servicePackageName,
+        String controllerPackageName,
+        String filterPackageName
+)
+{
 
     /**
      * Resolves package names for the given entity, considering configuration and annotations.
      *
      * @param entity the entity type element
      * @param config the Spring Forge configuration
-     * @param e the processing environment
+     * @param e      the processing environment
      * @return the resolved package names
      */
-    public static JpaEntityPackageNames resolvePackageNames(TypeElement entity,
-                                                            SpringForgeConfig config,
-                                                            ProcessingEnvironment e) {
+    public static JpaEntityPackageNames resolvePackageNames(
+            TypeElement entity,
+            SpringForgeConfig config,
+            ProcessingEnvironment e
+    ) {
         var packageName = resolvePackageName(entity);
 
         var repositoryPackage = resolvePackageName(entity, config.getRepositoryPackage(), e);
         var servicePackage = resolvePackageName(entity, config.getServicePackage(), e);
         var controllerPackage = resolvePackageName(entity, config.getControllerPackage(), e);
+        var filterPackage = resolvePackageName(entity, config.getFilterPackage(), e);
 
         if (!packageName.isBlank()) {
             repositoryPackage += "." + packageName;
             servicePackage += "." + packageName;
             controllerPackage += "." + packageName;
+            filterPackage += "." + packageName;
         }
 
-        return new JpaEntityPackageNames(packageName, repositoryPackage, servicePackage, controllerPackage);
+        return new JpaEntityPackageNames(packageName, repositoryPackage, servicePackage, controllerPackage, filterPackage);
     }
 
 

@@ -1,22 +1,28 @@
-package com.kivojenko.spring.forge.jpa.model.model;
+package com.kivojenko.spring.forge.jpa.model.base;
 
-import com.kivojenko.spring.forge.jpa.model.factory.EndpointRelationFactory;
+import com.kivojenko.spring.forge.annotation.FilterField;
+import com.kivojenko.spring.forge.config.SpringForgeConfig;
+import com.kivojenko.spring.forge.jpa.factory.EndpointRelationFactory;
 import com.kivojenko.spring.forge.jpa.model.relation.EndpointRelation;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.TypeName;
 import jakarta.persistence.MappedSuperclass;
 import lombok.Builder;
 
 import javax.annotation.processing.ProcessingEnvironment;
-import javax.lang.model.element.ElementKind;
-import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.Modifier;
-import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.*;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.ElementFilter;
+import java.util.ArrayList;
 import java.util.List;
 
+import static com.kivojenko.spring.forge.jpa.model.base.JpaEntityPackageNames.resolvePackageNames;
+import static com.kivojenko.spring.forge.jpa.model.base.JpaEntityRequirements.resolveRequirements;
+import static com.kivojenko.spring.forge.jpa.model.base.JpaId.resolveId;
+import static com.kivojenko.spring.forge.jpa.utils.StringUtils.pluralize;
 import static java.beans.Introspector.decapitalize;
 
 /**
@@ -36,7 +42,18 @@ public record JpaEntityModel(
         JpaEntityPackageNames packages,
         JpaEntityRequirements requirements,
         ProcessingEnvironment env
-) {
+)
+{
+    public JpaEntityModel(TypeElement entity, SpringForgeConfig config, ProcessingEnvironment env) {
+        this(
+                entity,
+                ClassName.get(entity),
+                resolveId(entity),
+                resolvePackageNames(entity, config, env),
+                resolveRequirements(entity, env),
+                env
+        );
+    }
 
     /**
      * Resolves and returns all endpoint relations for this entity.
@@ -46,7 +63,6 @@ public record JpaEntityModel(
     public List<EndpointRelation> endpointRelations() {
         return EndpointRelationFactory.resolve(element(), env);
     }
-
 
     /**
      * Gets the simple name of the generated repository interface.
@@ -129,12 +145,53 @@ public record JpaEntityModel(
         var annotation = requirements().controllerAnnotation();
         if (annotation != null && !annotation.path().isEmpty()) return annotation.path();
 
-        if (entityType.simpleName().endsWith("y")) {
-            return decapitalize(entityType.simpleName()).substring(0, entityType.simpleName().length() - 1) + "ies";
-        }
-        return decapitalize(entityType.simpleName()) + "s";
+        return pluralize(entityType.simpleName());
     }
 
+    /**
+     * Gets the simple name of the generated filter interface.
+     *
+     * @return the filter name
+     */
+    public String filterName() {
+        return element.getSimpleName() + "ForgeFilter";
+    }
+
+    /**
+     * Gets the fully qualified name of the generated filter interface.
+     *
+     * @return the filter FQN
+     */
+    public String filterFqn() {
+        return packages().filterPackageName() + "." + filterName();
+    }
+
+    /**
+     * Gets the {@link ClassName} of the generated filter interface.
+     *
+     * @return the filter type
+     */
+    public ClassName filterType() {
+        return ClassName.get(packages().filterPackageName(), filterName());
+    }
+
+    /**
+     * Gets the type of the filter field based on the entity's ID field type.
+     *
+     * @return the filter field type
+     */
+    public TypeName getFilterFieldType() {
+        return jpaId.type();
+    }
+
+    /**
+     * Gets the filter field name based on the entity's ID field name.
+     *
+     * @return the filter field name
+     */
+    public String getFilterFieldName() {
+        return pluralize(decapitalize(element.getSimpleName().toString()));
+    }
 
     /**
      * Resolves the {@link MethodSpec} for creating a new entity instance,
@@ -204,12 +261,7 @@ public record JpaEntityModel(
                 .build();
     }
 
-    /**
-     * Checks if the entity class has a constructor that accepts a single String argument.
-     *
-     * @return true if it has a string constructor, false otherwise
-     */
-    public boolean hasNameCtor() {
+    private boolean hasNameCtor() {
         return element()
                 .getEnclosedElements()
                 .stream()
@@ -219,12 +271,7 @@ public record JpaEntityModel(
                 .anyMatch(c -> isNameType(c.getParameters().getFirst().asType()));
     }
 
-    /**
-     * Checks if the entity class has a no-argument constructor.
-     *
-     * @return true if it has an empty constructor, false otherwise
-     */
-    public boolean hasEmptyCtor() {
+    private boolean hasEmptyCtor() {
         return element()
                 .getEnclosedElements()
                 .stream()
@@ -233,13 +280,7 @@ public record JpaEntityModel(
                 .anyMatch(c -> c.getParameters().isEmpty());
     }
 
-
-    /**
-     * Checks if the entity's builder has a {@code name} setter method (or field).
-     *
-     * @return true if it has a name setter, false otherwise
-     */
-    public boolean builderHasNameSetter() {
+    private boolean builderHasNameSetter() {
         return element()
                 .getEnclosedElements()
                 .stream()
@@ -259,23 +300,13 @@ public record JpaEntityModel(
                 ((TypeElement) ((DeclaredType) type).asElement()).getQualifiedName().contentEquals("java.lang.String");
     }
 
-    /**
-     * Checks if the entity class has a builder (either via {@code @Builder} or a static builder method).
-     *
-     * @return true if it has a builder, false otherwise
-     */
-    public boolean hasBuilder() {
+    private boolean hasBuilder() {
         return hasBuilderFactory() ||
                 element().getAnnotation(Builder.class) != null ||
                 element().getAnnotation(MappedSuperclass.class) != null;
     }
 
-    /**
-     * Checks if the entity class has a static {@code builder()} method.
-     *
-     * @return true if it has a builder factory method, false otherwise
-     */
-    public boolean hasBuilderFactory() {
+    private boolean hasBuilderFactory() {
         return element()
                 .getEnclosedElements()
                 .stream()
@@ -283,6 +314,40 @@ public record JpaEntityModel(
                 .map(ExecutableElement.class::cast)
                 .filter(m -> m.getModifiers().contains(Modifier.STATIC))
                 .anyMatch(m -> m.getSimpleName().contentEquals("builder"));
+    }
+
+    /**
+     * Retrieves the list of fields in the entity that are annotated with {@code @FilterField}.
+     * These fields are considered filterable. Validates that such fields are not marked as
+     * transient in any context (Java, JPA, or Beans). If a transient field is annotated with
+     * {@code @FilterField}, an {@link IllegalStateException} is thrown.
+     *
+     * @return a list of filterable fields represented as {@link VariableElement}.
+     * @throws IllegalStateException if a field annotated with {@code @FilterField} is transient.
+     */
+    public List<VariableElement> getFilterableFields() {
+        var filterFields = new ArrayList<VariableElement>();
+
+        var fields = ElementFilter.fieldsIn(element.getEnclosedElements());
+
+        for (var field : fields) {
+            var hasFilter = field.getAnnotation(FilterField.class) != null;
+            if (!hasFilter) continue;
+
+            var isJavaTransient = field.getModifiers().contains(Modifier.TRANSIENT);
+            var isJpaTransient = field.getAnnotation(jakarta.persistence.Transient.class) != null;
+            var isBeansTransient = field.getAnnotation(java.beans.Transient.class) != null;
+            if (isJavaTransient || isJpaTransient || isBeansTransient) {
+                throw new IllegalStateException("@FilterField is not allowed on transient field: " +
+                        field.getSimpleName() +
+                        " in " +
+                        element.getQualifiedName());
+            }
+            filterFields.add(field);
+        }
+
+        return filterFields;
+
     }
 
 }

@@ -1,6 +1,6 @@
 package com.kivojenko.spring.forge.jpa.model.relation;
 
-import com.kivojenko.spring.forge.jpa.model.model.JpaEntityModel;
+import com.kivojenko.spring.forge.jpa.model.base.JpaEntityModel;
 import com.squareup.javapoet.*;
 import lombok.Data;
 import lombok.experimental.SuperBuilder;

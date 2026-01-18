@@ -211,6 +211,52 @@ Attributes:
 
 Spring Forge can extend generated repositories based on **marker interfaces** implemented by your entities.
 
+### @FilterField
+
+You can use `@FilterField` on entity fields to generate a filter class that can be used for searching.
+
+```java
+public class Brand implements HasName {
+
+    @FilterField
+    protected String name;
+
+    @FilterField
+    private boolean vegan;
+
+    <...>
+    @FilterField
+    private Country country;
+
+    <...>
+    @FilterField
+    private Set<Certification> certifications = new HashSet<>();
+}
+```
+
+This generates:
+
+```java
+@Getter
+@Setter
+@Builder
+@AllArgsConstructor
+@RequiredArgsConstructor
+public class BrandForgeFilter {
+  private String name;
+
+  private boolean vegan;
+
+  @Builder.Default
+  private Set<Long> countries = new HashSet<>();
+
+  @Builder.Default
+  private Set<Long> certifications = new HashSet<>();
+}
+```
+
+The filter class uses the ID type of the related entities for associations, making it easy to filter by foreign keys.
+
 ### HasName
 
 ```java
