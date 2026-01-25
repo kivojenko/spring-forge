@@ -20,23 +20,27 @@ public final class SpringForgeConfig {
     /**
      * The base package for generated repositories.
      */
-    private final String repositoryPackage;
+    public static String repositoryPackage;
 
     /**
      * The base package for generated services.
      */
-    private final String servicePackage;
+    public static String servicePackage;
 
     /**
      * The base package for generated controllers.
      */
-    private final String controllerPackage;
+    public static String controllerPackage;
 
     /**
      * The base package for generated filters.
      */
-    private final String filterPackage;
+    public static String filterPackage;
 
+    /**
+     * Indicates whether the configuration has been loaded.
+     */
+    public static boolean isLoaded = false;
 
     /**
      * Loads the configuration using the provided processing environment.
@@ -44,17 +48,15 @@ public final class SpringForgeConfig {
      * and then merged with or overridden by compiler options prefixed with {@code springforge.}.
      *
      * @param env the processing environment
-     * @return the loaded configuration
      */
-    public static SpringForgeConfig load(ProcessingEnvironment env) {
+    public static void load(ProcessingEnvironment env) {
         var yaml = loadYaml(env);
 
-        return new SpringForgeConfig(
-                fromYaml(yaml, "repository.package"),
-                fromYaml(yaml, "service.package"),
-                fromYaml(yaml, "controller.package"),
-                fromYaml(yaml, "filter.package")
-        );
+        repositoryPackage = fromYaml(yaml, "repository.package");
+        servicePackage = fromYaml(yaml, "service.package");
+        controllerPackage = fromYaml(yaml, "controller.package");
+        filterPackage = fromYaml(yaml, "filter.package");
+        isLoaded = true;
     }
 
     /**

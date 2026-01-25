@@ -39,4 +39,32 @@ public final class StringUtils {
         }
         return decapitalize(s) + "s";
     }
+
+    /**
+     * Gets the standard getter name for a field.
+     *
+     * @param fieldName the name of the field
+     * @return the getter name
+     */
+    public static String getterName(String fieldName) {
+        if (fieldName == null || fieldName.isBlank()) {
+            throw new IllegalArgumentException("Field name must not be blank");
+        }
+
+        return "get" + capitalize(fieldName);
+    }
+
+    /**
+     * Gets the standard setter name for a field.
+     *
+     * @param fieldName the name of the field
+     * @return the setter name
+     */
+    public static String setterName(String fieldName) {
+        if (fieldName == null || fieldName.isBlank()) {
+            throw new IllegalArgumentException("Field name must not be blank");
+        }
+
+        return "set" + capitalize(fieldName);
+    }
 }

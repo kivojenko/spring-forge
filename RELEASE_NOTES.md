@@ -1,3 +1,23 @@
+### Release Notes - Version 0.1.7 (2026-01-25)
+
+This release focuses on a major internal architectural refactoring to improve maintainability, extensibility, and robustness of the code generation logic. It also introduces several enhancements to the generated APIs.
+
+#### New Features & Enhancements
+
+- **Paginated Results**: The generated `findAll` endpoints in REST controllers now support Spring Data `Pageable`, allowing for easier pagination of entity lists.
+- **Improved Filter Generation**: Refactored the `@FilterField` generation logic to be more robust and easier to maintain.
+- **QueryDSL Integration**: Introduced `HasToPredicate` interface to standardize how filters are converted to QueryDSL predicates.
+
+#### Improvements & Internal Refactoring
+
+- **Contract Package**: Moved core base interfaces (`ForgeController`, `ForgeService`, `HasNameRepository`) to a dedicated `com.kivojenko.spring.forge.jpa.contract` package for better organizational clarity.
+- **Generator Cleanup**: Significant refactoring of `ControllerGenerator`, `ServiceGenerator`, and `RepositoryGenerator` to use specialized factory classes and utility methods, reducing code duplication and complexity.
+- **Model Simplification**: `JpaEntityModel` has been streamlined, with many responsibilities delegated to specialized model and factory classes.
+- **New Utility Classes**: Introduced `ClassNameUtils` and `StringUtils` to centralize common code generation tasks.
+- **Enhanced Testing**: Added comprehensive unit tests for `ForgeProcessor` to ensure better stability and prevent regressions.
+
+---
+
 ### Release Notes - Version 0.1.6 (2026-01-19)
 
 This release introduces the `@FilterField` generation logic.
@@ -5,14 +25,6 @@ This release introduces the `@FilterField` generation logic.
 #### New Features
 
 - **Generic Filter Generation**: `@FilterField` generates more generic filter classes. For associations, it automatically uses the ID type of the related entity, facilitating filtering by foreign keys.
-
-#### Installation
-
-Update the version in your `build.gradle.kts`:
-
-```kotlin
-implementation(platform("com.kivojenko.spring.forge:spring-forge-bom:0.1.6"))
-```
 
 ---
 
@@ -33,14 +45,6 @@ This release introduces support for `@ManyToOne` associations in `@WithEndpoints
 - **Relation Model Restructuring**: Endpoint relation classes have been moved to specialized packages (`manyToOne` and `oneToMany`) and now inherit from a common `ServiceRepositoryEndpointRelation` base class.
 - **Enhanced Code Generation**: Improved the logic for generating repository, service, and controller methods for associations, including better parameter handling and transaction management.
 
-#### Installation
-
-Update the version in your `build.gradle.kts`:
-
-```kotlin
-implementation(platform("com.kivojenko.spring.forge:spring-forge-bom:0.1.5"))
-```
-
 ---
 
 ### Release Notes - Version 0.1.4 (2026-01-17)
@@ -57,14 +61,6 @@ This release focuses on internal refactoring for better annotation handling and 
 - **Annotation-Driven Requirements**: Refactored `JpaEntityRequirements` to store actual annotation instances. This improves the robustness of the generation logic and simplifies internal checks.
 - **Code Generation Cleanup**: Improved formatting and consistency in the generated Java code across repositories, services, and controllers.
 - **Enhanced Type Safety**: Better internal handling of entity types and IDs during the code generation process.
-
-#### Installation
-
-Update the version in your `build.gradle.kts`:
-
-```kotlin
-implementation(platform("com.kivojenko.spring.forge:spring-forge-bom:0.1.4"))
-```
 
 ---
 
@@ -83,14 +79,6 @@ This release introduces the ability to generate abstract repositories and servic
 - **Service Generation**: Fixed a bug where in entities with non-string type name services still tried to use string for getOrCreate
 - **Requirements Model**: Updated internal `JpaEntityRequirements` to properly distinguish between abstract and implemented states for repositories, services, and controllers.
 
-#### Installation
-
-Update the version in your `build.gradle.kts`:
-
-```kotlin
-implementation(platform("com.kivojenko.spring.forge:spring-forge-bom:0.1.3"))
-```
-
 ---
 
 ### Release Notes - Version 0.1.2 (2026-01-15)
@@ -107,14 +95,6 @@ This release introduces the ability to generate abstract controllers and include
 - **Internal Refactoring**: Refactored the internal model structure by renaming `JpaEntityModelRequirements` to `JpaEntityRequirements` for better naming consistency.
 - **Processor Reliability**: Improved package scanning in the annotation processor to ensure better entity detection in certain project structures.
 
-#### Installation
-
-Update the version in your `build.gradle.kts`:
-
-```kotlin
-implementation(platform("com.kivojenko.spring.forge:spring-forge-bom:0.1.2"))
-```
-
 ---
 
 ### Release Notes - Version 0.1.1 (2026-01-15)
@@ -130,22 +110,6 @@ This release introduces the Bill of Materials (BOM) for easier dependency manage
 
 - **Repository API Alignment**: Updated `HasNameRepository` to return `List` instead of `Iterable` for better compatibility with common Spring Data JPA patterns and easier usage in services.
 - **Documentation**: Refreshed Javadoc documentation across all modules.
-
-#### Installation
-
-Add the BOM to your `build.gradle.kts`:
-
-```kotlin
-implementation(platform("com.kivojenko.spring.forge:spring-forge-bom:0.1.1"))
-```
-
-Then add the required dependencies without versions:
-
-```kotlin
-compileOnly("com.kivojenko.spring.forge:forge-annotations")
-implementation("com.kivojenko.spring.forge:forge-runtime")
-annotationProcessor("com.kivojenko.spring.forge:forge-processor")
-```
 
 ---
 
@@ -168,13 +132,3 @@ It is the first release of **Spring Forge**, an annotation-driven boilerplate ge
   - Configure target packages for generated code via `springforge.yml` or compiler options.
   - Custom paths and naming for generated endpoints and methods.
 - **Repository Reuse**: Automatically detects and reuses existing repositories if they are already present in the configured package, preventing collisions.
-
-#### Installation
-
-Add the following dependencies to your `build.gradle.kts`:
-
-```kotlin
-compileOnly("com.kivojenko.spring.forge:forge-annotations:0.1.0")
-implementation("com.kivojenko.spring.forge:forge-runtime:0.1.0")
-annotationProcessor("com.kivojenko.spring.forge:forge-processor:0.1.0")
-```

@@ -6,8 +6,8 @@ import lombok.experimental.SuperBuilder;
 
 import javax.lang.model.element.Modifier;
 
-import static com.kivojenko.spring.forge.jpa.generator.MethodGenerator.DELETE_MAPPING;
-import static com.kivojenko.spring.forge.jpa.generator.MethodGenerator.setterName;
+import static com.kivojenko.spring.forge.jpa.utils.StringUtils.setterName;
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.DELETE_MAPPING;
 import static com.kivojenko.spring.forge.jpa.utils.StringUtils.capitalize;
 
 /**
@@ -31,7 +31,7 @@ public class RemoveManyToOneEndpointRelation extends ManyToOneEndpointRelation {
     }
 
     @Override
-    protected MethodSpec.Builder getRepositoryMethodSpec() {
+    public MethodSpec getServiceMethod() {
         var builder = MethodSpec
                 .methodBuilder((generatedMethodName()))
                 .returns(void.class)
@@ -40,7 +40,7 @@ public class RemoveManyToOneEndpointRelation extends ManyToOneEndpointRelation {
 
         addFindBase(builder);
         addFindSub(builder);
-        return builder.addStatement("$L.$L(null)", BASE_VAR_NAME, setterName(fieldName));
+        return builder.addStatement("$L.$L(null)", BASE_VAR_NAME, setterName(fieldName)).build();
     }
 
 }

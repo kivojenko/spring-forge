@@ -1,31 +1,16 @@
 package com.kivojenko.spring.forge.jpa.generator;
 
-import com.kivojenko.spring.forge.jpa.controller.ForgeController;
-import com.kivojenko.spring.forge.jpa.controller.ForgeControllerWithService;
 import com.kivojenko.spring.forge.jpa.model.base.JpaEntityModel;
-import com.kivojenko.spring.forge.jpa.model.relation.EndpointRelation;
 import com.squareup.javapoet.*;
 
 import javax.lang.model.element.Modifier;
 
-import static com.kivojenko.spring.forge.jpa.generator.MethodGenerator.getSetIdMethod;
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.*;
 
 /**
  * Generator for Spring REST controllers.
  */
 public final class ControllerGenerator {
-
-    private static final ClassName REST_CONTROLLER = ClassName.get(
-            "org.springframework.web.bind.annotation",
-            "RestController"
-    );
-    private static final ClassName REQUEST_MAPPING = ClassName.get(
-            "org.springframework.web.bind.annotation",
-            "RequestMapping"
-    );
-
-    private static final ClassName ABSTRACT_CONTROLLER = ClassName.get(ForgeController.class);
-    private static final ClassName HAS_SERVICE_CONTROLLER = ClassName.get(ForgeControllerWithService.class);
 
     /**
      * Generates a {@link JavaFile} containing the REST controller for the given model.
@@ -34,7 +19,7 @@ public final class ControllerGenerator {
      * @return the generated Java file
      */
     public static JavaFile generateFile(JpaEntityModel model) {
-        return JavaFile.builder(model.packages().controllerPackageName(), generate(model)).build();
+        return JavaFile.builder(model.getPackages().controllerPackageName(), generate(model)).build();
     }
 
     /**
@@ -44,61 +29,68 @@ public final class ControllerGenerator {
      * @return the type specification
      */
     public static TypeSpec generate(JpaEntityModel model) {
-        var spec = TypeSpec
-                .classBuilder(model.controllerName())
+        var superClass = ParameterizedTypeName.get(
+                FORGE_CONTROLLER,
+                model.getEntityType(),
+                model.getJpaId().type(),
+                model.getRepositoryType(),
+                model.getServiceType()
+        );
+        var builder = TypeSpec
+                .classBuilder(model.getControllerName())
                 .addModifiers(Modifier.PUBLIC)
-                .superclass(getSuperClass(model));
+                .superclass(superClass);
 
-        if (model.requirements().wantsAbstractController()) {
-            spec.addModifiers(Modifier.ABSTRACT);
+        if (model.getRequirements().wantsAbstractController()) {
+            builder.addModifiers(Modifier.ABSTRACT);
         } else {
             var mappingAnnotation = AnnotationSpec
                     .builder(REQUEST_MAPPING)
-                    .addMember("value", "$S", model.controllerPath())
+                    .addMember("value", "$S", model.getControllerPath())
                     .build();
-            spec.addAnnotation(REST_CONTROLLER).addAnnotation(mappingAnnotation);
+            builder.addAnnotation(REST_CONTROLLER).addAnnotation(mappingAnnotation);
         }
 
-        if (!model.requirements().wantsService()) spec.addMethod(getSetIdMethod(model));
+        if (model.getRequirements().getOrCreateAnnotation() != null) {
+            var annotation = AnnotationSpec.builder(POST_MAPPING).addMember("value", "$S", "/get-or-create").build();
 
-        model.endpointRelations().forEach(r -> addRelationEndpoints(spec, r));
+            var nameParam = ParameterSpec.builder(String.class, "name").addAnnotation(REQUEST_PARAM).build();
+            var getOrCreate = MethodSpec
+                    .methodBuilder("getOrCreate")
+                    .addModifiers(Modifier.PUBLIC)
+                    .addAnnotation(annotation)
+                    .addParameter(nameParam)
+                    .returns(model.getEntityType())
+                    .addStatement("return service.getOrCreate(name)")
+                    .build();
+            builder.addMethod(getOrCreate);
+        }
 
-        return spec.build();
-    }
+        var pageableParam = ParameterSpec
+                .builder(PAGEABLE, "pageable")
+                .addAnnotation(AnnotationSpec.builder(PAGEABLE_DEFAULT).addMember("size", "$L", 25).build())
+                .build();
+        var findAllBuilder = MethodSpec
+                .methodBuilder("findAll")
+                .addModifiers(Modifier.PUBLIC)
+                .addAnnotation(GET_MAPPING)
+                .returns(ParameterizedTypeName.get(ITERABLE, model.getEntityType()))
+                .addParameter(pageableParam);
 
-    /**
-     * Determines the superclass for the generated controller.
-     *
-     * @param model the entity model
-     * @return the parameterized type name of the superclass
-     */
-    public static ParameterizedTypeName getSuperClass(JpaEntityModel model) {
-        return model.requirements().wantsService() ? withService(model) : withoutService(model);
-    }
+        if (model.wantsFilter()) {
+            var filterParam = ParameterSpec.builder(model.getFilterType(), "filter")
+//                    .addAnnotation(ModelAttribute.class)
+                    .build();
+            findAllBuilder.addParameter(filterParam).addStatement("return service.findAll(pageable, filter)");
+            builder.addMethod(findAllBuilder.build());
+        } else {
+            findAllBuilder.addStatement("return service.findAll(pageable)");
+            builder.addMethod(findAllBuilder.build());
+        }
 
-    private static ParameterizedTypeName withService(JpaEntityModel model) {
-        return ParameterizedTypeName.get(
-                HAS_SERVICE_CONTROLLER,
-                model.entityType(),
-                model.jpaId().type(),
-                model.repositoryType(),
-                model.serviceType()
-        );
-    }
+//        if (model.wantsFilter()) builder.addMethod(model.findAllFilteredEndpoint());
+        model.getEndpointRelations().forEach(r -> r.addEndpoint(builder));
 
-    private static ParameterizedTypeName withoutService(JpaEntityModel model) {
-        return ParameterizedTypeName.get(
-                ABSTRACT_CONTROLLER,
-                model.entityType(),
-                model.jpaId().type(),
-                model.repositoryType()
-        );
-    }
-
-    private static void addRelationEndpoints(TypeSpec.Builder spec, EndpointRelation relation) {
-        var method = relation.getControllerMethod();
-        if (method != null) spec.addMethod(method);
-        var field = relation.getControllerField();
-        if (field != null && spec.fieldSpecs.stream().noneMatch(s -> s.type.equals(field.type))) spec.addField(field);
+        return builder.build();
     }
 }

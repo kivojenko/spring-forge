@@ -313,14 +313,16 @@ Spring Data will generate the query implementations automatically.
 
 ### Repository reuse (no collisions)
 
-If a repository already exists **in the configured repository package**,
-Spring Forge will **reuse it instead of generating a new one**.
+If a repository or service already exists **in the configured package**, Spring Forge will **reuse it instead of generating a new one**.
 
 ---
 
 ## Installation
 
 ### Dependencies
+```kotlin
+mavenBom("com.kivojenko.spring.forge:spring-forge-bom:0.1.7")
+```
 
 ```kotlin
 compileOnly("com.kivojenko.spring.forge:forge-annotations")

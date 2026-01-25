@@ -7,6 +7,8 @@ import lombok.experimental.SuperBuilder;
 
 import javax.lang.model.element.Modifier;
 
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.AUTOWIRED;
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.PATH_VARIABLE;
 import static com.kivojenko.spring.forge.jpa.utils.StringUtils.decapitalize;
 
 /**
@@ -15,14 +17,6 @@ import static com.kivojenko.spring.forge.jpa.utils.StringUtils.decapitalize;
 @Data
 @SuperBuilder
 public abstract class EndpointRelation {
-    protected static final ClassName AUTOWIRED = ClassName.get(
-            "org.springframework.beans.factory.annotation",
-            "Autowired"
-    );
-    protected static final ClassName PATH_VARIABLE = ClassName.get(
-            "org.springframework.web.bind.annotation",
-            "PathVariable"
-    );
 
 
     protected static final String BASE_ID_PARAM_NAME = "baseId";
@@ -32,14 +26,14 @@ public abstract class EndpointRelation {
 
     protected ParameterSpec baseParamSpec() {
         return ParameterSpec
-                .builder(entityModel.jpaId().type(), BASE_ID_PARAM_NAME)
+                .builder(entityModel.getJpaId().type(), BASE_ID_PARAM_NAME)
                 .addAnnotation(PATH_VARIABLE)
                 .build();
     }
 
     protected ParameterSpec subParamSpec() {
         return ParameterSpec
-                .builder(targetEntityModel.jpaId().type(), SUB_ID_PARAM_NAME)
+                .builder(targetEntityModel.getJpaId().type(), SUB_ID_PARAM_NAME)
                 .addAnnotation(PATH_VARIABLE)
                 .build();
     }
@@ -111,7 +105,7 @@ public abstract class EndpointRelation {
 
     protected FieldSpec getTargetRepositoryFieldSpec() {
         return FieldSpec
-                .builder(targetEntityModel.repositoryType(), decapitalize(targetEntityModel.repositoryName()))
+                .builder(targetEntityModel.getRepositoryType(), decapitalize(targetEntityModel.getRepositoryName()))
                 .addModifiers(Modifier.PRIVATE)
                 .addAnnotation(AnnotationSpec.builder(AUTOWIRED).build())
                 .build();
@@ -123,5 +117,23 @@ public abstract class EndpointRelation {
 
     protected MethodSpec.Builder addFindBase(MethodSpec.Builder methodSpec) {
         return methodSpec.addStatement("var $L = getById($L)", BASE_VAR_NAME, BASE_ID_PARAM_NAME);
+    }
+
+    public TypeSpec.Builder addMethod(TypeSpec.Builder spec) {
+        var serviceMethod = getServiceMethod();
+        if (serviceMethod != null) spec.addMethod(serviceMethod);
+
+        var field = getServiceField();
+        if (field != null && spec.fieldSpecs.stream().noneMatch(s -> s.type.equals(field.type))) spec.addField(field);
+        return spec;
+    }
+
+    public TypeSpec.Builder addEndpoint(TypeSpec.Builder spec) {
+        var method = getControllerMethod();
+        if (method != null) spec.addMethod(method);
+
+        var field = getControllerField();
+        if (field != null && spec.fieldSpecs.stream().noneMatch(s -> s.type.equals(field.type))) spec.addField(field);
+        return spec;
     }
 }

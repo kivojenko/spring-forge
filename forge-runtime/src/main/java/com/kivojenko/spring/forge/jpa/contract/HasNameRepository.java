@@ -1,6 +1,5 @@
-package com.kivojenko.spring.forge.jpa.repository;
+package com.kivojenko.spring.forge.jpa.contract;
 
-import com.kivojenko.spring.forge.jpa.contract.HasName;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;

@@ -5,7 +5,7 @@ import com.squareup.javapoet.MethodSpec;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.experimental.SuperBuilder;
 
-import static com.kivojenko.spring.forge.jpa.generator.MethodGenerator.getterName;
+import static com.kivojenko.spring.forge.jpa.utils.StringUtils.getterName;
 import static com.kivojenko.spring.forge.jpa.utils.StringUtils.decapitalize;
 
 
@@ -22,7 +22,7 @@ public abstract class OneToManyEndpointRelation extends ServiceRepositoryEndpoin
                 .addStatement(
                         "var $L = $L.findById($L).orElseThrow($T::new)",
                         SUB_VAR_NAME,
-                        decapitalize(targetEntityModel.repositoryName()),
+                        decapitalize(targetEntityModel.getRepositoryName()),
                         SUB_ID_PARAM_NAME,
                         EntityNotFoundException.class
                 )
@@ -30,14 +30,14 @@ public abstract class OneToManyEndpointRelation extends ServiceRepositoryEndpoin
                         "if (!$N.$L().$L().equals($L))",
                         SUB_VAR_NAME,
                         getterName(mappedBy),
-                        getterName(entityModel),
+                        entityModel.getGetterName(),
                         BASE_ID_PARAM_NAME
                 )
                 .addStatement("throw new $T($S)",
                         IllegalStateException.class,
-                        entityModel.entityType().simpleName() +
+                        entityModel.getEntityType().simpleName() +
                                 " is not associated with the given " +
-                                targetEntityModel.entityType().simpleName())
+                                targetEntityModel.getEntityType().simpleName())
                 .endControlFlow();
     }
 }

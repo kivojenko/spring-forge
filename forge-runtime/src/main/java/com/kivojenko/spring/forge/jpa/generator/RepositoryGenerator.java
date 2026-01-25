@@ -2,25 +2,18 @@ package com.kivojenko.spring.forge.jpa.generator;
 
 
 import com.kivojenko.spring.forge.jpa.model.base.JpaEntityModel;
-import com.kivojenko.spring.forge.jpa.repository.HasNameRepository;
-import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeSpec;
 
 import javax.lang.model.element.Modifier;
 
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.*;
+
 /**
  * Generator for Spring Data JPA repositories.
  */
 public final class RepositoryGenerator {
-
-    private static final ClassName JPA_REPOSITORY = ClassName.get(
-            "org.springframework.data.jpa.repository",
-            "JpaRepository"
-    );
-    private static final ClassName HAS_NAME_REPOSITORY = ClassName.get(HasNameRepository.class);
-
     /**
      * Generates a {@link JavaFile} containing the JPA repository for the given model.
      *
@@ -28,7 +21,7 @@ public final class RepositoryGenerator {
      * @return the generated Java file
      */
     public static JavaFile generateFile(JpaEntityModel model) {
-        return JavaFile.builder(model.packages().repositoryPackageName(), generate(model)).build();
+        return JavaFile.builder(model.getPackages().repositoryPackageName(), generate(model)).build();
     }
 
     /**
@@ -39,21 +32,26 @@ public final class RepositoryGenerator {
      */
     public static TypeSpec generate(JpaEntityModel model) {
         var builder = TypeSpec
-                .interfaceBuilder(model.repositoryName())
+                .interfaceBuilder(model.getRepositoryName())
                 .addModifiers(Modifier.PUBLIC)
                 .addSuperinterface(jpaRepositoryOf(model));
 
-        if (model.requirements().wantsAbstractRepository()) builder.addModifiers(Modifier.ABSTRACT);
-        if (model.requirements().hasName()) builder.addSuperinterface(hasNameRepositoryOf(model));
+        if (model.getRequirements().wantsAbstractRepository()) builder.addModifiers(Modifier.ABSTRACT);
+        if (model.getRequirements().hasName()) builder.addSuperinterface(hasNameRepositoryOf(model));
+        if (model.wantsFilter()) builder.addSuperinterface(queryDslPredicateExecutorOf(model));
 
         return builder.build();
     }
 
     private static ParameterizedTypeName jpaRepositoryOf(JpaEntityModel model) {
-        return ParameterizedTypeName.get(JPA_REPOSITORY, model.entityType(), model.jpaId().type());
+        return ParameterizedTypeName.get(JPA_REPOSITORY, model.getEntityType(), model.getJpaId().type());
     }
 
     private static ParameterizedTypeName hasNameRepositoryOf(JpaEntityModel model) {
-        return ParameterizedTypeName.get(HAS_NAME_REPOSITORY, model.entityType());
+        return ParameterizedTypeName.get(HAS_NAME_REPOSITORY, model.getEntityType());
+    }
+
+    private static ParameterizedTypeName queryDslPredicateExecutorOf(JpaEntityModel model) {
+        return ParameterizedTypeName.get(QUERY_DSL_PREDICATE_EXECUTOR, model.getEntityType());
     }
 }

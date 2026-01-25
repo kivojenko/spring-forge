@@ -4,24 +4,22 @@ import com.kivojenko.spring.forge.annotation.GetOrCreate;
 import com.kivojenko.spring.forge.annotation.WithJpaRepository;
 import com.kivojenko.spring.forge.annotation.WithRestController;
 import com.kivojenko.spring.forge.annotation.WithService;
+import com.kivojenko.spring.forge.jpa.factory.EndpointRelationFactory;
+import com.kivojenko.spring.forge.jpa.factory.JpaEntityModelFactory;
 import com.kivojenko.spring.forge.jpa.generator.ControllerGenerator;
 import com.kivojenko.spring.forge.jpa.generator.FilterGenerator;
 import com.kivojenko.spring.forge.jpa.generator.RepositoryGenerator;
 import com.kivojenko.spring.forge.jpa.generator.ServiceGenerator;
-import com.kivojenko.spring.forge.jpa.factory.EndpointRelationFactory;
-import com.kivojenko.spring.forge.jpa.factory.JpaEntityModelFactory;
 import com.kivojenko.spring.forge.jpa.model.base.JpaEntityModel;
 import com.kivojenko.spring.forge.jpa.utils.LoggingUtils;
 import com.squareup.javapoet.JavaFile;
 
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
-import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import java.util.ArrayDeque;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 
 /**
@@ -36,29 +34,30 @@ public final class ForgeProcessor extends AbstractProcessor {
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         JpaEntityModelFactory.setEnv(processingEnv);
-        FilterGenerator.setEnv(processingEnv);
-        var entities = new HashSet<Element>();
+        var annotationTypes = Set.of(
+                WithJpaRepository.class,
+                WithService.class,
+                GetOrCreate.class,
+                WithRestController.class
+        );
+        Set<TypeElement> rootEntities = new HashSet<>();
 
-        entities.addAll(roundEnv.getElementsAnnotatedWith(WithJpaRepository.class));
-        entities.addAll(roundEnv.getElementsAnnotatedWith(WithService.class));
-        entities.addAll(roundEnv.getElementsAnnotatedWith(GetOrCreate.class));
-        entities.addAll(roundEnv.getElementsAnnotatedWith(WithRestController.class));
-
-        var rootEntities = entities
-                .stream()
-                .filter(TypeElement.class::isInstance)
-                .map(TypeElement.class::cast)
-                .collect(Collectors.toSet());
-
+        for (var annotation : annotationTypes) {
+            for (var element : roundEnv.getElementsAnnotatedWith(annotation)) {
+                if (element instanceof TypeElement type) {
+                    rootEntities.add(type);
+                }
+            }
+        }
         expandEntityGraph(rootEntities, processingEnv);
         rootEntities.forEach(JpaEntityModelFactory::get);
 
         var jpaEntities = JpaEntityModelFactory.getAll();
 
+        jpaEntities.forEach(this::addFilter);
         jpaEntities.forEach(this::addRepository);
         jpaEntities.forEach(this::addService);
         jpaEntities.forEach(this::addController);
-        jpaEntities.forEach(this::addFilter);
 
         return true;
     }
@@ -82,7 +81,7 @@ public final class ForgeProcessor extends AbstractProcessor {
             var relations = EndpointRelationFactory.resolve(entity, env);
 
             for (var rel : relations) {
-                var related = rel.getEntityModel().element();
+                var related = rel.getEntityModel().getElement();
                 if (related != null) {
                     queue.add(related);
                 }
@@ -97,10 +96,14 @@ public final class ForgeProcessor extends AbstractProcessor {
      * @param model the entity model
      */
     private void addRepository(JpaEntityModel model) {
-        if (!model.requirements().wantsRepository() || alreadyExists(model.repositoryFqn())) return;
+        if (!model.getRequirements().wantsRepository() || alreadyExists(model.getRepositoryFqn())) return;
 
-        var file = RepositoryGenerator.generateFile(model);
-        tryWriteTo(file, model.element());
+        try {
+            var file = RepositoryGenerator.generateFile(model);
+            tryWriteTo(file);
+        } catch (Exception e) {
+            LoggingUtils.error(processingEnv, model.getElement(), "Failed to generate repository: " + e.getMessage());
+        }
     }
 
     /**
@@ -109,10 +112,14 @@ public final class ForgeProcessor extends AbstractProcessor {
      * @param model the entity model
      */
     private void addService(JpaEntityModel model) {
-        if (!model.requirements().wantsService() || alreadyExists(model.serviceFqn())) return;
+        if (!model.getRequirements().wantsService() || alreadyExists(model.getServiceFqn())) return;
 
-        var file = ServiceGenerator.generateFile(model);
-        tryWriteTo(file, model.element());
+        try {
+            var file = ServiceGenerator.generateFile(model);
+            tryWriteTo(file);
+        } catch (Exception e) {
+            LoggingUtils.error(processingEnv, model.getElement(), "Failed to generate service: " + e.getMessage());
+        }
     }
 
     /**
@@ -121,17 +128,30 @@ public final class ForgeProcessor extends AbstractProcessor {
      * @param model the entity model
      */
     private void addController(JpaEntityModel model) {
-        if (!model.requirements().wantsController() || alreadyExists(model.controllerFqn())) return;
+        if (!model.getRequirements().wantsController() || alreadyExists(model.getControllerFqn())) return;
 
-        var file = ControllerGenerator.generateFile(model);
-        tryWriteTo(file, model.element());
+        try {
+            var file = ControllerGenerator.generateFile(model);
+            tryWriteTo(file);
+        } catch (Exception e) {
+            LoggingUtils.error(processingEnv, model.getElement(), "Failed to generate controller: " + e.getMessage());
+        }
     }
 
+    /**
+     * Generates a filter for the given entity model if requested and doesn't exist.
+     *
+     * @param model the entity model
+     */
     private void addFilter(JpaEntityModel model) {
-        if (model.getFilterableFields().isEmpty() || alreadyExists(model.filterFqn())) return;
+        if (!model.wantsFilter() || alreadyExists(model.getFilterFqn())) return;
 
-        var file = FilterGenerator.generateFile(model);
-        tryWriteTo(file, model.element());
+        try {
+            var file = FilterGenerator.generateFile(model);
+            tryWriteTo(file);
+        } catch (Exception e) {
+            LoggingUtils.error(processingEnv, model.getElement(), "Failed to generate filter: " + e.getMessage());
+        }
     }
 
     /**
@@ -147,14 +167,14 @@ public final class ForgeProcessor extends AbstractProcessor {
     /**
      * Attempts to write the generated Java file using the filer.
      *
-     * @param file    the JavaPoet JavaFile
-     * @param element the source element for error logging
+     * @param file the JavaPoet JavaFile
      */
-    private void tryWriteTo(JavaFile file, Element element) {
+    private void tryWriteTo(JavaFile file) {
         try {
             file.writeTo(processingEnv.getFiler());
+        } catch (javax.annotation.processing.FilerException ignored) {
         } catch (Exception e) {
-            LoggingUtils.error(processingEnv, element, e.getMessage());
+            LoggingUtils.error(processingEnv, null, e.getMessage());
         }
     }
 }

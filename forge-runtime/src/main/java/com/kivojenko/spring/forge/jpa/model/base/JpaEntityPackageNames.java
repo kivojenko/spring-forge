@@ -31,21 +31,18 @@ public record JpaEntityPackageNames(
      * Resolves package names for the given entity, considering configuration and annotations.
      *
      * @param entity the entity type element
-     * @param config the Spring Forge configuration
      * @param e      the processing environment
      * @return the resolved package names
      */
-    public static JpaEntityPackageNames resolvePackageNames(
-            TypeElement entity,
-            SpringForgeConfig config,
-            ProcessingEnvironment e
-    ) {
+    public static JpaEntityPackageNames resolvePackageNames(TypeElement entity, ProcessingEnvironment e) {
+        if (!SpringForgeConfig.isLoaded) SpringForgeConfig.load(e);
+
         var packageName = resolvePackageName(entity);
 
-        var repositoryPackage = resolvePackageName(entity, config.getRepositoryPackage(), e);
-        var servicePackage = resolvePackageName(entity, config.getServicePackage(), e);
-        var controllerPackage = resolvePackageName(entity, config.getControllerPackage(), e);
-        var filterPackage = resolvePackageName(entity, config.getFilterPackage(), e);
+        var repositoryPackage = resolvePackageName(entity, SpringForgeConfig.repositoryPackage, e);
+        var servicePackage = resolvePackageName(entity, SpringForgeConfig.servicePackage, e);
+        var controllerPackage = resolvePackageName(entity, SpringForgeConfig.controllerPackage, e);
+        var filterPackage = resolvePackageName(entity, SpringForgeConfig.filterPackage, e);
 
         if (!packageName.isBlank()) {
             repositoryPackage += "." + packageName;
@@ -54,7 +51,13 @@ public record JpaEntityPackageNames(
             filterPackage += "." + packageName;
         }
 
-        return new JpaEntityPackageNames(packageName, repositoryPackage, servicePackage, controllerPackage, filterPackage);
+        return new JpaEntityPackageNames(
+                packageName,
+                repositoryPackage,
+                servicePackage,
+                controllerPackage,
+                filterPackage
+        );
     }
 
 

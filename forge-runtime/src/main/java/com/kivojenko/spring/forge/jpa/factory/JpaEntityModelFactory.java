@@ -1,6 +1,5 @@
 package com.kivojenko.spring.forge.jpa.factory;
 
-import com.kivojenko.spring.forge.config.SpringForgeConfig;
 import com.kivojenko.spring.forge.jpa.model.base.JpaEntityModel;
 import lombok.Setter;
 
@@ -17,7 +16,6 @@ import java.util.Map;
 public final class JpaEntityModelFactory {
 
     private static final Map<TypeElement, JpaEntityModel> CACHE = new HashMap<>();
-    private static SpringForgeConfig config;
     @Setter
     private static ProcessingEnvironment env;
 
@@ -37,8 +35,13 @@ public final class JpaEntityModelFactory {
      * @return the entity model
      */
     public static JpaEntityModel get(TypeElement entity) {
-        if (config == null) config = SpringForgeConfig.load(env);
+        if (entity == null) {
+            return null;
+        }
+        return CACHE.computeIfAbsent(entity, e -> new JpaEntityModel(env, e));
+    }
 
-        return CACHE.computeIfAbsent(entity, e -> new JpaEntityModel(e, config, env));
+    public static void clear() {
+        CACHE.clear();
     }
 }

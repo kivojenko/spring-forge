@@ -1,4 +1,4 @@
-package com.kivojenko.spring.forge.jpa.service;
+package com.kivojenko.spring.forge.jpa.contract;
 
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;

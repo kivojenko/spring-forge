@@ -70,50 +70,22 @@ public record JpaEntityRequirements(
         return repositoryAnnotation != null || wantsService() || wantsController();
     }
 
-    /**
-     * Determines if the repository for the entity should be abstract.
-     * An abstract repository allows for custom implementation later.
-     *
-     * @return true if the repository should be abstract, false otherwise
-     */
     public boolean wantsAbstractRepository() {
         return repositoryAnnotation != null && repositoryAnnotation.makeAbstract();
     }
 
-    /**
-     * Checks if a service should be generated for the entity.
-     *
-     * @return true if a service should be generated, false otherwise
-     */
     public boolean wantsService() {
-        return serviceAnnotation != null || getOrCreateAnnotation != null;
+        return serviceAnnotation != null || getOrCreateAnnotation != null || wantsController();
     }
 
-    /**
-     * Determines if the service for the entity should be abstract.
-     * An abstract service allows for custom implementation later.
-     *
-     * @return true if the service should be abstract, false otherwise
-     */
     public boolean wantsAbstractService() {
         return serviceAnnotation != null && serviceAnnotation.makeAbstract();
     }
 
-    /**
-     * Checks if a controller should be generated for the entity.
-     *
-     * @return true if a controller should be generated, false otherwise
-     */
     public boolean wantsController() {
         return controllerAnnotation != null;
     }
 
-    /**
-     * Determines if the controller for the entity should be abstract.
-     * An abstract controller allows for custom implementation later.
-     *
-     * @return true if the controller should be abstract, false otherwise
-     */
     public boolean wantsAbstractController() {
         return controllerAnnotation != null && controllerAnnotation.makeAbstract();
     }
