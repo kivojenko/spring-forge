@@ -5,7 +5,9 @@ import com.kivojenko.spring.forge.jpa.contract.HasNameRepository;
 import com.kivojenko.spring.forge.jpa.contract.ForgeService;
 import com.squareup.javapoet.ClassName;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public class ClassNameUtils {
@@ -21,6 +23,8 @@ public class ClassNameUtils {
     public static final ClassName REST_CONTROLLER = ClassName.get(BIND_ANNOTATION, "RestController");
     public static final ClassName PATH_VARIABLE = ClassName.get(BIND_ANNOTATION, "PathVariable");
     public static final ClassName REQUEST_PARAM = ClassName.get(BIND_ANNOTATION, "RequestParam");
+    public static final ClassName REQUEST_BODY = ClassName.get(BIND_ANNOTATION, "RequestBody");
+    public static final ClassName RESPONSE_STATUS = ClassName.get(BIND_ANNOTATION, "ResponseStatus");
 
     public static final ClassName DATA_INTEGRITY_VIOLATION_EXCEPTION = ClassName.get(
             "org.springframework.dao",
@@ -36,7 +40,7 @@ public class ClassNameUtils {
             "Autowired"
     );
 
-    public static final ClassName ITERABLE = ClassName.get(Iterable.class);
+    public static final ClassName PAGE = ClassName.get("org.springframework.data.domain", "Page");
     public static final ClassName PAGEABLE = ClassName.get("org.springframework.data.domain", "Pageable");
     public static final ClassName PAGEABLE_DEFAULT = ClassName.get("org.springframework.data.web", "PageableDefault");
 
@@ -63,8 +67,11 @@ public class ClassNameUtils {
             "QuerydslPredicateExecutor"
     );
 
+    public static final ClassName ITERABLE = ClassName.get(Iterable.class);
     public static final ClassName SET = ClassName.get(Set.class);
     public static final ClassName HASH_SET = ClassName.get(HashSet.class);
+    public static final ClassName LIST = ClassName.get(List.class);
+    public static final ClassName ARRAY_LIST = ClassName.get(ArrayList.class);
     public static final ClassName STRING = ClassName.get(String.class);
     public static final ClassName BOOLEAN = ClassName.get(Boolean.class);
 }

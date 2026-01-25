@@ -54,7 +54,7 @@ public abstract class ForgeController<E, ID, R extends JpaRepository<E, ID>, S e
      * @return the entity
      */
     @GetMapping("/{id}")
-    public E getById(@PathVariable ID id) {
+    public E getById(@PathVariable(name = "id") ID id) {
         return service.getById(id);
     }
 
@@ -65,7 +65,7 @@ public abstract class ForgeController<E, ID, R extends JpaRepository<E, ID>, S e
      * @return true if exists, false otherwise
      */
     @RequestMapping(method = RequestMethod.HEAD, path = "/{id}")
-    public boolean exists(@PathVariable ID id) {
+    public boolean exists(@PathVariable(name = "id") ID id) {
         return service.exists(id);
     }
 
@@ -77,7 +77,8 @@ public abstract class ForgeController<E, ID, R extends JpaRepository<E, ID>, S e
      * @return the updated entity
      */
     @PutMapping("/{id}")
-    public E update(@PathVariable ID id, @Valid @RequestBody E entity) {
+    @ResponseStatus(code = HttpStatus.CREATED)
+    public E update(@PathVariable(name = "id") ID id, @Valid @RequestBody E entity) {
         return service.update(id, entity);
     }
 
@@ -87,7 +88,8 @@ public abstract class ForgeController<E, ID, R extends JpaRepository<E, ID>, S e
      * @param id the ID of the entity to delete
      */
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable ID id) {
+    @ResponseStatus(code = HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable(name = "id") ID id) {
         service.deleteById(id);
     }
 }

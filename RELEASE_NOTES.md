@@ -1,3 +1,23 @@
+### Release Notes - Version 0.1.8 (2026-01-25)
+
+This release adds support for Many-to-Many and One-to-One associations in `@WithEndpoints`, and continues the internal refactoring of the relation handling logic.
+
+#### New Features & Enhancements
+
+- **Many-to-Many Association Support**: `@WithEndpoints` now supports `@ManyToMany` associations, providing:
+    - **Read**: Fetch the collection of associated entities.
+    - **Add**: Link an existing entity to the many-to-many collection.
+- **One-to-One Association Support**: Added support for reading `@OneToOne` associations via generated endpoints.
+- **Enhanced Endpoint Generation**: Improved logic for association endpoints, including better handling of return types (e.g., `Iterable` for many-to-many additions).
+
+#### Improvements & Internal Refactoring
+
+- **Relation Model Expansion**: Added specialized relation classes for `manyToMany` and `oneToOne` associations.
+- **Improved Type Safety**: Refined internal use of `ClassNameUtils` with new constants for `LIST`, `ARRAY_LIST`, and `ITERABLE`.
+- **Code Generation Consistency**: Standardized method naming and parameter handling across different relation types.
+
+---
+
 ### Release Notes - Version 0.1.7 (2026-01-25)
 
 This release focuses on a major internal architectural refactoring to improve maintainability, extensibility, and robustness of the code generation logic. It also introduces several enhancements to the generated APIs.

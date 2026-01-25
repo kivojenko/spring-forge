@@ -54,23 +54,4 @@ public class FilterGenerator {
         return builder.build();
     }
 
-
-//    public Predicate toPredicate() {
-//        QBrand b = QBrand.brand;
-//        BooleanBuilder bb = new BooleanBuilder(String);
-//
-//        if (name != null && !name.isBlank()) {
-//            bb.and(b.name.containsIgnoreCase(name));
-//        }
-//
-//        bb.and(b.vegan.eq(vegan));
-//        bb.and(b.crueltyFree.eq(crueltyFree));
-//
-//        if (!countries.isEmpty()) {
-//            bb.and(b.countries.any().id.in(countries));
-//        }
-//
-//        return bb;
-//    }
-
 }

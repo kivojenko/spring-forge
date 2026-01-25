@@ -1,12 +1,11 @@
 package com.kivojenko.spring.forge.jpa.generator;
 
 import com.kivojenko.spring.forge.jpa.model.base.JpaEntityModel;
-import com.squareup.javapoet.JavaFile;
-import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterizedTypeName;
-import com.squareup.javapoet.TypeSpec;
+import com.squareup.javapoet.*;
 
 import javax.lang.model.element.Modifier;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.*;
 
@@ -98,7 +97,35 @@ public final class ServiceGenerator {
         }
 
 
-        if (model.wantsFilter()) builder.addMethod(model.findAllFilteredMethod());
+        if (model.wantsFilter()) {
+            var pageableParam = ParameterSpec.builder(PAGEABLE, "pageable").build();
+            var filterParam = ParameterSpec.builder(model.getFilterType(), "filter").build();
+            var findAllPagedFiltered = MethodSpec
+                    .methodBuilder("findAll")
+                    .addModifiers(Modifier.PUBLIC)
+                    .returns(ParameterizedTypeName.get(PAGE, model.getEntityType()))
+                    .addParameter(pageableParam)
+                    .addParameter(filterParam)
+                    .addStatement("return repository.findAll(filter.toPredicate(), pageable)")
+                    .build();
+
+
+            var findAllFiltered = MethodSpec
+                    .methodBuilder("findAll")
+                    .addModifiers(Modifier.PUBLIC)
+                    .returns(ParameterizedTypeName.get(ARRAY_LIST, model.getEntityType()))
+                    .addParameter(filterParam)
+                    .addStatement("var result = repository.findAll(filter.toPredicate())")
+                    .addStatement(
+                            "return $T.stream(result.spliterator(), false).collect($T.toCollection($T::new))",
+                            ClassName.get(StreamSupport.class),
+                            ClassName.get(Collectors.class),
+                            ARRAY_LIST
+                    )
+                    .build();
+
+            builder.addMethod(findAllPagedFiltered).addMethod(findAllFiltered);
+        }
 
         model.getEndpointRelations().forEach(r -> r.addMethod(builder));
         return builder.build();

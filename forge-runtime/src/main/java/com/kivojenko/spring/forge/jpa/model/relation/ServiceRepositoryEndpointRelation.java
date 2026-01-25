@@ -3,7 +3,6 @@ package com.kivojenko.spring.forge.jpa.model.relation;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.experimental.SuperBuilder;
 
 import javax.lang.model.element.Modifier;
@@ -30,7 +29,6 @@ public abstract class ServiceRepositoryEndpointRelation extends EndpointRelation
                 .addModifiers(Modifier.PUBLIC)
                 .addParameter(Long.class, BASE_ID_PARAM_NAME)
                 .addParameter(Long.class, SUB_ID_PARAM_NAME)
-                .addException(ClassName.get(EntityNotFoundException.class))
                 .addStatement("service.$L($L, $L)", generatedMethodName(), BASE_ID_PARAM_NAME, SUB_ID_PARAM_NAME)
                 .addAnnotation(annotation(mapping()))
                 .addAnnotation(TRANSACTIONAL)

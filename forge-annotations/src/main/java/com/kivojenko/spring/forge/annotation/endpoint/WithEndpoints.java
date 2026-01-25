@@ -39,12 +39,12 @@ public @interface WithEndpoints {
      *
      * @return true if a POST endpoint should be generated, false otherwise
      */
-    boolean add() default false;
+    boolean add() default true;
 
     /**
      * Whether to generate a DELETE endpoint for this association.
      *
      * @return true if a DELETE endpoint should be generated, false otherwise
      */
-    boolean remove() default false;
+    boolean remove() default true;
 }

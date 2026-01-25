@@ -78,9 +78,7 @@ public final class ControllerGenerator {
                 .addParameter(pageableParam);
 
         if (model.wantsFilter()) {
-            var filterParam = ParameterSpec.builder(model.getFilterType(), "filter")
-//                    .addAnnotation(ModelAttribute.class)
-                    .build();
+            var filterParam = ParameterSpec.builder(model.getFilterType(), "filter").build();
             findAllBuilder.addParameter(filterParam).addStatement("return service.findAll(pageable, filter)");
             builder.addMethod(findAllBuilder.build());
         } else {
@@ -88,7 +86,6 @@ public final class ControllerGenerator {
             builder.addMethod(findAllBuilder.build());
         }
 
-//        if (model.wantsFilter()) builder.addMethod(model.findAllFilteredEndpoint());
         model.getEndpointRelations().forEach(r -> r.addEndpoint(builder));
 
         return builder.build();

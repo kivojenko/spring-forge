@@ -6,9 +6,9 @@ import lombok.experimental.SuperBuilder;
 
 import javax.lang.model.element.Modifier;
 
-import static com.kivojenko.spring.forge.jpa.utils.StringUtils.setterName;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.DELETE_MAPPING;
 import static com.kivojenko.spring.forge.jpa.utils.StringUtils.capitalize;
+import static com.kivojenko.spring.forge.jpa.utils.StringUtils.setterName;
 
 /**
  * Represents a relation that generates a DELETE endpoint to remove an entity from a OneToMany association.

@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.experimental.SuperBuilder;
 
 import javax.lang.model.element.Modifier;
+import javax.lang.model.element.VariableElement;
 
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.AUTOWIRED;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.PATH_VARIABLE;
@@ -17,7 +18,6 @@ import static com.kivojenko.spring.forge.jpa.utils.StringUtils.decapitalize;
 @Data
 @SuperBuilder
 public abstract class EndpointRelation {
-
 
     protected static final String BASE_ID_PARAM_NAME = "baseId";
     protected static final String BASE_VAR_NAME = "base";
@@ -56,6 +56,8 @@ public abstract class EndpointRelation {
      * The name of the field this relation is based on, if applicable.
      */
     protected String fieldName;
+
+    protected VariableElement field;
 
     /**
      * The model of the entity that owns this relation.
@@ -103,9 +105,13 @@ public abstract class EndpointRelation {
         return null;
     }
 
+    protected String getTargetRepositoryFieldName() {
+        return decapitalize(targetEntityModel.getRepositoryName());
+    }
+
     protected FieldSpec getTargetRepositoryFieldSpec() {
         return FieldSpec
-                .builder(targetEntityModel.getRepositoryType(), decapitalize(targetEntityModel.getRepositoryName()))
+                .builder(targetEntityModel.getRepositoryType(), getTargetRepositoryFieldName())
                 .addModifiers(Modifier.PRIVATE)
                 .addAnnotation(AnnotationSpec.builder(AUTOWIRED).build())
                 .build();

@@ -3,12 +3,18 @@ package com.kivojenko.spring.forge.jpa.factory;
 import com.kivojenko.spring.forge.annotation.endpoint.WithEndpoints;
 import com.kivojenko.spring.forge.annotation.endpoint.WithGetEndpoint;
 import com.kivojenko.spring.forge.jpa.model.relation.EndpointRelation;
+import com.kivojenko.spring.forge.jpa.model.relation.manyToMany.AddManyToManyEndpointRelation;
+import com.kivojenko.spring.forge.jpa.model.relation.manyToMany.ReadManyToManyEndpointRelation;
 import com.kivojenko.spring.forge.jpa.model.relation.manyToOne.ReadManyToOneEndpointRelation;
+import com.kivojenko.spring.forge.jpa.model.relation.oneToMany.AddOneToManyEndpointRelation;
 import com.kivojenko.spring.forge.jpa.model.relation.oneToMany.ReadOneToManyEndpointRelation;
-import com.kivojenko.spring.forge.jpa.model.relation.manyToOne.AddExistingManyToOneEndpointRelation;
+import com.kivojenko.spring.forge.jpa.model.relation.manyToOne.AddManyToOneEndpointRelation;
 import com.kivojenko.spring.forge.jpa.model.relation.manyToOne.RemoveManyToOneEndpointRelation;
 import com.kivojenko.spring.forge.jpa.model.relation.oneToMany.RemoveOneToManyEndpointRelation;
+import com.kivojenko.spring.forge.jpa.model.relation.oneToOne.ReadOneToOneEndpointRelation;
 import com.kivojenko.spring.forge.jpa.utils.LoggingUtils;
+import jakarta.persistence.Embedded;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import org.jspecify.annotations.NonNull;
@@ -78,6 +84,8 @@ public class EndpointRelationFactory {
         var path = withEndpoints.path();
         if (path.isBlank()) path = field.getSimpleName().toString();
 
+        var embedded = field.getAnnotation(Embedded.class);
+
         var oneToMany = field.getAnnotation(OneToMany.class);
         if (oneToMany != null) {
             var mappedBy = oneToMany.mappedBy();
@@ -91,19 +99,40 @@ public class EndpointRelationFactory {
             }
         }
         var manyToOne = field.getAnnotation(ManyToOne.class);
+        var manyToMany = field.getAnnotation(ManyToMany.class);
 
         TypeElement elementType;
-        if (manyToOne == null) {
-            elementType = getElementTypeFromList(field.asType(), field, env);
-        } else {
+        if (manyToOne != null || embedded != null) {
             elementType = (TypeElement) env.getTypeUtils().asElement(field.asType());
+        } else {
+            elementType = getElementTypeFromList(field.asType(), field, env);
         }
 
         if (withEndpoints.read()) {
+            if (embedded != null) {
+                result.add(ReadOneToOneEndpointRelation
+                        .builder()
+                        .path(path)
+                        .field(field)
+                        .methodName(methodName)
+                        .targetEntityModel(JpaEntityModelFactory.get(elementType))
+                        .build());
+            }
+            if (manyToMany != null) {
+                result.add(ReadManyToManyEndpointRelation
+                        .builder()
+                        .path(path)
+                        .field(field)
+                        .methodName(methodName)
+                        .fieldName(field.getSimpleName().toString())
+                        .targetEntityModel(JpaEntityModelFactory.get(elementType))
+                        .build());
+            }
             if (oneToMany != null) {
                 result.add(ReadOneToManyEndpointRelation
                         .builder()
                         .path(path)
+                        .field(field)
                         .methodName(methodName)
                         .targetEntityModel(JpaEntityModelFactory.get(elementType))
                         .build());
@@ -112,6 +141,7 @@ public class EndpointRelationFactory {
                 result.add(ReadManyToOneEndpointRelation
                         .builder()
                         .path(path)
+                        .field(field)
                         .methodName(methodName)
                         .targetEntityModel(JpaEntityModelFactory.get(elementType))
                         .build());
@@ -119,10 +149,32 @@ public class EndpointRelationFactory {
         }
 
         if (withEndpoints.add()) {
-            if (manyToOne != null) {
-                result.add(AddExistingManyToOneEndpointRelation
+            if (oneToMany != null) {
+                result.add(AddOneToManyEndpointRelation
                         .builder()
                         .path(path)
+                        .field(field)
+                        .methodName(methodName)
+                        .fieldName(field.getSimpleName().toString())
+                        .mappedBy(oneToMany.mappedBy())
+                        .targetEntityModel(JpaEntityModelFactory.get(elementType))
+                        .build());
+            }
+            if (manyToOne != null) {
+                result.add(AddManyToOneEndpointRelation
+                        .builder()
+                        .path(path)
+                        .field(field)
+                        .methodName(methodName)
+                        .fieldName(field.getSimpleName().toString())
+                        .targetEntityModel(JpaEntityModelFactory.get(elementType))
+                        .build());
+            }
+            if (manyToMany != null) {
+                result.add(AddManyToManyEndpointRelation
+                        .builder()
+                        .path(path)
+                        .field(field)
                         .methodName(methodName)
                         .fieldName(field.getSimpleName().toString())
                         .targetEntityModel(JpaEntityModelFactory.get(elementType))
@@ -135,6 +187,7 @@ public class EndpointRelationFactory {
                 result.add(RemoveOneToManyEndpointRelation
                         .builder()
                         .path(path)
+                        .field(field)
                         .methodName(methodName)
                         .fieldName(field.getSimpleName().toString())
                         .targetEntityModel(JpaEntityModelFactory.get(elementType))
@@ -146,6 +199,7 @@ public class EndpointRelationFactory {
                 result.add(RemoveManyToOneEndpointRelation
                         .builder()
                         .path(path)
+                        .field(field)
                         .methodName(methodName)
                         .fieldName(field.getSimpleName().toString())
                         .targetEntityModel(JpaEntityModelFactory.get(elementType))

@@ -150,20 +150,6 @@ public final class JpaEntityModel {
                 .build();
     }
 
-
-    public MethodSpec findAllFilteredMethod() {
-        var pageableParam = ParameterSpec.builder(PAGEABLE, "pageable").build();
-        var filterParam = ParameterSpec.builder(getFilterType(), "filter").build();
-        return MethodSpec
-                .methodBuilder("findAll")
-                .addModifiers(Modifier.PUBLIC)
-                .returns(ParameterizedTypeName.get(ITERABLE, getEntityType()))
-                .addParameter(pageableParam)
-                .addParameter(filterParam)
-                .addStatement("return repository.findAll(filter.toPredicate(), pageable)")
-                .build();
-    }
-
     public MethodSpec nameCreateMethod() {
         if (hasBuilder()) {
             if (builderHasNameSetter()) return createViaBuilder();

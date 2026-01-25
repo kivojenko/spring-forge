@@ -15,6 +15,8 @@ import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
 
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.*;
+import static com.kivojenko.spring.forge.jpa.utils.StringUtils.pluralize;
+import static java.beans.Introspector.decapitalize;
 import static javax.lang.model.element.Modifier.PRIVATE;
 
 @Data
@@ -40,7 +42,7 @@ public class FilterFieldModel {
             var relation = JpaEntityModelFactory.get(typeElement);
             var paramTypeName = ParameterizedTypeName.get(SET, relation.getJpaId().type());
             return FieldSpec
-                    .builder(paramTypeName, relation.getFilterFieldName(), PRIVATE)
+                    .builder(paramTypeName, pluralize(decapitalize(getName())), PRIVATE)
                     .addAnnotation(BUILDER_DEFAULT)
                     .initializer("new $T<>()", HASH_SET)
                     .build();
@@ -49,13 +51,13 @@ public class FilterFieldModel {
             var relation = JpaEntityModelFactory.get(typeElement);
             var paramTypeName = ParameterizedTypeName.get(SET, relation.getJpaId().type());
             return FieldSpec
-                    .builder(paramTypeName, element.getSimpleName().toString(), PRIVATE)
+                    .builder(paramTypeName, getName(), PRIVATE)
                     .addAnnotation(BUILDER_DEFAULT)
                     .initializer("new $T<>()", HASH_SET)
                     .build();
         }
 
-        return FieldSpec.builder(getTypeName(), element.getSimpleName().toString(), PRIVATE).build();
+        return FieldSpec.builder(getTypeName(), getName()).addModifiers(PRIVATE).build();
     }
 
     public void addBuilderStatement(MethodSpec.Builder builder) {
@@ -73,8 +75,16 @@ public class FilterFieldModel {
             builder.endControlFlow();
         }
         if (isSingleEntity()) {
-            builder.beginControlFlow("if ($L != null && !$L.isEmpty())", relation.getFilterFieldName(), relation.getFilterFieldName());
-            builder.addStatement("builder.and(entity.$L.id.in($L))", element.getSimpleName(), relation.getFilterFieldName());
+            builder.beginControlFlow(
+                    "if ($L != null && !$L.isEmpty())",
+                    pluralize(decapitalize(getName())),
+                    pluralize(decapitalize(getName()))
+            );
+            builder.addStatement(
+                    "builder.and(entity.$L.id.in($L))",
+                    element.getSimpleName(),
+                    pluralize(decapitalize(getName()))
+            );
             builder.endControlFlow();
         }
         if (isIterable()) {
