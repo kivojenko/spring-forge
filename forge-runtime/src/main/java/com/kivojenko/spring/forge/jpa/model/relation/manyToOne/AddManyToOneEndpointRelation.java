@@ -16,36 +16,39 @@ import static com.kivojenko.spring.forge.jpa.utils.StringUtils.capitalize;
 @SuperBuilder
 public class AddManyToOneEndpointRelation extends ManyToOneEndpointRelation {
 
-    @Override
-    protected String generatedMethodName() {
-        return "addExisting" + capitalize(fieldName);
-    }
+  @Override
+  protected String generatedMethodName() {
+    return "addExisting" + capitalize(fieldName);
+  }
 
-    @Override
-    protected String uri() {
-        return super.uri() + "/{" + SUB_ID_PARAM_NAME + "}";
-    }
+  @Override
+  protected String uri() {
+    return super.uri() + "/{" + SUB_ID_PARAM_NAME + "}";
+  }
 
-    @Override
-    protected ClassName mapping() {
-        return PUT_MAPPING;
-    }
+  @Override
+  protected ClassName mapping() {
+    return PUT_MAPPING;
+  }
 
-    @Override
-    public MethodSpec getServiceMethod() {
-        var builder = MethodSpec
-                .methodBuilder(generatedMethodName())
-                .addModifiers(Modifier.PUBLIC)
-                .returns(targetEntityModel.getEntityType())
-                .addParameter(baseParamSpec());
+  @Override
+  public MethodSpec getServiceMethod() {
+    var builder = MethodSpec
+        .methodBuilder(generatedMethodName())
+        .addModifiers(Modifier.PUBLIC)
+        .returns(targetEntityModel.getEntityType())
+        .addParameter(baseParamSpec());
 
-        addFindBase(builder);
-        addFindSub(builder);
+    addFindBase(builder);
+    addFindSub(builder);
 
-        return builder
-                .addStatement("$L.$L($L)", BASE_VAR_NAME, StringUtils.setterName(fieldName), SUB_VAR_NAME)
-                .addStatement("return repository.save($L).$L()", BASE_VAR_NAME, StringUtils.getterName(fieldName))
-                .build();
-    }
+    return builder
+        .addStatement("hooks.forEach(hook -> hook.beforeAdd($L, $L));", BASE_VAR_NAME, SUB_VAR_NAME)
+        .addStatement("$L.$L($L)", BASE_VAR_NAME, StringUtils.setterName(fieldName), SUB_VAR_NAME)
+        .addStatement("var $L = repository.save($L)", UPDATED_BASE_VAR_NAME, BASE_VAR_NAME)
+        .addStatement("hooks.forEach(hook -> hook.afterAdd($L, $L.$L()));", UPDATED_BASE_VAR_NAME,  UPDATED_BASE_VAR_NAME, StringUtils.getterName(fieldName))
+        .addStatement("return $L.$L()", UPDATED_BASE_VAR_NAME, StringUtils.getterName(fieldName))
+        .build();
+  }
 }
 

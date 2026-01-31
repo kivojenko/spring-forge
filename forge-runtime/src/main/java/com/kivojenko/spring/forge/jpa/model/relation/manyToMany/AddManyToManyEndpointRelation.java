@@ -19,39 +19,42 @@ import static com.kivojenko.spring.forge.jpa.utils.StringUtils.getterName;
 @SuperBuilder
 public class AddManyToManyEndpointRelation extends ManyToManyEndpointRelation {
 
-    @Override
-    protected String generatedMethodName() {
-        return "addExisting" + capitalize(fieldName);
-    }
+  @Override
+  protected String generatedMethodName() {
+    return "addExisting" + capitalize(fieldName);
+  }
 
-    @Override
-    protected String uri() {
-        return super.uri() + "/{" + SUB_ID_PARAM_NAME + "}";
-    }
+  @Override
+  protected String uri() {
+    return super.uri() + "/{" + SUB_ID_PARAM_NAME + "}";
+  }
 
-    @Override
-    protected ClassName mapping() {
-        return PUT_MAPPING;
-    }
+  @Override
+  protected ClassName mapping() {
+    return PUT_MAPPING;
+  }
 
-    @Override
-    public MethodSpec getServiceMethod() {
-        var builder = MethodSpec
-                .methodBuilder(generatedMethodName())
-                .addModifiers(Modifier.PUBLIC)
-                .returns(ParameterizedTypeName.get(ITERABLE, targetEntityModel.getEntityType()))
-                .addParameter(ParameterSpec.builder(entityModel.getJpaId().type(), BASE_ID_PARAM_NAME).build());
+  @Override
+  public MethodSpec getServiceMethod() {
+    var builder = MethodSpec
+        .methodBuilder(generatedMethodName())
+        .addModifiers(Modifier.PUBLIC)
+        .returns(ParameterizedTypeName.get(ITERABLE, targetEntityModel.getEntityType()))
+        .addParameter(ParameterSpec.builder(entityModel.getJpaId().type(), BASE_ID_PARAM_NAME).build());
 
-        addFindBase(builder);
-        addFindSub(builder);
+    addFindBase(builder);
+    addFindSub(builder);
 
-        return builder
-                .beginControlFlow("if ($L.$L().contains($L))", BASE_VAR_NAME, getterName(fieldName), SUB_VAR_NAME)
-                .addStatement("return $L.$L()", BASE_VAR_NAME, getterName(fieldName))
-                .endControlFlow()
-                .addStatement("$L.$L().add($L)", BASE_VAR_NAME, getterName(fieldName), SUB_VAR_NAME)
-                .addStatement("return repository.save($L).$L()", BASE_VAR_NAME, getterName(fieldName))
-                .build();
-    }
+    return builder
+        .addStatement("hooks.forEach(hook -> hook.beforeAdd($L, $L));", BASE_VAR_NAME, SUB_VAR_NAME)
+        .beginControlFlow("if ($L.$L().contains($L))", BASE_VAR_NAME, getterName(fieldName), SUB_VAR_NAME)
+        .addStatement("return $L.$L()", BASE_VAR_NAME, getterName(fieldName))
+        .endControlFlow()
+        .addStatement("$L.$L().add($L)", BASE_VAR_NAME, getterName(fieldName), SUB_VAR_NAME)
+        .addStatement("var $L = repository.save($L)", UPDATED_BASE_VAR_NAME, BASE_VAR_NAME)
+        .addStatement("hooks.forEach(hook -> hook.afterAdd($L, $L.$L()));", UPDATED_BASE_VAR_NAME, UPDATED_BASE_VAR_NAME, getterName(fieldName))
+        .addStatement("return $L.$L()", UPDATED_BASE_VAR_NAME, getterName(fieldName))
+        .build();
+  }
 }
 

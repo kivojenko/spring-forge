@@ -270,7 +270,6 @@ public interface HasName {
 If an entity implements `HasName`:
 
 ```java
-
 @Entity
 @WithJpaRepository
 public class Person implements HasName {
@@ -308,6 +307,33 @@ public interface PersonForgeRepository extends JpaRepository<Person, Long>, HasN
 Generated controller will accept optional `name` query parameters: `GET /entity?page={page}&size={size}&name={name}`.
 Spring Data will generate the query implementations automatically.
 
+---
+
+### ForgePersistenceHook
+
+You can implement `ForgePersistenceHook<E>` to intercept persistence operations in the generated service.
+Hooks are automatically detected by Spring if they are marked as `@Component`.
+
+Example for logging entity creation:
+
+```java
+@Component
+@Slf4j
+public class AuditLogger implements ForgePersistenceHook<Product> {
+
+    @Override
+    public void afterCreate(Product product) {
+        log.atInfo().setMessage("Created {}").addArgument(product);
+    }
+}
+```
+
+Available methods in `ForgePersistenceHook`:
+- `beforeCreate(E entity)` / `afterCreate(E entity)`
+- `beforeUpdate(E entity)` / `afterUpdate(E entity)`
+- `beforeDelete(E entity)` / `afterDelete(E entity)`
+- `beforeAdd(E mainEntity, Object subEntity)` / `afterAdd(E mainEntity, Object subEntity)`
+- `beforeDelete(E mainEntity, Object subEntity)` / `afterDelete(E mainEntity, Object subEntity)`
 
 ---
 
@@ -321,7 +347,7 @@ If a repository or service already exists **in the configured package**, Spring 
 
 ### Dependencies
 ```kotlin
-mavenBom("com.kivojenko.spring.forge:spring-forge-bom:0.1.7")
+mavenBom("com.kivojenko.spring.forge:spring-forge-bom:0.1.9")
 ```
 
 ```kotlin

@@ -19,127 +19,130 @@ import static com.kivojenko.spring.forge.jpa.utils.StringUtils.decapitalize;
 @SuperBuilder
 public abstract class EndpointRelation {
 
-    protected static final String BASE_ID_PARAM_NAME = "baseId";
-    protected static final String BASE_VAR_NAME = "base";
-    protected static final String SUB_ID_PARAM_NAME = "subId";
-    protected static final String SUB_VAR_NAME = "sub";
+  protected static final String BASE_ID_PARAM_NAME = "baseId";
+  protected static final String BASE_VAR_NAME = "base";
+  protected static final String UPDATED_BASE_VAR_NAME = "updatedBase";
 
-    protected ParameterSpec baseParamSpec() {
-        return ParameterSpec
-                .builder(entityModel.getJpaId().type(), BASE_ID_PARAM_NAME)
-                .addAnnotation(PATH_VARIABLE)
-                .build();
-    }
+  protected static final String SUB_ID_PARAM_NAME = "subId";
+  protected static final String SUB_VAR_NAME = "sub";
+  protected static final String UPDATED_SUB_VAR_NAME = "updatedSub";
 
-    protected ParameterSpec subParamSpec() {
-        return ParameterSpec
-                .builder(targetEntityModel.getJpaId().type(), SUB_ID_PARAM_NAME)
-                .addAnnotation(PATH_VARIABLE)
-                .build();
-    }
+  protected ParameterSpec baseParamSpec() {
+    return ParameterSpec
+        .builder(entityModel.getJpaId().type(), BASE_ID_PARAM_NAME)
+        .addAnnotation(PATH_VARIABLE)
+        .build();
+  }
 
-    /**
-     * The relative path for the endpoint.
-     */
-    protected String path;
+  protected ParameterSpec subParamSpec() {
+    return ParameterSpec
+        .builder(targetEntityModel.getJpaId().type(), SUB_ID_PARAM_NAME)
+        .addAnnotation(PATH_VARIABLE)
+        .build();
+  }
 
-    protected String uri() {
-        return "/{" + BASE_ID_PARAM_NAME + "}/" + path;
-    }
+  /**
+   * The relative path for the endpoint.
+   */
+  protected String path;
 
-    /**
-     * The name of the method that provides the data for this relation.
-     */
-    protected String methodName;
+  protected String uri() {
+    return "/{" + BASE_ID_PARAM_NAME + "}/" + path;
+  }
 
-    /**
-     * The name of the field this relation is based on, if applicable.
-     */
-    protected String fieldName;
+  /**
+   * The name of the method that provides the data for this relation.
+   */
+  protected String methodName;
 
-    protected VariableElement field;
+  /**
+   * The name of the field this relation is based on, if applicable.
+   */
+  protected String fieldName;
 
-    /**
-     * The model of the entity that owns this relation.
-     */
-    protected JpaEntityModel entityModel;
+  protected VariableElement field;
 
-    /**
-     * The model of the target entity of this relation.
-     */
-    protected JpaEntityModel targetEntityModel;
+  /**
+   * The model of the entity that owns this relation.
+   */
+  protected JpaEntityModel entityModel;
 
-    /**
-     * Returns the field specification to be added to the generated controller, if any.
-     *
-     * @return the field specification or null
-     */
-    public FieldSpec getControllerField() {
-        return null;
-    }
+  /**
+   * The model of the target entity of this relation.
+   */
+  protected JpaEntityModel targetEntityModel;
 
-    /**
-     * Returns the field specification to be added to the generated service, if any.
-     *
-     * @return the field specification or null
-     */
-    public FieldSpec getServiceField() {
-        return null;
-    }
+  /**
+   * Returns the field specification to be added to the generated controller, if any.
+   *
+   * @return the field specification or null
+   */
+  public FieldSpec getControllerField() {
+    return null;
+  }
 
-    /**
-     * Returns the method specification for the generated controller.
-     *
-     * @return the method specification or null
-     */
-    public MethodSpec getControllerMethod() {
-        return null;
-    }
+  /**
+   * Returns the field specification to be added to the generated service, if any.
+   *
+   * @return the field specification or null
+   */
+  public FieldSpec getServiceField() {
+    return null;
+  }
 
-    /**
-     * Returns the method specification for the generated service.
-     *
-     * @return the method specification or null
-     */
-    public MethodSpec getServiceMethod() {
-        return null;
-    }
+  /**
+   * Returns the method specification for the generated controller.
+   *
+   * @return the method specification or null
+   */
+  public MethodSpec getControllerMethod() {
+    return null;
+  }
 
-    protected String getTargetRepositoryFieldName() {
-        return decapitalize(targetEntityModel.getRepositoryName());
-    }
+  /**
+   * Returns the method specification for the generated service.
+   *
+   * @return the method specification or null
+   */
+  public MethodSpec getServiceMethod() {
+    return null;
+  }
 
-    protected FieldSpec getTargetRepositoryFieldSpec() {
-        return FieldSpec
-                .builder(targetEntityModel.getRepositoryType(), getTargetRepositoryFieldName())
-                .addModifiers(Modifier.PRIVATE)
-                .addAnnotation(AnnotationSpec.builder(AUTOWIRED).build())
-                .build();
-    }
+  protected String getTargetRepositoryFieldName() {
+    return decapitalize(targetEntityModel.getRepositoryName());
+  }
 
-    protected AnnotationSpec annotation(ClassName mapping) {
-        return AnnotationSpec.builder(mapping).addMember("value", "$S", uri()).build();
-    }
+  protected FieldSpec getTargetRepositoryFieldSpec() {
+    return FieldSpec
+        .builder(targetEntityModel.getRepositoryType(), getTargetRepositoryFieldName())
+        .addModifiers(Modifier.PRIVATE)
+        .addAnnotation(AnnotationSpec.builder(AUTOWIRED).build())
+        .build();
+  }
 
-    protected MethodSpec.Builder addFindBase(MethodSpec.Builder methodSpec) {
-        return methodSpec.addStatement("var $L = getById($L)", BASE_VAR_NAME, BASE_ID_PARAM_NAME);
-    }
+  protected AnnotationSpec annotation(ClassName mapping) {
+    return AnnotationSpec.builder(mapping).addMember("value", "$S", uri()).build();
+  }
 
-    public TypeSpec.Builder addMethod(TypeSpec.Builder spec) {
-        var serviceMethod = getServiceMethod();
-        if (serviceMethod != null) spec.addMethod(serviceMethod);
+  protected MethodSpec.Builder addFindBase(MethodSpec.Builder methodSpec) {
+    return methodSpec.addStatement("var $L = getById($L)", BASE_VAR_NAME, BASE_ID_PARAM_NAME);
+  }
 
-        var field = getServiceField();
-        if (field != null && spec.fieldSpecs.stream().noneMatch(s -> s.type.equals(field.type))) spec.addField(field);
-        return spec;
-    }
+  public TypeSpec.Builder addMethod(TypeSpec.Builder spec) {
+    var serviceMethod = getServiceMethod();
+    if (serviceMethod != null) spec.addMethod(serviceMethod);
 
-    public TypeSpec.Builder addEndpoint(TypeSpec.Builder spec) {
-        var method = getControllerMethod();
-        if (method != null) spec.addMethod(method);
+    var field = getServiceField();
+    if (field != null && spec.fieldSpecs.stream().noneMatch(s -> s.type.equals(field.type))) spec.addField(field);
+    return spec;
+  }
 
-        var field = getControllerField();
-        if (field != null && spec.fieldSpecs.stream().noneMatch(s -> s.type.equals(field.type))) spec.addField(field);
-        return spec;
-    }
+  public TypeSpec.Builder addEndpoint(TypeSpec.Builder spec) {
+    var method = getControllerMethod();
+    if (method != null) spec.addMethod(method);
+
+    var field = getControllerField();
+    if (field != null && spec.fieldSpecs.stream().noneMatch(s -> s.type.equals(field.type))) spec.addField(field);
+    return spec;
+  }
 }

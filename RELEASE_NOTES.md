@@ -1,3 +1,14 @@
+### Release Notes - Version 0.1.9 (2026-01-30)
+
+This release introduces `ForgePersistenceHook` support in `ForgeService`, allowing for custom logic (e.g., logging, auditing) to be executed during entity persistence operations.
+
+#### New Features & Enhancements
+
+- **Persistence Hooks**: Added `ForgePersistenceHook<E>` interface for intercepting CRUD operations in `ForgeService`.
+- **Enhanced Service Layer**: `ForgeService` now supports a list of persistence hooks that are executed before and after create, update, delete, and association (add/remove) operations.
+
+---
+
 ### Release Notes - Version 0.1.8 (2026-01-25)
 
 This release adds support for Many-to-Many and One-to-One associations in `@WithEndpoints`, and continues the internal refactoring of the relation handling logic.

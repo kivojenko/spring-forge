@@ -15,29 +15,34 @@ import static com.kivojenko.spring.forge.jpa.utils.StringUtils.setterName;
  */
 @SuperBuilder
 public class RemoveOneToManyEndpointRelation extends OneToManyEndpointRelation {
-    @Override
-    protected ClassName mapping() {
-        return DELETE_MAPPING;
-    }
+  @Override
+  protected ClassName mapping() {
+    return DELETE_MAPPING;
+  }
 
-    @Override
-    protected String uri() {
-        return super.uri() + "/{" + SUB_ID_PARAM_NAME + "}";
-    }
+  @Override
+  protected String uri() {
+    return super.uri() + "/{" + SUB_ID_PARAM_NAME + "}";
+  }
 
-    @Override
-    protected String generatedMethodName() {
-        return "remove" + capitalize(fieldName);
-    }
+  @Override
+  protected String generatedMethodName() {
+    return "remove" + capitalize(fieldName);
+  }
 
-    @Override
-    public MethodSpec getServiceMethod() {
-        var builder = MethodSpec
-                .methodBuilder((generatedMethodName()))
-                .returns(void.class)
-                .addModifiers(Modifier.PUBLIC)
-                .addParameter(baseParamSpec());
-        addFindSub(builder);
-        return builder.addStatement("$L.$L(null)", SUB_VAR_NAME, setterName(mappedBy)).build();
-    }
+  @Override
+  public MethodSpec getServiceMethod() {
+    var builder = MethodSpec
+        .methodBuilder((generatedMethodName()))
+        .returns(void.class)
+        .addModifiers(Modifier.PUBLIC)
+        .addParameter(baseParamSpec());
+    addFindBase(builder);
+    addFindSub(builder);
+    return builder
+        .addStatement("hooks.forEach(hook -> hook.beforeDelete($L, $L))", BASE_VAR_NAME, SUB_VAR_NAME)
+        .addStatement("$N.$L(null)", SUB_VAR_NAME, setterName(mappedBy))
+        .addStatement("hooks.forEach(hook -> hook.afterDelete($L, $L))", BASE_VAR_NAME, SUB_VAR_NAME)
+        .build();
+  }
 }
