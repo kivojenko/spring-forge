@@ -1,6 +1,7 @@
 package com.kivojenko.spring.forge.jpa.model;
 
-import com.kivojenko.spring.forge.annotation.FilterField;
+import com.kivojenko.spring.forge.annotation.filter.IterableFilterField;
+import com.kivojenko.spring.forge.annotation.filter.IterableMatchMode;
 import com.kivojenko.spring.forge.jpa.factory.JpaEntityModelFactory;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
@@ -13,6 +14,7 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
+import java.lang.annotation.Annotation;
 
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.*;
 import static com.kivojenko.spring.forge.jpa.utils.StringUtils.pluralize;
@@ -27,7 +29,7 @@ public class FilterFieldModel {
     TypeMirror type;
     TypeMirror entityCandidate;
     TypeElement typeElement;
-    FilterField annotation;
+    Annotation annotation;
     boolean iterable;
     boolean singleEntity;
     ProcessingEnvironment env;
@@ -89,7 +91,14 @@ public class FilterFieldModel {
         }
         if (isIterable()) {
             builder.beginControlFlow("if ($L != null && !$L.isEmpty())", name, name);
-            builder.addStatement("builder.and(entity.$L.any().id.in($L))", element.getSimpleName(), name);
+
+            if (annotation instanceof IterableFilterField iterableAnnotation && iterableAnnotation.match() == IterableMatchMode.ALL) {
+                builder.beginControlFlow("for (var $L : $L)", "sub", name);
+                builder.addStatement("builder.and(entity.$L.any().id.eq($L))", element.getSimpleName(), "sub");
+                builder.endControlFlow();
+            } else {
+                builder.addStatement("builder.and(entity.$L.any().id.in($L))", element.getSimpleName(), name);
+            }
             builder.endControlFlow();
         }
     }

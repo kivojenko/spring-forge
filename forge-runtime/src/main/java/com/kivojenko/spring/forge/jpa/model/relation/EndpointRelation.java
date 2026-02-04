@@ -27,6 +27,11 @@ public abstract class EndpointRelation {
   protected static final String SUB_VAR_NAME = "sub";
   protected static final String UPDATED_SUB_VAR_NAME = "updatedSub";
 
+  /**
+   * Returns a parameter specification for the base entity ID.
+   *
+   * @return the parameter specification
+   */
   protected ParameterSpec baseParamSpec() {
     return ParameterSpec
         .builder(entityModel.getJpaId().type(), BASE_ID_PARAM_NAME)
@@ -34,6 +39,11 @@ public abstract class EndpointRelation {
         .build();
   }
 
+  /**
+   * Returns a parameter specification for the sub-entity ID.
+   *
+   * @return the parameter specification
+   */
   protected ParameterSpec subParamSpec() {
     return ParameterSpec
         .builder(targetEntityModel.getJpaId().type(), SUB_ID_PARAM_NAME)
@@ -46,6 +56,11 @@ public abstract class EndpointRelation {
    */
   protected String path;
 
+  /**
+   * Returns the URI for the endpoint.
+   *
+   * @return the URI
+   */
   protected String uri() {
     return "/{" + BASE_ID_PARAM_NAME + "}/" + path;
   }
@@ -60,6 +75,9 @@ public abstract class EndpointRelation {
    */
   protected String fieldName;
 
+  /**
+   * The element representing the field this relation is based on.
+   */
   protected VariableElement field;
 
   /**
@@ -108,10 +126,20 @@ public abstract class EndpointRelation {
     return null;
   }
 
+  /**
+   * Returns the name of the target repository field.
+   *
+   * @return the field name
+   */
   protected String getTargetRepositoryFieldName() {
     return decapitalize(targetEntityModel.getRepositoryName());
   }
 
+  /**
+   * Returns the field specification for the target repository.
+   *
+   * @return the field specification
+   */
   protected FieldSpec getTargetRepositoryFieldSpec() {
     return FieldSpec
         .builder(targetEntityModel.getRepositoryType(), getTargetRepositoryFieldName())
@@ -120,14 +148,32 @@ public abstract class EndpointRelation {
         .build();
   }
 
+  /**
+   * Returns an annotation specification for the given mapping.
+   *
+   * @param mapping the mapping class name
+   * @return the annotation specification
+   */
   protected AnnotationSpec annotation(ClassName mapping) {
     return AnnotationSpec.builder(mapping).addMember("value", "$S", uri()).build();
   }
 
+  /**
+   * Adds a statement to find the base entity by its ID to the given method builder.
+   *
+   * @param methodSpec the method builder
+   * @return the method builder
+   */
   protected MethodSpec.Builder addFindBase(MethodSpec.Builder methodSpec) {
     return methodSpec.addStatement("var $L = getById($L)", BASE_VAR_NAME, BASE_ID_PARAM_NAME);
   }
 
+  /**
+   * Adds the service method and any required fields to the given type builder.
+   *
+   * @param spec the type builder
+   * @return the type builder
+   */
   public TypeSpec.Builder addMethod(TypeSpec.Builder spec) {
     var serviceMethod = getServiceMethod();
     if (serviceMethod != null) spec.addMethod(serviceMethod);
@@ -137,6 +183,12 @@ public abstract class EndpointRelation {
     return spec;
   }
 
+  /**
+   * Adds the controller endpoint and any required fields to the given type builder.
+   *
+   * @param spec the type builder
+   * @return the type builder
+   */
   public TypeSpec.Builder addEndpoint(TypeSpec.Builder spec) {
     var method = getControllerMethod();
     if (method != null) spec.addMethod(method);

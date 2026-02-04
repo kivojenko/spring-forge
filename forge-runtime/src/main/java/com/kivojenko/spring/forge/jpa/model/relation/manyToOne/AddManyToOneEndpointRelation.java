@@ -16,16 +16,31 @@ import static com.kivojenko.spring.forge.jpa.utils.StringUtils.capitalize;
 @SuperBuilder
 public class AddManyToOneEndpointRelation extends ManyToOneEndpointRelation {
 
+  /**
+   * Returns the generated method name for the endpoint.
+   *
+   * @return the method name
+   */
   @Override
   protected String generatedMethodName() {
     return "addExisting" + capitalize(fieldName);
   }
 
+  /**
+   * Returns the URI for the endpoint.
+   *
+   * @return the URI
+   */
   @Override
   protected String uri() {
     return super.uri() + "/{" + SUB_ID_PARAM_NAME + "}";
   }
 
+  /**
+   * Returns the HTTP mapping annotation class for the endpoint.
+   *
+   * @return the mapping class
+   */
   @Override
   protected ClassName mapping() {
     return PUT_MAPPING;

@@ -1,8 +1,8 @@
 package com.kivojenko.spring.forge.jpa.utils;
 
 import com.kivojenko.spring.forge.jpa.contract.ForgeController;
-import com.kivojenko.spring.forge.jpa.contract.HasNameRepository;
 import com.kivojenko.spring.forge.jpa.contract.ForgeService;
+import com.kivojenko.spring.forge.jpa.contract.HasNameRepository;
 import com.squareup.javapoet.ClassName;
 
 import java.util.ArrayList;

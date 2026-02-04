@@ -35,8 +35,18 @@ public abstract class ServiceRepositoryEndpointRelation extends EndpointRelation
                 .build();
     }
 
+    /**
+     * Returns the HTTP mapping annotation class for the endpoint.
+     *
+     * @return the mapping class
+     */
     protected abstract ClassName mapping();
 
+    /**
+     * Returns the generated method name for the endpoint.
+     *
+     * @return the method name
+     */
     protected abstract String generatedMethodName();
 
 }

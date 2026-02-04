@@ -3,6 +3,7 @@ package com.kivojenko.spring.forge.jpa.contract;
 import com.kivojenko.spring.forge.jpa.contract.persistence.ForgePersistenceHook;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +24,9 @@ public abstract class ForgeService<E, ID, R extends JpaRepository<E, ID>> {
    */
   @Autowired
   protected R repository;
+  /**
+   * List of persistence hooks to be executed during CRUD operations.
+   */
   @Autowired(required = false)
   protected List<ForgePersistenceHook<? super E>> hooks = List.of();
 
@@ -125,8 +129,17 @@ public abstract class ForgeService<E, ID, R extends JpaRepository<E, ID>> {
    * @param pageable the pagination information
    * @return a page of entities
    */
-  public Iterable<E> findAll(Pageable pageable) {
+  public Page<E> findAll(Pageable pageable) {
     return repository.findAll(pageable);
+  }
+
+  /**
+   * Returns all entities.
+   *
+   * @return a list of all entities
+   */
+  public List<E> findAll() {
+    return repository.findAll();
   }
 
   /**

@@ -19,77 +19,77 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 public abstract class ForgeController<E, ID, R extends JpaRepository<E, ID>, S extends ForgeService<E, ID, R>> {
 
-    /**
-     * The service used for business logic and data access.
-     */
-    @Autowired
-    protected S service;
+  /**
+   * The service used for business logic and data access.
+   */
+  @Autowired
+  protected S service;
 
-    /**
-     * Returns the total number of entities.
-     *
-     * @return the count
-     */
-    @GetMapping("/count")
-    public long count() {
-        return service.count();
-    }
+  /**
+   * Returns the total number of entities.
+   *
+   * @return the count
+   */
+  @GetMapping("/count")
+  public long count() {
+    return service.count();
+  }
 
-    /**
-     * Creates a new entity.
-     *
-     * @param entity the entity to create
-     * @return the created entity
-     */
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public E create(@Valid @RequestBody E entity) {
-        return service.create(entity);
-    }
+  /**
+   * Creates a new entity.
+   *
+   * @param entity the entity to create
+   * @return the created entity
+   */
+  @PostMapping
+  @ResponseStatus(HttpStatus.CREATED)
+  public E create(@Valid @RequestBody E entity) {
+    return service.create(entity);
+  }
 
-    /**
-     * Gets an entity by its ID.
-     *
-     * @param id the ID of the entity
-     * @return the entity
-     */
-    @GetMapping("/{id}")
-    public E getById(@PathVariable(name = "id") ID id) {
-        return service.getById(id);
-    }
+  /**
+   * Gets an entity by its ID.
+   *
+   * @param id the ID of the entity
+   * @return the entity
+   */
+  @GetMapping("/{id}")
+  public E getById(@PathVariable(name = "id") ID id) {
+    return service.getById(id);
+  }
 
-    /**
-     * Checks if an entity exists by its ID.
-     *
-     * @param id the ID of the entity
-     * @return true if exists, false otherwise
-     */
-    @RequestMapping(method = RequestMethod.HEAD, path = "/{id}")
-    public boolean exists(@PathVariable(name = "id") ID id) {
-        return service.exists(id);
-    }
+  /**
+   * Checks if an entity exists by its ID.
+   *
+   * @param id the ID of the entity
+   * @return true if exists, false otherwise
+   */
+  @RequestMapping(method = RequestMethod.HEAD, path = "/{id}")
+  public boolean exists(@PathVariable(name = "id") ID id) {
+    return service.exists(id);
+  }
 
-    /**
-     * Updates an existing entity.
-     *
-     * @param id     the ID of the entity to update
-     * @param entity the updated entity data
-     * @return the updated entity
-     */
-    @PutMapping("/{id}")
-    @ResponseStatus(code = HttpStatus.CREATED)
-    public E update(@PathVariable(name = "id") ID id, @Valid @RequestBody E entity) {
-        return service.update(id, entity);
-    }
+  /**
+   * Updates an existing entity.
+   *
+   * @param id     the ID of the entity to update
+   * @param entity the updated entity data
+   * @return the updated entity
+   */
+  @PutMapping("/{id}")
+  @ResponseStatus(code = HttpStatus.CREATED)
+  public E update(@PathVariable(name = "id") ID id, @Valid @RequestBody E entity) {
+    return service.update(id, entity);
+  }
 
-    /**
-     * Deletes an entity by its ID.
-     *
-     * @param id the ID of the entity to delete
-     */
-    @DeleteMapping("/{id}")
-    @ResponseStatus(code = HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable(name = "id") ID id) {
-        service.deleteById(id);
-    }
+  /**
+   * Deletes an entity by its ID.
+   *
+   * @param id the ID of the entity to delete
+   */
+  @DeleteMapping("/{id}")
+  @ResponseStatus(code = HttpStatus.NO_CONTENT)
+  public void delete(@PathVariable(name = "id") ID id) {
+    service.deleteById(id);
+  }
 }
