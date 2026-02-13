@@ -1,3 +1,17 @@
+### Release Notes - Version 0.1.10 (2026-02-13)
+
+This release introduces advanced string filtering capabilities and continues internal refactoring of the association handling logic to improve consistency and maintainability.
+
+#### New Features & Enhancements
+
+- **Advanced String Filtering**: Introduced `@StringFilterField` annotation, allowing for fine-grained control over how string fields are filtered:
+    - **Match Modes**: Supported modes include `EQUALS`, `CONTAINS` (default), `STARTS_WITH`, and `ENDS_WITH`.
+    - **QueryDSL Integration**: Automatically generates the appropriate QueryDSL predicates based on the selected match mode.
+- **Enhanced Association Handling**: Refactored internal relation models for `ManyToOne`, `OneToMany`, and `ManyToMany` associations to use a more consistent and robust base architecture.
+- **Improved Filter Generation**: `FilterFieldModelFactory` now supports specialized handling for string fields, ensuring type safety and better error reporting during compilation.
+
+---
+
 ### Release Notes - Version 0.1.9 (2026-01-30)
 
 This release introduces `ForgePersistenceHook` support in `ForgeService`, allowing for custom logic (e.g., logging, auditing) to be executed during entity persistence operations.

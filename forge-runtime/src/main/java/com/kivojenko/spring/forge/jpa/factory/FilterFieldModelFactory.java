@@ -2,6 +2,7 @@ package com.kivojenko.spring.forge.jpa.factory;
 
 import com.kivojenko.spring.forge.annotation.filter.FilterField;
 import com.kivojenko.spring.forge.annotation.filter.IterableFilterField;
+import com.kivojenko.spring.forge.annotation.filter.StringFilterField;
 import com.kivojenko.spring.forge.jpa.model.FilterFieldModel;
 import com.kivojenko.spring.forge.jpa.utils.LoggingUtils;
 import com.squareup.javapoet.TypeName;
@@ -16,6 +17,7 @@ import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.STRING;
 
 public class FilterFieldModelFactory {
   public static List<FilterFieldModel> resolve(TypeElement entity, ProcessingEnvironment env) {
@@ -40,6 +42,14 @@ public class FilterFieldModelFactory {
           LoggingUtils.error(env, field, "@FilterIterableField is only allowed on Iterable types");
         }
       }
+      if (annotation == null) {
+        annotation = field.getAnnotation(StringFilterField.class);
+        if (annotation != null &&
+            !typeUtils.isSameType(type, elementUtils.getTypeElement(STRING.canonicalName()).asType())) {
+          LoggingUtils.error(env, field, "@StringFilterField is only allowed on String types");
+        }
+      }
+
       if (annotation == null) continue;
 
       var isJavaTransient = field.getModifiers().contains(Modifier.TRANSIENT);
