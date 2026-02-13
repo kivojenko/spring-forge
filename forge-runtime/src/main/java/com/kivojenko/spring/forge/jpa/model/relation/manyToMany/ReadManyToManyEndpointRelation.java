@@ -21,7 +21,7 @@ public class ReadManyToManyEndpointRelation extends EndpointRelation {
                 .addModifiers(Modifier.PUBLIC)
                 .addAnnotation(annotation(GET_MAPPING))
                 .returns(TypeName.get(field.asType()))
-                .addParameter(baseParamSpec())
+                .addParameter(baseParamSpec(true))
                 .addStatement("return getById($L).$L()", BASE_ID_PARAM_NAME, methodName)
                 .build();
     }

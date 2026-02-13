@@ -19,12 +19,17 @@ tasks.withType<Javadoc>().configureEach {
 
 publishing {
     repositories {
-        maven {
-            name = "ossrh-staging-api"
-            url = uri("https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/")
-            credentials {
-                username = findProperty("ossrhUsername") as String
-                password = findProperty("ossrhPassword") as String
+        val ossrhUser = providers.gradleProperty("ossrhUsername").orNull
+        val ossrhPass = providers.gradleProperty("ossrhPassword").orNull
+
+        if (!ossrhUser.isNullOrBlank() && !ossrhPass.isNullOrBlank()) {
+            maven {
+                name = "ossrh-staging-api"
+                url = uri("https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/")
+                credentials {
+                    username = ossrhUser
+                    password = ossrhPass
+                }
             }
         }
     }

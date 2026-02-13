@@ -51,8 +51,7 @@ public class AddManyToOneEndpointRelation extends ManyToOneEndpointRelation {
     var builder = MethodSpec
         .methodBuilder(generatedMethodName())
         .addModifiers(Modifier.PUBLIC)
-        .returns(targetEntityModel.getEntityType())
-        .addParameter(baseParamSpec());
+        .returns(targetEntityModel.getEntityType());
 
     addFindBase(builder);
     addFindSub(builder);

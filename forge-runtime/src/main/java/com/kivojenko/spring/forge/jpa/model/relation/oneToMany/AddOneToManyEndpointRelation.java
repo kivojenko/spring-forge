@@ -33,13 +33,13 @@ public class AddOneToManyEndpointRelation extends OneToManyEndpointRelation {
 
     return MethodSpec
         .methodBuilder((generatedMethodName()))
-        .returns(targetEntityModel.getEntityType())
-        .addModifiers(Modifier.PUBLIC)
-        .addParameter(Long.class, BASE_ID_PARAM_NAME)
-        .addParameter(subParam)
-        .addStatement("return service.$L($L, $L)", generatedMethodName(), BASE_ID_PARAM_NAME, SUB_VAR_NAME)
         .addAnnotation(annotation(mapping()))
         .addAnnotation(TRANSACTIONAL)
+        .addModifiers(Modifier.PUBLIC)
+        .returns(targetEntityModel.getEntityType())
+        .addParameter(baseParamSpec(true))
+        .addParameter(subParam)
+        .addStatement("return service.$L($L, $L)", generatedMethodName(), BASE_ID_PARAM_NAME, SUB_VAR_NAME)
         .build();
   }
 
@@ -51,10 +51,10 @@ public class AddOneToManyEndpointRelation extends OneToManyEndpointRelation {
         .methodBuilder((generatedMethodName()))
         .returns(targetEntityModel.getEntityType())
         .addModifiers(Modifier.PUBLIC)
-        .addParameter(baseParamSpec())
         .addParameter(subParam);
 
     addFindBase(builder);
+
     return builder
         .addStatement("hooks.forEach(hook -> hook.beforeAdd($L, $L));", BASE_VAR_NAME, SUB_VAR_NAME)
         .addStatement("$L.$L($L)", SUB_VAR_NAME, setterName(mappedBy), BASE_VAR_NAME)

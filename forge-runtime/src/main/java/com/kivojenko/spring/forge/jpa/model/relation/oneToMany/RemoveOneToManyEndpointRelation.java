@@ -35,8 +35,7 @@ public class RemoveOneToManyEndpointRelation extends OneToManyEndpointRelation {
     var builder = MethodSpec
         .methodBuilder((generatedMethodName()))
         .returns(void.class)
-        .addModifiers(Modifier.PUBLIC)
-        .addParameter(baseParamSpec());
+        .addModifiers(Modifier.PUBLIC);
     addFindBase(builder);
     addFindSub(builder);
     return builder

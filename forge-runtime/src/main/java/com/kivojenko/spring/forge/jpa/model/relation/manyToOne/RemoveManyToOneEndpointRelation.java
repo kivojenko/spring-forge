@@ -34,9 +34,8 @@ public class RemoveManyToOneEndpointRelation extends ManyToOneEndpointRelation {
   public MethodSpec getServiceMethod() {
     var builder = MethodSpec
         .methodBuilder((generatedMethodName()))
-        .returns(void.class)
         .addModifiers(Modifier.PUBLIC)
-        .addParameter(Long.class, BASE_ID_PARAM_NAME);
+        .returns(void.class);
 
     addFindBase(builder);
     addFindSub(builder);

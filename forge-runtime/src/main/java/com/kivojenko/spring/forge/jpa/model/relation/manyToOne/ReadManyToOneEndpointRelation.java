@@ -20,7 +20,7 @@ public class ReadManyToOneEndpointRelation extends EndpointRelation {
                 .addModifiers(Modifier.PUBLIC)
                 .addAnnotation(annotation(GET_MAPPING))
                 .returns(targetEntityModel.getEntityType())
-                .addParameter(baseParamSpec())
+                .addParameter(baseParamSpec(true))
                 .addStatement("return getById($L).$L()", BASE_ID_PARAM_NAME, methodName)
                 .build();
     }

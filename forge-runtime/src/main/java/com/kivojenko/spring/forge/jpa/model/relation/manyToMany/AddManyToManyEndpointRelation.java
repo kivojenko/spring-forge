@@ -2,7 +2,6 @@ package com.kivojenko.spring.forge.jpa.model.relation.manyToMany;
 
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import lombok.experimental.SuperBuilder;
 
@@ -54,8 +53,7 @@ public class AddManyToManyEndpointRelation extends ManyToManyEndpointRelation {
     var builder = MethodSpec
         .methodBuilder(generatedMethodName())
         .addModifiers(Modifier.PUBLIC)
-        .returns(ParameterizedTypeName.get(ITERABLE, targetEntityModel.getEntityType()))
-        .addParameter(ParameterSpec.builder(entityModel.getJpaId().type(), BASE_ID_PARAM_NAME).build());
+        .returns(ParameterizedTypeName.get(ITERABLE, targetEntityModel.getEntityType()));
 
     addFindBase(builder);
     addFindSub(builder);
