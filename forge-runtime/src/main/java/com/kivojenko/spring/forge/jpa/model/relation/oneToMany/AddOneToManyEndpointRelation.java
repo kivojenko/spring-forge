@@ -11,6 +11,9 @@ import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.*;
 import static com.kivojenko.spring.forge.jpa.utils.StringUtils.capitalize;
 import static com.kivojenko.spring.forge.jpa.utils.StringUtils.setterName;
 
+/**
+ * Represents a relation that generates a POST endpoint to add a new entity to a One-to-Many association.
+ */
 @SuperBuilder
 public class AddOneToManyEndpointRelation extends OneToManyEndpointRelation {
 
@@ -50,12 +53,12 @@ public class AddOneToManyEndpointRelation extends OneToManyEndpointRelation {
     var builder = MethodSpec
         .methodBuilder((generatedMethodName()))
         .returns(targetEntityModel.getEntityType())
-        .addModifiers(Modifier.PUBLIC)
-        .addParameter(subParam);
+        .addModifiers(Modifier.PUBLIC);
 
     addFindBase(builder);
 
     return builder
+        .addParameter(subParam)
         .addStatement("hooks.forEach(hook -> hook.beforeAdd($L, $L));", BASE_VAR_NAME, SUB_VAR_NAME)
         .addStatement("$L.$L($L)", SUB_VAR_NAME, setterName(mappedBy), BASE_VAR_NAME)
         .addStatement("var $L = $L.save($L)", UPDATED_SUB_VAR_NAME, getTargetRepositoryFieldName(), SUB_VAR_NAME)

@@ -3,11 +3,13 @@ package com.kivojenko.spring.forge.jpa.model.relation;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.experimental.SuperBuilder;
 
 import javax.lang.model.element.Modifier;
 
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.TRANSACTIONAL;
+import static com.kivojenko.spring.forge.jpa.utils.StringUtils.decapitalize;
 
 /**
  * Base class for endpoint relations that involve both Service and Repository layers.
@@ -16,37 +18,60 @@ import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.TRANSACTIONAL;
 @SuperBuilder
 public abstract class ServiceRepositoryEndpointRelation extends EndpointRelation {
 
-    @Override
-    public FieldSpec getServiceField() {
-        return getTargetRepositoryFieldSpec();
-    }
+  @Override
+  public FieldSpec getServiceField() {
+    return getTargetRepositoryFieldSpec();
+  }
 
-    @Override
-    public MethodSpec getControllerMethod() {
-        return MethodSpec
-                .methodBuilder((generatedMethodName()))
-                .returns(void.class)
-                .addModifiers(Modifier.PUBLIC)
-                .addParameter(baseParamSpec(true))
-                .addParameter(subParamSpec(true))
-                .addStatement("service.$L($L, $L)", generatedMethodName(), BASE_ID_PARAM_NAME, SUB_ID_PARAM_NAME)
-                .addAnnotation(annotation(mapping()))
-                .addAnnotation(TRANSACTIONAL)
-                .build();
-    }
+  @Override
+  public MethodSpec getControllerMethod() {
+    return MethodSpec
+        .methodBuilder((generatedMethodName()))
+        .returns(void.class)
+        .addModifiers(Modifier.PUBLIC)
+        .addParameter(baseParamSpec(true))
+        .addParameter(subParamSpec(true))
+        .addStatement("service.$L($L, $L)", generatedMethodName(), BASE_ID_PARAM_NAME, SUB_ID_PARAM_NAME)
+        .addAnnotation(annotation(mapping()))
+        .addAnnotation(TRANSACTIONAL)
+        .build();
+  }
 
-    /**
-     * Returns the HTTP mapping annotation class for the endpoint.
-     *
-     * @return the mapping class
-     */
-    protected abstract ClassName mapping();
+  /**
+   * Returns the HTTP mapping annotation class for the endpoint.
+   *
+   * @return the mapping class
+   */
+  protected abstract ClassName mapping();
 
-    /**
-     * Returns the generated method name for the endpoint.
-     *
-     * @return the method name
-     */
-    protected abstract String generatedMethodName();
+  /**
+   * Returns the generated method name for the endpoint.
+   *
+   * @return the method name
+   */
+  protected abstract String generatedMethodName();
+
+  protected void addFindSub(MethodSpec.Builder methodSpec) {
+    addFindSub(methodSpec, false);
+  }
+
+  /**
+   * Adds a statement to find the sub-entity by its ID to the given method builder.
+   *
+   * @param methodSpec the method builder
+   */
+  protected void addFindSub(MethodSpec.Builder methodSpec, boolean pathVariable) {
+    methodSpec.addParameter(subParamSpec(pathVariable)).addStatement(
+        "var $L = $L.findById($L).orElseThrow($T::new)",
+        SUB_VAR_NAME,
+        decapitalize(targetEntityModel.getRepositoryName()),
+        SUB_ID_PARAM_NAME,
+        EntityNotFoundException.class
+    );
+    checkFoundSub(methodSpec);
+  }
+
+  protected void checkFoundSub(MethodSpec.Builder methodSpec) {
+  }
 
 }

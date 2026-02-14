@@ -78,6 +78,6 @@ dependencies {
     annotationProcessor("org.yaml:snakeyaml:2.5")
     implementation("org.yaml:snakeyaml:2.5")
 
-    annotationProcessor("org.projectlombok:lombok:1.18.42")
-    compileOnly("org.projectlombok:lombok:1.18.42")
+    annotationProcessor("org.projectlombok:lombok")
+    compileOnly("org.projectlombok:lombok")
 }

@@ -14,31 +14,23 @@ import static com.kivojenko.spring.forge.jpa.utils.StringUtils.getterName;
  */
 @SuperBuilder
 public abstract class ManyToOneEndpointRelation extends ServiceRepositoryEndpointRelation {
-  protected void addFindSub(MethodSpec.Builder methodSpec) {
-    addFindSub(methodSpec, false);
-  }
 
-  /**
-   * Adds a statement to find the sub-entity by its ID to the given method builder.
-   *
-   * @param methodSpec the method builder
-   */
-  protected void addFindSub(MethodSpec.Builder methodSpec, boolean pathVariable) {
-    methodSpec.addParameter(subParamSpec(pathVariable))
-        .addStatement("var $L = $L.findById($L).orElseThrow($T::new)",
-                      SUB_VAR_NAME,
-                      decapitalize(targetEntityModel.getRepositoryName()),
-                      SUB_ID_PARAM_NAME,
-                      EntityNotFoundException.class)
-        .beginControlFlow("if (!$N.$L().$L().equals($L))",
-                          BASE_VAR_NAME,
-                          getterName(fieldName),
-                          getterName("id"),
-                          SUB_ID_PARAM_NAME)
-        .addStatement("throw new $T($S)",
-                      IllegalStateException.class,
-                      entityModel.getEntityType().simpleName() + " is not associated with the given "
-                          + targetEntityModel.getEntityType().simpleName())
-        .endControlFlow();
+  @Override
+  protected void checkFoundSub(MethodSpec.Builder methodSpec) {
+    methodSpec.beginControlFlow(
+        "if ($N.$L() != null && !$N.$L().$L().equals($L))",
+        BASE_VAR_NAME,
+        getterName(fieldName),
+        BASE_VAR_NAME,
+        getterName(fieldName),
+        getterName("id"),
+        SUB_ID_PARAM_NAME
+    ).addStatement(
+        "throw new $T($S)",
+        IllegalStateException.class,
+        entityModel.getEntityType().simpleName() +
+            " is not associated with the given " +
+            targetEntityModel.getEntityType().simpleName()
+    ).endControlFlow();
   }
 }

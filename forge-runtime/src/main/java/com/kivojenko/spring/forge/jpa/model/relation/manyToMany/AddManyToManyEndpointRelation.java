@@ -1,5 +1,6 @@
 package com.kivojenko.spring.forge.jpa.model.relation.manyToMany;
 
+import com.kivojenko.spring.forge.jpa.model.relation.ServiceRepositoryEndpointRelation;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
@@ -13,10 +14,10 @@ import static com.kivojenko.spring.forge.jpa.utils.StringUtils.capitalize;
 import static com.kivojenko.spring.forge.jpa.utils.StringUtils.getterName;
 
 /**
- * Represents a relation that generates a PUT endpoint to link an existing entity to a Many-to-One association.
+ * Represents a relation that generates a PUT endpoint to link an existing entity to a Many-to-Many association.
  */
 @SuperBuilder
-public class AddManyToManyEndpointRelation extends ManyToManyEndpointRelation {
+public class AddManyToManyEndpointRelation extends ServiceRepositoryEndpointRelation {
 
   /**
    * Returns the generated method name for the endpoint.
@@ -65,7 +66,12 @@ public class AddManyToManyEndpointRelation extends ManyToManyEndpointRelation {
         .endControlFlow()
         .addStatement("$L.$L().add($L)", BASE_VAR_NAME, getterName(fieldName), SUB_VAR_NAME)
         .addStatement("var $L = repository.save($L)", UPDATED_BASE_VAR_NAME, BASE_VAR_NAME)
-        .addStatement("hooks.forEach(hook -> hook.afterAdd($L, $L.$L()));", UPDATED_BASE_VAR_NAME, UPDATED_BASE_VAR_NAME, getterName(fieldName))
+        .addStatement(
+            "hooks.forEach(hook -> hook.afterAdd($L, $L.$L()));",
+            UPDATED_BASE_VAR_NAME,
+            UPDATED_BASE_VAR_NAME,
+            getterName(fieldName)
+        )
         .addStatement("return $L.$L()", UPDATED_BASE_VAR_NAME, getterName(fieldName))
         .build();
   }

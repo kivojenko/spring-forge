@@ -2,10 +2,8 @@ package com.kivojenko.spring.forge.jpa.model.relation.oneToMany;
 
 import com.kivojenko.spring.forge.jpa.model.relation.ServiceRepositoryEndpointRelation;
 import com.squareup.javapoet.MethodSpec;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.experimental.SuperBuilder;
 
-import static com.kivojenko.spring.forge.jpa.utils.StringUtils.decapitalize;
 import static com.kivojenko.spring.forge.jpa.utils.StringUtils.getterName;
 
 
@@ -14,38 +12,24 @@ import static com.kivojenko.spring.forge.jpa.utils.StringUtils.getterName;
  */
 @SuperBuilder
 public abstract class OneToManyEndpointRelation extends ServiceRepositoryEndpointRelation {
-    protected String mappedBy;
-    protected void addFindSub(MethodSpec.Builder methodSpec) {
-      addFindSub(methodSpec, false);
-    }
+  protected String mappedBy;
 
-    /**
-     * Adds a statement to find the sub-entity by its ID to the given method builder.
-     *
-     * @param methodSpec the method builder
-     */
-    protected void addFindSub(MethodSpec.Builder methodSpec, boolean pathVariable) {
-        methodSpec
-                .addParameter(subParamSpec(pathVariable))
-                .addStatement(
-                        "var $L = $L.findById($L).orElseThrow($T::new)",
-                        SUB_VAR_NAME,
-                        decapitalize(targetEntityModel.getRepositoryName()),
-                        SUB_ID_PARAM_NAME,
-                        EntityNotFoundException.class
-                )
-                .beginControlFlow(
-                        "if (!$N.$L().$L().equals($L))",
-                        SUB_VAR_NAME,
-                        getterName(mappedBy),
-                        entityModel.getGetterName(),
-                        BASE_ID_PARAM_NAME
-                )
-                .addStatement("throw new $T($S)",
-                        IllegalStateException.class,
-                        entityModel.getEntityType().simpleName() +
-                                " is not associated with the given " +
-                                targetEntityModel.getEntityType().simpleName())
-                .endControlFlow();
-    }
+  @Override
+  protected void checkFoundSub(MethodSpec.Builder methodSpec) {
+    methodSpec.beginControlFlow(
+        "if ($N.$L() != null && !$N.$L().$L().equals($L))",
+        SUB_VAR_NAME,
+        getterName(mappedBy),
+        SUB_VAR_NAME,
+        getterName(mappedBy),
+        entityModel.getGetterName(),
+        BASE_ID_PARAM_NAME
+    ).addStatement(
+        "throw new $T($S)",
+        IllegalStateException.class,
+        entityModel.getEntityType().simpleName() +
+            " is not associated with the given " +
+            targetEntityModel.getEntityType().simpleName()
+    ).endControlFlow();
+  }
 }

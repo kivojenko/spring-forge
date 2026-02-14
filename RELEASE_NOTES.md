@@ -1,3 +1,21 @@
+### Release Notes - Version 0.1.11 (2026-02-14)
+
+This release expands the association endpoint generation to support more relation types and introduces internal validation logic to ensure data consistency during association operations.
+
+#### New Features & Enhancements
+
+- **Expanded Association Support**:
+    - **Many-to-Many**: Added support for removing entities from many-to-many associations via `DELETE` endpoints.
+    - **One-to-One**: Added support for unlinking (removing) entities from one-to-one associations via `DELETE` endpoints.
+    - **Many-to-One**: Added support for reading and removing many-to-one associations.
+- **Association Validation**: Added validation checks to generated association endpoints to ensure that entities being operated on are actually associated as expected, preventing inconsistent state.
+
+#### Improvements & Internal Changes
+
+- **Example Project**: Expanded the `forge-example` module with new entities, controllers, and comprehensive tests to demonstrate and verify the new association features.
+
+---
+
 ### Release Notes - Version 0.1.10 (2026-02-13)
 
 This release introduces advanced string filtering capabilities and continues internal refactoring of the association handling logic to improve consistency and maintainability.

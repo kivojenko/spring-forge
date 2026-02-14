@@ -79,20 +79,20 @@ dependencies {
 
     implementation("com.squareup:javapoet:1.13.0")
 
-    compileOnly("org.springframework:spring-web:7.0.1")
-    compileOnly("org.springframework.data:spring-data-jpa:4.0.1")
+    compileOnly("org.springframework:spring-web")
+    compileOnly("org.springframework.data:spring-data-jpa")
 
-    compileOnly("jakarta.validation:jakarta.validation-api:3.0.2")
-    compileOnly("jakarta.persistence:jakarta.persistence-api:3.2.0")
+    compileOnly("jakarta.validation:jakarta.validation-api")
+    compileOnly("jakarta.persistence:jakarta.persistence-api")
 
     implementation("com.querydsl:querydsl-core:5.1.0")
     implementation("com.querydsl:querydsl-jpa:5.1.0:jakarta")
     annotationProcessor("com.querydsl:querydsl-apt:5.1.0:jakarta")
-    annotationProcessor("jakarta.persistence:jakarta.persistence-api:3.2.0")
-    annotationProcessor("jakarta.annotation:jakarta.annotation-api:3.0.0")
+    annotationProcessor("jakarta.persistence:jakarta.persistence-api")
+    annotationProcessor("jakarta.annotation:jakarta.annotation-api")
 
-    compileOnly("org.projectlombok:lombok:1.18.42")
-    annotationProcessor("org.projectlombok:lombok:1.18.42")
+    compileOnly("org.projectlombok:lombok")
+    annotationProcessor("org.projectlombok:lombok")
 
     testImplementation("com.google.testing.compile:compile-testing:0.23.0")
 }

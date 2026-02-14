@@ -154,31 +154,84 @@ Spring Forge can generate additional endpoints for associations or custom servic
 
 #### @WithEndpoints
 
-Used on association fields in entities. It supports the following attributes:
+Used on association fields in entities. It generates endpoints for reading and managing associations.
+
+It supports the following attributes:
 
 - `read` (default: `true`): Generates a GET endpoint.
-- `remove` (default: `false`): Generates a DELETE endpoint (requires `mappedBy`).
+- `remove` (default: `true`): Generates a DELETE endpoint (requires `mappedBy` for collections).
 - `path`: Custom path for the association (defaults to field name).
 - `getMethodName`: Custom name of the getter method in the service (defaults to `get` + CapitalizedFieldName).
 
-```java
+##### Examples by Relation Type
 
+###### One-to-One
+
+```java
+@Entity
+public class Category {
+    @Id Long id;
+
+    @OneToOne
+    @WithEndpoints(read = true, remove = true)
+    Translation nameTranslation;
+}
+```
+
+- `GET /categories/{id}/nameTranslation` - returns the associated translation.
+- `DELETE /categories/{id}/nameTranslation` - unlinks the translation from the category.
+
+
+###### One-to-Many
+
+```java
 @Entity
 public class Company {
-    @Id
-    Long id;
+    @Id Long id;
 
     @OneToMany(mappedBy = "company")
-    @WithEndpoints(read = true, remove = true)
+    @WithEndpoints
     List<Employee> employees;
 }
 ```
 
-This generates:
-
 - `GET /companies/{id}/employees` - returns a list of employees for the company.
-- `DELETE /companies/{id}/employees/{employeeId}` - removes an employee from the company (sets the association to
-  `null`).
+- `POST /companies/{id}/employees` - creates a new employee and associates it with the company.
+- `DELETE /companies/{id}/employees/{employeeId}` - removes an employee from the company (sets the association to `null`).
+
+###### Many-to-One
+
+```java
+@Entity
+public class Employee {
+    @Id Long id;
+
+    @ManyToOne
+    @WithEndpoints
+    Company company;
+}
+```
+
+- `GET /employees/{id}/company` - returns the associated company.
+- `POST /employees/{id}/company/{companyId}` - links an existing company to the employee.
+- `DELETE /employees/{id}/company/{companyId}` - unlinks the company from the employee.
+
+###### Many-to-Many
+
+```java
+@Entity
+public class Book {
+    @Id Long id;
+
+    @ManyToMany
+    @WithEndpoints(read = true, remove = true)
+    List<Category> categories;
+}
+```
+
+- `GET /books/{id}/categories` - returns the list of categories for the book.
+- `POST /books/{id}/categories/{categoryId}` - links an existing category to the book.
+- `DELETE /books/{id}/categories/{categoryId}` - removes the category from the book.
 
 #### @WithGetEndpoint
 

@@ -84,11 +84,11 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
     testImplementation("com.google.testing.compile:compile-testing:0.23.0")
-    testImplementation("jakarta.persistence:jakarta.persistence-api:3.2.0")
-    testImplementation("org.springframework.data:spring-data-jpa:4.0.1")
-    testImplementation("org.springframework:spring-web:7.0.1")
-    testImplementation("org.projectlombok:lombok:1.18.42")
-    testAnnotationProcessor("org.projectlombok:lombok:1.18.42")
+    testImplementation("jakarta.persistence:jakarta.persistence-api")
+    testImplementation("org.springframework.data:spring-data-jpa")
+    testImplementation("org.springframework:spring-web")
+    testImplementation("org.projectlombok:lombok")
+    testAnnotationProcessor("org.projectlombok:lombok")
 }
 
 tasks.test {
