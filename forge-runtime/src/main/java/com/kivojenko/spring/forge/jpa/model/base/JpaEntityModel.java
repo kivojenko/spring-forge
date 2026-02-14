@@ -1,12 +1,14 @@
 package com.kivojenko.spring.forge.jpa.model.base;
 
-import com.kivojenko.spring.forge.jpa.factory.EndpointRelationFactory;
+import com.kivojenko.spring.forge.jpa.factory.EndpointRelationResolver;
 import com.kivojenko.spring.forge.jpa.factory.FilterFieldModelFactory;
 import com.kivojenko.spring.forge.jpa.model.FilterFieldModel;
 import com.kivojenko.spring.forge.jpa.model.relation.EndpointRelation;
 import com.kivojenko.spring.forge.jpa.utils.StringUtils;
 import com.querydsl.core.BooleanBuilder;
-import com.squareup.javapoet.*;
+import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.TypeName;
 import jakarta.persistence.MappedSuperclass;
 import lombok.Builder;
 import lombok.Getter;
@@ -27,7 +29,6 @@ import static com.kivojenko.spring.forge.jpa.generator.FilterGenerator.ENTITY_VA
 import static com.kivojenko.spring.forge.jpa.model.base.JpaEntityPackageNames.resolvePackageNames;
 import static com.kivojenko.spring.forge.jpa.model.base.JpaEntityRequirements.resolveRequirements;
 import static com.kivojenko.spring.forge.jpa.model.base.JpaId.resolveId;
-import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.*;
 import static com.kivojenko.spring.forge.jpa.utils.StringUtils.pluralize;
 import static java.beans.Introspector.decapitalize;
 
@@ -88,7 +89,7 @@ public final class JpaEntityModel {
     private final List<FilterFieldModel> filterableFields = FilterFieldModelFactory.resolve(getElement(), env);
 
     @Getter(lazy = true)
-    private final List<EndpointRelation> endpointRelations = EndpointRelationFactory.resolve(getElement(), env);
+    private final List<EndpointRelation> endpointRelations = EndpointRelationResolver.resolve(getElement(), env);
 
     @Getter(lazy = true)
     private final String getterName = StringUtils.getterName(getJpaId().name());
@@ -103,11 +104,6 @@ public final class JpaEntityModel {
         return pluralize(getEntityType().simpleName());
     }
 
-    /**
-     * Generates a protected {@code setId} method that overrides the base controller/service method.
-     *
-     * @return the method specification
-     */
     public MethodSpec setIdMethod() {
         return MethodSpec
                 .methodBuilder("setId")
@@ -117,36 +113,6 @@ public final class JpaEntityModel {
                 .addParameter(getEntityType(), "entity")
                 .addParameter(getJpaId().type(), "id")
                 .addStatement("entity.$L(id)", StringUtils.setterName(getJpaId().name()))
-                .build();
-    }
-
-    public MethodSpec findAllFilteredEndpoint() {
-        var pageableDefaultAnnotation = AnnotationSpec.builder(PAGEABLE_DEFAULT).addMember("size", "$L", 25).build();
-        var pageableParam = ParameterSpec
-                .builder(PAGEABLE, "pageable")
-                .addAnnotation(pageableDefaultAnnotation)
-                .build();
-
-        var requestParamAnnotation = AnnotationSpec.builder(REQUEST_PARAM).addMember("required", "false").build();
-        var filterParam = ParameterSpec
-                .builder(getFilterType(), "filter")
-                .addAnnotation(requestParamAnnotation)
-                .build();
-
-        var mappingAnnotationBuilder = AnnotationSpec.builder(GET_MAPPING);
-        getFilterableFields()
-                .stream()
-                .map(f -> f.getElement().getSimpleName().toString())
-                .forEach(f -> mappingAnnotationBuilder.addMember("params", "$S", f));
-
-        return MethodSpec
-                .methodBuilder("findAllFiltered")
-                .addModifiers(Modifier.PUBLIC)
-                .addAnnotation(mappingAnnotationBuilder.build())
-                .returns(ParameterizedTypeName.get(ITERABLE, getEntityType()))
-                .addParameter(pageableParam)
-                .addParameter(filterParam)
-                .addStatement("return service.findAllFiltered(pageable, filter)")
                 .build();
     }
 

@@ -1,30 +1,29 @@
-package com.kivojenko.spring.forge.jpa.model.relation.manyToOne;
+package com.kivojenko.spring.forge.jpa.model.relation.toCollection.oneToMany;
 
 import com.kivojenko.spring.forge.jpa.model.relation.ServiceRepositoryEndpointRelation;
 import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterSpec;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.experimental.SuperBuilder;
 
-import static com.kivojenko.spring.forge.jpa.utils.StringUtils.decapitalize;
 import static com.kivojenko.spring.forge.jpa.utils.StringUtils.getterName;
 
+
 /**
- * Base class for Many-to-One endpoint relations.
+ * Base class for One-to-Many endpoint relations.
  */
 @SuperBuilder
-public abstract class ManyToOneEndpointRelation extends ServiceRepositoryEndpointRelation {
+public abstract class OneToManyEndpointRelation extends ServiceRepositoryEndpointRelation {
+  protected String mappedBy;
 
   @Override
   protected void checkFoundSub(MethodSpec.Builder methodSpec) {
     methodSpec.beginControlFlow(
         "if ($N.$L() != null && !$N.$L().$L().equals($L))",
-        BASE_VAR_NAME,
-        getterName(fieldName),
-        BASE_VAR_NAME,
-        getterName(fieldName),
-        getterName("id"),
-        SUB_ID_PARAM_NAME
+        SUB_VAR_NAME,
+        getterName(mappedBy),
+        SUB_VAR_NAME,
+        getterName(mappedBy),
+        entityModel.getGetterName(),
+        BASE_ID_PARAM_NAME
     ).addStatement(
         "throw new $T($S)",
         IllegalStateException.class,

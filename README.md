@@ -400,7 +400,7 @@ If a repository or service already exists **in the configured package**, Spring 
 
 ### Dependencies
 ```kotlin
-mavenBom("com.kivojenko.spring.forge:spring-forge-bom:0.1.9")
+mavenBom("com.kivojenko.spring.forge:spring-forge-bom:0.1.11")
 ```
 
 ```kotlin

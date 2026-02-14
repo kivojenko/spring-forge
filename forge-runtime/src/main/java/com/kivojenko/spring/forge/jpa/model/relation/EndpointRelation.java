@@ -8,6 +8,7 @@ import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.TypeSpec;
 import lombok.Data;
+import lombok.Getter;
 import lombok.experimental.SuperBuilder;
 
 import javax.lang.model.element.Modifier;
@@ -36,26 +37,12 @@ public abstract class EndpointRelation {
     return baseParamSpec(false);
   }
 
-  /**
-   * Returns a parameter specification for the base entity ID.
-   *
-   * @return the parameter specification
-   */
   protected ParameterSpec baseParamSpec(boolean pathVariable) {
     var param = ParameterSpec.builder(entityModel.getJpaId().type(), BASE_ID_PARAM_NAME);
     if (pathVariable) {
       param.addAnnotation(PATH_VARIABLE);
     }
     return param.build();
-  }
-
-  /**
-   * Returns a parameter specification for the sub-entity ID.
-   *
-   * @return the parameter specification
-   */
-  protected ParameterSpec subParamSpec() {
-    return subParamSpec(false);
   }
 
   protected ParameterSpec subParamSpec(boolean pathVariable) {
@@ -66,98 +53,51 @@ public abstract class EndpointRelation {
     return param.build();
   }
 
-  /**
-   * The relative path for the endpoint.
-   */
   protected String path;
 
-  /**
-   * Returns the URI for the endpoint.
-   *
-   * @return the URI
-   */
   protected String uri() {
     return "/{" + BASE_ID_PARAM_NAME + "}/" + path;
   }
+  
+  @Getter(lazy = true)
+  private final String fieldName = fieldName();
+  
+  private String fieldName() {
+    if (field == null) return "";
+    return field.getSimpleName().toString();
+  }
 
-  /**
-   * The name of the method that provides the data for this relation.
-   */
-  protected String methodName;
+  protected abstract String generatedMethodName();
 
-  /**
-   * The name of the field this relation is based on, if applicable.
-   */
-  protected String fieldName;
-
-  /**
-   * The element representing the field this relation is based on.
-   */
   protected VariableElement field;
 
-  /**
-   * The model of the entity that owns this relation.
-   */
   protected JpaEntityModel entityModel;
 
-  /**
-   * The model of the target entity of this relation.
-   */
   protected JpaEntityModel targetEntityModel;
 
-  /**
-   * Returns the field specification to be added to the generated controller, if any.
-   *
-   * @return the field specification or null
-   */
   public FieldSpec getControllerField() {
     return null;
   }
 
-  /**
-   * Returns the field specification to be added to the generated service, if any.
-   *
-   * @return the field specification or null
-   */
   public FieldSpec getServiceField() {
     return null;
   }
 
-  /**
-   * Returns the method specification for the generated controller.
-   *
-   * @return the method specification or null
-   */
   public MethodSpec getControllerMethod() {
     return null;
   }
 
-  /**
-   * Returns the method specification for the generated service.
-   *
-   * @return the method specification or null
-   */
   public MethodSpec getServiceMethod() {
     return null;
   }
 
-  /**
-   * Returns the name of the target repository field.
-   *
-   * @return the field name
-   */
-  protected String getTargetRepositoryFieldName() {
+  protected String getTargetRepositorygetFieldName() {
     return decapitalize(targetEntityModel.getRepositoryName());
   }
 
-  /**
-   * Returns the field specification for the target repository.
-   *
-   * @return the field specification
-   */
   protected FieldSpec getTargetRepositoryFieldSpec() {
     return FieldSpec
-        .builder(targetEntityModel.getRepositoryType(), getTargetRepositoryFieldName())
+        .builder(targetEntityModel.getRepositoryType(), getTargetRepositorygetFieldName())
         .addModifiers(Modifier.PRIVATE)
         .addAnnotation(AnnotationSpec.builder(AUTOWIRED).build())
         .build();

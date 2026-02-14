@@ -1,20 +1,21 @@
-package com.kivojenko.spring.forge.jpa.model.relation.manyToOne;
+package com.kivojenko.spring.forge.jpa.model.relation.toCollection.manyToMany;
 
+import com.kivojenko.spring.forge.jpa.model.relation.ServiceRepositoryEndpointRelation;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.MethodSpec;
 import lombok.experimental.SuperBuilder;
 
 import javax.lang.model.element.Modifier;
 
-import static com.kivojenko.spring.forge.jpa.utils.StringUtils.setterName;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.DELETE_MAPPING;
-import static com.kivojenko.spring.forge.jpa.utils.StringUtils.capitalize;
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.TRANSACTIONAL;
+import static com.kivojenko.spring.forge.jpa.utils.StringUtils.*;
 
 /**
- * Represents a relation that generates a DELETE endpoint to remove (unlink) an entity from a Many-to-One association.
+ * Represents a relation that generates a DELETE endpoint to remove (unlink) an entity from a Many-to-Many association.
  */
 @SuperBuilder
-public class RemoveManyToOneEndpointRelation extends ManyToOneEndpointRelation {
+public class UnlinkManyToManyEndpointRelation extends ServiceRepositoryEndpointRelation {
 
   @Override
   protected ClassName mapping() {
@@ -27,21 +28,29 @@ public class RemoveManyToOneEndpointRelation extends ManyToOneEndpointRelation {
 
   @Override
   protected String generatedMethodName() {
-    return "remove" + capitalize(fieldName);
+    return "removeRelationWith" + capitalize(singularize(getFieldName()));
   }
 
   @Override
   public MethodSpec getServiceMethod() {
     var builder = MethodSpec
-        .methodBuilder((generatedMethodName()))
+        .methodBuilder(generatedMethodName())
         .addModifiers(Modifier.PUBLIC)
+        .addAnnotation(TRANSACTIONAL)
         .returns(void.class);
 
     addFindBase(builder);
     addFindSub(builder);
+
     return builder
         .addStatement("hooks.forEach(hook -> hook.beforeDelete($L, $L))", BASE_VAR_NAME, SUB_VAR_NAME)
-        .addStatement("$L.$L(null)", BASE_VAR_NAME, setterName(fieldName))
+        .addStatement(
+            "$L.$L().removeIf(e -> e.$L() == $L)",
+            BASE_VAR_NAME,
+            getterName(getFieldName()),
+            getterName("id"),
+            SUB_ID_PARAM_NAME
+        )
         .addStatement("hooks.forEach(hook -> hook.afterDelete($L, $L))", BASE_VAR_NAME, SUB_VAR_NAME)
         .build();
   }

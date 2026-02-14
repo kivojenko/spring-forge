@@ -38,6 +38,10 @@ public final class StringUtils {
     return decapitalize(s) + "s";
   }
 
+  public static String singularize(String s) {
+    return s.replaceAll("ies$", "y").replaceAll("s$", "");
+  }
+
   /**
    * Gets the standard getter name for a field.
    *

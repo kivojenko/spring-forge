@@ -1,4 +1,4 @@
-package com.kivojenko.spring.forge.jpa.model.relation.oneToMany;
+package com.kivojenko.spring.forge.jpa.model.relation.toCollection.oneToMany;
 
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.MethodSpec;
@@ -15,7 +15,7 @@ import static com.kivojenko.spring.forge.jpa.utils.StringUtils.setterName;
  * Represents a relation that generates a POST endpoint to add a new entity to a One-to-Many association.
  */
 @SuperBuilder
-public class AddOneToManyEndpointRelation extends OneToManyEndpointRelation {
+public class AddNewOneToManyEndpointRelation extends OneToManyEndpointRelation {
 
   @Override
   protected ClassName mapping() {
@@ -35,9 +35,8 @@ public class AddOneToManyEndpointRelation extends OneToManyEndpointRelation {
         .build();
 
     return MethodSpec
-        .methodBuilder((generatedMethodName()))
+        .methodBuilder(generatedMethodName())
         .addAnnotation(annotation(mapping()))
-        .addAnnotation(TRANSACTIONAL)
         .addModifiers(Modifier.PUBLIC)
         .returns(targetEntityModel.getEntityType())
         .addParameter(baseParamSpec(true))
@@ -51,9 +50,10 @@ public class AddOneToManyEndpointRelation extends OneToManyEndpointRelation {
     var subParam = ParameterSpec.builder(targetEntityModel.getEntityType(), SUB_VAR_NAME).build();
 
     var builder = MethodSpec
-        .methodBuilder((generatedMethodName()))
+        .methodBuilder(generatedMethodName())
         .returns(targetEntityModel.getEntityType())
-        .addModifiers(Modifier.PUBLIC);
+        .addModifiers(Modifier.PUBLIC)
+        .addAnnotation(TRANSACTIONAL);
 
     addFindBase(builder);
 
@@ -61,7 +61,7 @@ public class AddOneToManyEndpointRelation extends OneToManyEndpointRelation {
         .addParameter(subParam)
         .addStatement("hooks.forEach(hook -> hook.beforeAdd($L, $L));", BASE_VAR_NAME, SUB_VAR_NAME)
         .addStatement("$L.$L($L)", SUB_VAR_NAME, setterName(mappedBy), BASE_VAR_NAME)
-        .addStatement("var $L = $L.save($L)", UPDATED_SUB_VAR_NAME, getTargetRepositoryFieldName(), SUB_VAR_NAME)
+        .addStatement("var $L = $L.save($L)", UPDATED_SUB_VAR_NAME, getTargetRepositorygetFieldName(), SUB_VAR_NAME)
         .addStatement("hooks.forEach(hook -> hook.afterAdd($L, $L));", BASE_VAR_NAME, UPDATED_SUB_VAR_NAME)
         .addStatement("return $L", UPDATED_SUB_VAR_NAME)
         .build();

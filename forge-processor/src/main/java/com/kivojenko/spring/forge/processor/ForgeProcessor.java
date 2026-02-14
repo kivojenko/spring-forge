@@ -4,7 +4,7 @@ import com.kivojenko.spring.forge.annotation.GetOrCreate;
 import com.kivojenko.spring.forge.annotation.WithJpaRepository;
 import com.kivojenko.spring.forge.annotation.WithRestController;
 import com.kivojenko.spring.forge.annotation.WithService;
-import com.kivojenko.spring.forge.jpa.factory.EndpointRelationFactory;
+import com.kivojenko.spring.forge.jpa.factory.EndpointRelationResolver;
 import com.kivojenko.spring.forge.jpa.factory.JpaEntityModelFactory;
 import com.kivojenko.spring.forge.jpa.generator.ControllerGenerator;
 import com.kivojenko.spring.forge.jpa.generator.FilterGenerator;
@@ -18,6 +18,7 @@ import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.TypeElement;
 import java.util.ArrayDeque;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -78,7 +79,7 @@ public final class ForgeProcessor extends AbstractProcessor {
             var entity = queue.poll();
             if (!result.add(entity)) continue;
 
-            var relations = EndpointRelationFactory.resolve(entity, env);
+            var relations = EndpointRelationResolver.resolve(entity, env);
 
             for (var rel : relations) {
                 var related = rel.getEntityModel().getElement();
@@ -90,11 +91,6 @@ public final class ForgeProcessor extends AbstractProcessor {
     }
 
 
-    /**
-     * Generates a repository for the given entity model if it doesn't exist.
-     *
-     * @param model the entity model
-     */
     private void addRepository(JpaEntityModel model) {
         if (!model.getRequirements().wantsRepository() || alreadyExists(model.getRepositoryFqn())) return;
 
@@ -102,15 +98,12 @@ public final class ForgeProcessor extends AbstractProcessor {
             var file = RepositoryGenerator.generateFile(model);
             tryWriteTo(file);
         } catch (Exception e) {
-            LoggingUtils.error(processingEnv, model.getElement(), "Failed to generate repository: " + e.getMessage());
+            LoggingUtils.error(processingEnv, model.getElement(),
+                "Failed to generate repository: " + e.getMessage() + Arrays.toString(e.getStackTrace())
+            );
         }
     }
 
-    /**
-     * Generates a service for the given entity model if requested and doesn't exist.
-     *
-     * @param model the entity model
-     */
     private void addService(JpaEntityModel model) {
         if (!model.getRequirements().wantsService() || alreadyExists(model.getServiceFqn())) return;
 
@@ -118,15 +111,11 @@ public final class ForgeProcessor extends AbstractProcessor {
             var file = ServiceGenerator.generateFile(model);
             tryWriteTo(file);
         } catch (Exception e) {
-            LoggingUtils.error(processingEnv, model.getElement(), "Failed to generate service: " + e.getMessage());
+            LoggingUtils.error(processingEnv, model.getElement(),
+                "Failed to generate service: " + e.getMessage() + Arrays.toString(e.getStackTrace()));
         }
     }
 
-    /**
-     * Generates a REST controller for the given entity model if requested and doesn't exist.
-     *
-     * @param model the entity model
-     */
     private void addController(JpaEntityModel model) {
         if (!model.getRequirements().wantsController() || alreadyExists(model.getControllerFqn())) return;
 
@@ -134,15 +123,11 @@ public final class ForgeProcessor extends AbstractProcessor {
             var file = ControllerGenerator.generateFile(model);
             tryWriteTo(file);
         } catch (Exception e) {
-            LoggingUtils.error(processingEnv, model.getElement(), "Failed to generate controller: " + e.getMessage());
+            LoggingUtils.error(processingEnv, model.getElement(),
+                "Failed to generate controller: " + e.getMessage() + Arrays.toString(e.getStackTrace()));
         }
     }
 
-    /**
-     * Generates a filter for the given entity model if requested and doesn't exist.
-     *
-     * @param model the entity model
-     */
     private void addFilter(JpaEntityModel model) {
         if (!model.wantsFilter() || alreadyExists(model.getFilterFqn())) return;
 
@@ -150,25 +135,15 @@ public final class ForgeProcessor extends AbstractProcessor {
             var file = FilterGenerator.generateFile(model);
             tryWriteTo(file);
         } catch (Exception e) {
-            LoggingUtils.error(processingEnv, model.getElement(), "Failed to generate filter: " + e.getMessage());
+            LoggingUtils.error(processingEnv, model.getElement(),
+                "Failed to generate filter: " + e.getMessage() + Arrays.toString(e.getStackTrace()));
         }
     }
 
-    /**
-     * Checks if a type with the given fully qualified name already exists.
-     *
-     * @param fqn the fully qualified name to check
-     * @return true if exists, false otherwise
-     */
     private boolean alreadyExists(String fqn) {
         return processingEnv.getElementUtils().getTypeElement(fqn) != null;
     }
 
-    /**
-     * Attempts to write the generated Java file using the filer.
-     *
-     * @param file the JavaPoet JavaFile
-     */
     private void tryWriteTo(JavaFile file) {
         try {
             file.writeTo(processingEnv.getFiler());

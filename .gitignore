@@ -5,8 +5,7 @@ docs/javadoc/**
 !**/src/main/**/build/
 !**/src/test/**/build/
 .kotlin
-docs/**
-**/docs/**
+**/docs/javadoc/**
 
 ### IntelliJ IDEA ###
 .idea/modules.xml

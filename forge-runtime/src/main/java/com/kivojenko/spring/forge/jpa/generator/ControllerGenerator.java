@@ -64,9 +64,6 @@ public final class ControllerGenerator {
           .addAnnotation(annotation)
           .addParameter(nameParam)
           .returns(model.getEntityType())
-          .addJavadoc("Gets an entity by name, or creates it if it doesn't exist.\n\n")
-          .addJavadoc("@param name the name of the entity\n")
-          .addJavadoc("@return the entity\n")
           .addStatement("return service.getOrCreate(name)")
           .build();
       builder.addMethod(getOrCreate);
@@ -81,10 +78,7 @@ public final class ControllerGenerator {
         .addModifiers(Modifier.PUBLIC)
         .addAnnotation(GET_MAPPING)
         .returns(ParameterizedTypeName.get(PAGE, model.getEntityType()))
-        .addParameter(pageableParam)
-        .addJavadoc("Returns a page of entities.\n\n")
-        .addJavadoc("@param pageable the pagination information\n")
-        .addJavadoc("@return a page of entities\n");
+        .addParameter(pageableParam);
 
     if (model.wantsFilter()) {
       var filterParam = ParameterSpec.builder(model.getFilterType(), "filter").build();
