@@ -15,10 +15,7 @@ import jakarta.persistence.*;
 import org.jspecify.annotations.NonNull;
 
 import javax.annotation.processing.ProcessingEnvironment;
-import javax.lang.model.element.Element;
-import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.TypeElement;
-import javax.lang.model.element.VariableElement;
+import javax.lang.model.element.*;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
 import java.util.ArrayList;
@@ -153,6 +150,11 @@ public class EndpointRelationResolver {
     var withGetEndpoint = getter.getAnnotation(WithGetEndpoint.class);
     if (withGetEndpoint == null) return null;
 
+    if (!getter.getModifiers().contains(Modifier.PUBLIC)) {
+      LoggingUtils.warn(env, getter, "@WithGetEndpoints can only be used on public methods");
+      return null;
+    }
+
     var path = withGetEndpoint.path();
 
     if (path.isBlank()) {
@@ -165,6 +167,7 @@ public class EndpointRelationResolver {
     return ReadOneToManyEndpointRelation
         .builder()
         .path(path)
+        .methodName(getter.getSimpleName().toString())
         .targetEntityModel(getEntityModelFromList(getter.getReturnType(), getter, env))
         .build();
   }

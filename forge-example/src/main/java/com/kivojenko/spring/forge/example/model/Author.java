@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.kivojenko.spring.forge.annotation.GetOrCreate;
 import com.kivojenko.spring.forge.annotation.WithRestController;
 import com.kivojenko.spring.forge.annotation.endpoint.WithEndpoints;
+import com.kivojenko.spring.forge.annotation.endpoint.WithGetEndpoint;
 import com.kivojenko.spring.forge.jpa.contract.HasName;
 import jakarta.persistence.*;
 import lombok.*;
@@ -50,4 +51,10 @@ public class Author implements HasName {
   @ToString.Exclude
   @JsonIgnore
   private List<Book> books = new ArrayList<>();
+
+  @WithGetEndpoint
+  @JsonIgnore
+  public List<String> getBooksTitles() {
+    return books.stream().map(Book::getTitle).toList();
+  }
 }
