@@ -1,5 +1,6 @@
 package com.kivojenko.spring.forge.jpa.generator;
 
+import com.kivojenko.spring.forge.config.SpringForgeConfig;
 import com.kivojenko.spring.forge.jpa.model.base.JpaEntityModel;
 import com.squareup.javapoet.*;
 
@@ -38,7 +39,8 @@ public final class ControllerGenerator {
     );
     var builder = TypeSpec.classBuilder(model.getControllerName()).addModifiers(Modifier.PUBLIC).superclass(superClass);
 
-    var javadoc = CodeBlock.builder()
+    var javadoc = CodeBlock
+        .builder()
         .add("Generated REST controller for {@link $T}.\n", model.getEntityType())
         .add("Provides endpoints for standard CRUD operations and custom relations.\n")
         .build();
@@ -69,10 +71,11 @@ public final class ControllerGenerator {
       builder.addMethod(getOrCreate);
     }
 
-    var pageableParam = ParameterSpec
-        .builder(PAGEABLE, "pageable")
-        .addAnnotation(AnnotationSpec.builder(PAGEABLE_DEFAULT).addMember("size", "$L", Integer.MAX_VALUE).build())
+    var pageableAnnotation = AnnotationSpec
+        .builder(PAGEABLE_DEFAULT)
+        .addMember("size", "$L", SpringForgeConfig.getAllPageSize)
         .build();
+    var pageableParam = ParameterSpec.builder(PAGEABLE, "pageable").addAnnotation(pageableAnnotation).build();
     var findAllBuilder = MethodSpec
         .methodBuilder("findAll")
         .addModifiers(Modifier.PUBLIC)
@@ -82,7 +85,8 @@ public final class ControllerGenerator {
 
     if (model.wantsFilter()) {
       var filterParam = ParameterSpec.builder(model.getFilterType(), "filter").build();
-      findAllBuilder.addParameter(filterParam)
+      findAllBuilder
+          .addParameter(filterParam)
           .addJavadoc("@param filter the filter criteria\n")
           .addStatement("return service.findAll(pageable, filter)");
       builder.addMethod(findAllBuilder.build());

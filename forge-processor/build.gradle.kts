@@ -74,6 +74,7 @@ signing {
 
 
 dependencies {
+    implementation(project(":forge-config"))
     implementation(project(":forge-annotations"))
     implementation(project(":forge-runtime"))
 

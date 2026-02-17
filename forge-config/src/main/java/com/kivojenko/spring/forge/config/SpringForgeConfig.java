@@ -37,6 +37,10 @@ public final class SpringForgeConfig {
      */
     public static String filterPackage;
 
+    public static int pageSize = 20;
+
+    public static int getAllPageSize = Integer.MAX_VALUE;
+
     /**
      * Indicates whether the configuration has been loaded.
      */
@@ -52,10 +56,19 @@ public final class SpringForgeConfig {
     public static void load(ProcessingEnvironment env) {
         var yaml = loadYaml(env);
 
-        repositoryPackage = fromYaml(yaml, "repository.package");
-        servicePackage = fromYaml(yaml, "service.package");
-        controllerPackage = fromYaml(yaml, "controller.package");
-        filterPackage = fromYaml(yaml, "filter.package");
+        repositoryPackage = fromYaml(yaml, "repository.package").toString();
+        servicePackage = fromYaml(yaml, "service.package").toString();
+        controllerPackage = fromYaml(yaml, "controller.package").toString();
+        filterPackage = fromYaml(yaml, "filter.package").toString();
+
+        var newPageSize = fromYaml(yaml, "page.size");
+        if (newPageSize != null) {
+            pageSize = Integer.parseInt(newPageSize.toString());
+        }
+        var newGetAllPageSize = fromYaml(yaml, "getAll.page.size");
+        if (newGetAllPageSize != null) {
+            getAllPageSize = Integer.parseInt(newGetAllPageSize.toString());
+        }
         isLoaded = true;
     }
 
@@ -92,7 +105,7 @@ public final class SpringForgeConfig {
      * @param path the dot-separated path (e.g., "service.package")
      * @return the string value if found and is a string, {@code null} otherwise
      */
-    private static String fromYaml(Map<String, Object> yaml, String path) {
+    private static Object fromYaml(Map<String, Object> yaml, String path) {
         if (yaml == null || yaml.isEmpty()) return null;
 
         Object current = yaml;
@@ -100,6 +113,6 @@ public final class SpringForgeConfig {
             if (!(current instanceof Map<?, ?> map)) return null;
             current = map.get(key);
         }
-        return current instanceof String s ? s : null;
+        return current;
     }
 }

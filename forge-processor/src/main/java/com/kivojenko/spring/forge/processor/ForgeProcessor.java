@@ -4,6 +4,7 @@ import com.kivojenko.spring.forge.annotation.GetOrCreate;
 import com.kivojenko.spring.forge.annotation.WithJpaRepository;
 import com.kivojenko.spring.forge.annotation.WithRestController;
 import com.kivojenko.spring.forge.annotation.WithService;
+import com.kivojenko.spring.forge.config.SpringForgeConfig;
 import com.kivojenko.spring.forge.jpa.factory.EndpointRelationResolver;
 import com.kivojenko.spring.forge.jpa.factory.JpaEntityModelFactory;
 import com.kivojenko.spring.forge.jpa.generator.ControllerGenerator;
@@ -32,124 +33,137 @@ import java.util.Set;
 @SupportedSourceVersion(SourceVersion.RELEASE_21)
 public final class ForgeProcessor extends AbstractProcessor {
 
-    @Override
-    public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-        JpaEntityModelFactory.setEnv(processingEnv);
-        var annotationTypes = Set.of(
-                WithJpaRepository.class,
-                WithService.class,
-                GetOrCreate.class,
-                WithRestController.class
-        );
-        Set<TypeElement> rootEntities = new HashSet<>();
+  @Override
+  public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+    if (!SpringForgeConfig.isLoaded) SpringForgeConfig.load(processingEnv);
 
-        for (var annotation : annotationTypes) {
-            for (var element : roundEnv.getElementsAnnotatedWith(annotation)) {
-                if (element instanceof TypeElement type) {
-                    rootEntities.add(type);
-                }
-            }
+    JpaEntityModelFactory.setEnv(processingEnv);
+    var annotationTypes = Set.of(
+        WithJpaRepository.class,
+        WithService.class,
+        GetOrCreate.class,
+        WithRestController.class
+    );
+    Set<TypeElement> rootEntities = new HashSet<>();
+
+    for (var annotation : annotationTypes) {
+      for (var element : roundEnv.getElementsAnnotatedWith(annotation)) {
+        if (element instanceof TypeElement type) {
+          rootEntities.add(type);
         }
-        expandEntityGraph(rootEntities, processingEnv);
-        rootEntities.forEach(JpaEntityModelFactory::get);
-
-        var jpaEntities = JpaEntityModelFactory.getAll();
-
-        jpaEntities.forEach(this::addFilter);
-        jpaEntities.forEach(this::addRepository);
-        jpaEntities.forEach(this::addService);
-        jpaEntities.forEach(this::addController);
-
-        return true;
+      }
     }
+    expandEntityGraph(rootEntities, processingEnv);
+    rootEntities.forEach(JpaEntityModelFactory::get);
 
-    /**
-     * Expands the entity graph by following relationships defined on the root entities.
-     * This ensures that related entities also have models generated if they are part of an endpoint.
-     *
-     * @param roots the set of initial entity type elements
-     * @param env   the processing environment
-     */
-    void expandEntityGraph(Set<TypeElement> roots, ProcessingEnvironment env) {
-        var result = new HashSet<TypeElement>();
+    var jpaEntities = JpaEntityModelFactory.getAll();
 
-        var queue = new ArrayDeque<>(roots);
+    jpaEntities.forEach(this::addFilter);
+    jpaEntities.forEach(this::addRepository);
+    jpaEntities.forEach(this::addService);
+    jpaEntities.forEach(this::addController);
 
-        while (!queue.isEmpty()) {
-            var entity = queue.poll();
-            if (!result.add(entity)) continue;
+    return true;
+  }
 
-            var relations = EndpointRelationResolver.resolve(entity, env);
+  /**
+   * Expands the entity graph by following relationships defined on the root entities.
+   * This ensures that related entities also have models generated if they are part of an endpoint.
+   *
+   * @param roots the set of initial entity type elements
+   * @param env   the processing environment
+   */
+  void expandEntityGraph(Set<TypeElement> roots, ProcessingEnvironment env) {
+    var result = new HashSet<TypeElement>();
 
-            for (var rel : relations) {
-                var related = rel.getEntityModel().getElement();
-                if (related != null) {
-                    queue.add(related);
-                }
-            }
+    var queue = new ArrayDeque<>(roots);
+
+    while (!queue.isEmpty()) {
+      var entity = queue.poll();
+      if (!result.add(entity)) continue;
+
+      var relations = EndpointRelationResolver.resolve(entity, env);
+
+      for (var rel : relations) {
+        var related = rel.getEntityModel().getElement();
+        if (related != null) {
+          queue.add(related);
         }
+      }
     }
+  }
 
 
-    private void addRepository(JpaEntityModel model) {
-        if (!model.getRequirements().wantsRepository() || alreadyExists(model.getRepositoryFqn())) return;
+  private void addRepository(JpaEntityModel model) {
+    if (!model.getRequirements().wantsRepository() || alreadyExists(model.getRepositoryFqn())) return;
 
-        try {
-            var file = RepositoryGenerator.generateFile(model);
-            tryWriteTo(file);
-        } catch (Exception e) {
-            LoggingUtils.error(processingEnv, model.getElement(),
-                "Failed to generate repository: " + e.getMessage() + Arrays.toString(e.getStackTrace())
-            );
-        }
+    try {
+      var file = RepositoryGenerator.generateFile(model);
+      tryWriteTo(file);
+    } catch (Exception e) {
+      LoggingUtils.error(
+          processingEnv,
+          model.getElement(),
+          "Failed to generate repository: " + e.getMessage() + Arrays.toString(e.getStackTrace())
+      );
     }
+  }
 
-    private void addService(JpaEntityModel model) {
-        if (!model.getRequirements().wantsService() || alreadyExists(model.getServiceFqn())) return;
+  private void addService(JpaEntityModel model) {
+    if (!model.getRequirements().wantsService() || alreadyExists(model.getServiceFqn())) return;
 
-        try {
-            var file = ServiceGenerator.generateFile(model);
-            tryWriteTo(file);
-        } catch (Exception e) {
-            LoggingUtils.error(processingEnv, model.getElement(),
-                "Failed to generate service: " + e.getMessage() + Arrays.toString(e.getStackTrace()));
-        }
+    try {
+      var file = ServiceGenerator.generateFile(model);
+      tryWriteTo(file);
+    } catch (Exception e) {
+      LoggingUtils.error(
+          processingEnv,
+          model.getElement(),
+          "Failed to generate service: " + e.getMessage() + Arrays.toString(e.getStackTrace())
+      );
     }
+  }
 
-    private void addController(JpaEntityModel model) {
-        if (!model.getRequirements().wantsController() || alreadyExists(model.getControllerFqn())) return;
+  private void addController(JpaEntityModel model) {
+    if (!model.getRequirements().wantsController() || alreadyExists(model.getControllerFqn())) return;
 
-        try {
-            var file = ControllerGenerator.generateFile(model);
-            tryWriteTo(file);
-        } catch (Exception e) {
-            LoggingUtils.error(processingEnv, model.getElement(),
-                "Failed to generate controller: " + e.getMessage() + Arrays.toString(e.getStackTrace()));
-        }
+    try {
+      var file = ControllerGenerator.generateFile(model);
+      tryWriteTo(file);
+    } catch (Exception e) {
+      LoggingUtils.error(
+          processingEnv,
+          model.getElement(),
+          "Failed to generate controller: " + e.getMessage() + Arrays.toString(e.getStackTrace())
+      );
     }
+  }
 
-    private void addFilter(JpaEntityModel model) {
-        if (!model.wantsFilter() || alreadyExists(model.getFilterFqn())) return;
+  private void addFilter(JpaEntityModel model) {
+    if (!model.wantsFilter() || alreadyExists(model.getFilterFqn())) return;
 
-        try {
-            var file = FilterGenerator.generateFile(model);
-            tryWriteTo(file);
-        } catch (Exception e) {
-            LoggingUtils.error(processingEnv, model.getElement(),
-                "Failed to generate filter: " + e.getMessage() + Arrays.toString(e.getStackTrace()));
-        }
+    try {
+      var file = FilterGenerator.generateFile(model);
+      tryWriteTo(file);
+    } catch (Exception e) {
+      LoggingUtils.error(
+          processingEnv,
+          model.getElement(),
+          "Failed to generate filter: " + e.getMessage() + Arrays.toString(e.getStackTrace())
+      );
     }
+  }
 
-    private boolean alreadyExists(String fqn) {
-        return processingEnv.getElementUtils().getTypeElement(fqn) != null;
-    }
+  private boolean alreadyExists(String fqn) {
+    return processingEnv.getElementUtils().getTypeElement(fqn) != null;
+  }
 
-    private void tryWriteTo(JavaFile file) {
-        try {
-            file.writeTo(processingEnv.getFiler());
-        } catch (javax.annotation.processing.FilerException ignored) {
-        } catch (Exception e) {
-            LoggingUtils.error(processingEnv, null, e.getMessage());
-        }
+  private void tryWriteTo(JavaFile file) {
+    try {
+      file.writeTo(processingEnv.getFiler());
+    } catch (javax.annotation.processing.FilerException ignored) {
+    } catch (Exception e) {
+      LoggingUtils.error(processingEnv, null, e.getMessage());
     }
+  }
 }

@@ -35,8 +35,6 @@ public record JpaEntityPackageNames(
      * @return the resolved package names
      */
     public static JpaEntityPackageNames resolvePackageNames(TypeElement entity, ProcessingEnvironment e) {
-        if (!SpringForgeConfig.isLoaded) SpringForgeConfig.load(e);
-
         var packageName = resolvePackageName(entity);
 
         var repositoryPackage = resolvePackageName(entity, SpringForgeConfig.repositoryPackage, e);
