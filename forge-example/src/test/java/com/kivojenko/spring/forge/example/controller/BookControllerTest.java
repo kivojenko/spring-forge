@@ -85,7 +85,7 @@ public class BookControllerTest extends WithPostgres {
 
     Long bookId = objectMapper.readTree(bookJson).get("id").asLong();
 
-    mockMvc.perform(put("/books/{id}/categories/{subId}", bookId, categoryId)).andExpect(status().isOk());
+    mockMvc.perform(put("/books/{id}/categories/{subId}", bookId, categoryId)).andExpect(status().isNoContent());
 
     mockMvc
         .perform(get("/books/{id}/categories", bookId))
@@ -112,7 +112,7 @@ public class BookControllerTest extends WithPostgres {
 
     Long bookId = objectMapper.readTree(bookJson).get("id").asLong();
 
-    mockMvc.perform(delete("/books/{id}/categories/{subId}", bookId, categoryId)).andExpect(status().isOk());
+    mockMvc.perform(delete("/books/{id}/categories/{subId}", bookId, categoryId)).andExpect(status().isNoContent());
 
     mockMvc
         .perform(get("/books/{id}/categories", bookId))
@@ -142,7 +142,7 @@ public class BookControllerTest extends WithPostgres {
                 .title("Book 1")
                 .categories(List.of(Category.builder().id(categoryId).build()))
                 .build())))
-        .andExpect(status().isOk())
+        .andExpect(status().isCreated())
         .andReturn()
         .getResponse()
         .getContentAsString();
@@ -214,14 +214,14 @@ public class BookControllerTest extends WithPostgres {
                 .title("Book with author")
                 .categories(List.of(Category.builder().id(categoryId).build()))
                 .build())))
-        .andExpect(status().isOk())
+        .andExpect(status().isCreated())
         .andReturn()
         .getResponse()
         .getContentAsString();
 
     Long bookId = objectMapper.readTree(bookJson).get("id").asLong();
 
-    mockMvc.perform(delete("/books/{id}/author/{subId}", bookId, authorId)).andExpect(status().isOk());
+    mockMvc.perform(delete("/books/{id}/author/{subId}", bookId, authorId)).andExpect(status().isNoContent());
 
     mockMvc.perform(get("/books/{id}", bookId)).andExpect(status().isOk()).andExpect(jsonPath("$.author").isEmpty());
   }

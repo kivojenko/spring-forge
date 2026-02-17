@@ -73,7 +73,9 @@ public class FilterFieldModel {
           case STARTS_WITH: builder.addStatement("builder.and(entity.name.startsWith($L))", getName()); break;
           case ENDS_WITH: builder.addStatement("builder.and(entity.name.endsWith($L))", getName()); break;
           case CONTAINS: builder.addStatement("builder.and(entity.name.contains($L))", getName()); break;
+          case CONTAINS_IGNORE_CASE: builder.addStatement("builder.and(entity.name.containsIgnoreCase($L))", getName()); break;
           case EQUALS: builder.addStatement("builder.and(entity.name.eq($L))", getName()); break;
+          case EQUALS_IGNORE_CASE: builder.addStatement("builder.and(entity.name.equalsIgnoreCase($L))", getName()); break;
           default: break;
         }
       } else {

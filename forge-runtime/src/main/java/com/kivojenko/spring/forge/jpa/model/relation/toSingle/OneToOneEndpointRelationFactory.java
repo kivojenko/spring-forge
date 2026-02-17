@@ -1,7 +1,9 @@
-package com.kivojenko.spring.forge.jpa.model.relation.toSingle.oneToOne;
+package com.kivojenko.spring.forge.jpa.model.relation.toSingle;
 
 import com.kivojenko.spring.forge.jpa.model.relation.EndpointRelation;
 import com.kivojenko.spring.forge.jpa.model.relation.EndpointRelationFactory;
+import com.kivojenko.spring.forge.jpa.model.relation.toSingle.oneToOne.ReadOneToOneEndpointRelation;
+import com.kivojenko.spring.forge.jpa.model.relation.toSingle.oneToOne.UnlinkOneToOneEndpointRelation;
 import lombok.experimental.SuperBuilder;
 
 @SuperBuilder

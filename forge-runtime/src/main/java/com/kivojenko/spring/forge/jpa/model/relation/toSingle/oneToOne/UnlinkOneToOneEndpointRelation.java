@@ -2,6 +2,7 @@ package com.kivojenko.spring.forge.jpa.model.relation.toSingle.oneToOne;
 
 import com.kivojenko.spring.forge.jpa.model.relation.ServiceRepositoryEndpointRelation;
 import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
 import lombok.experimental.SuperBuilder;
 
@@ -9,6 +10,7 @@ import javax.lang.model.element.Modifier;
 
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.DELETE_MAPPING;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.TRANSACTIONAL;
+import static com.kivojenko.spring.forge.jpa.utils.HttpStatusValue.NO_CONTENT;
 import static com.kivojenko.spring.forge.jpa.utils.StringUtils.*;
 
 /**
@@ -35,13 +37,18 @@ public class UnlinkOneToOneEndpointRelation extends ServiceRepositoryEndpointRel
   public MethodSpec getControllerMethod() {
     return MethodSpec
         .methodBuilder(generatedMethodName())
+        .addAnnotation(annotation(mapping()))
+        .addAnnotation(responseStatus(NO_CONTENT))
         .returns(void.class)
         .addModifiers(Modifier.PUBLIC)
         .addParameter(baseParamSpec(true))
         .addStatement("service.$L($L)", generatedMethodName(), BASE_ID_PARAM_NAME)
-        .addAnnotation(annotation(mapping()))
-        .addAnnotation(TRANSACTIONAL)
         .build();
+  }
+
+  @Override
+  public FieldSpec getServiceField() {
+    return null;
   }
 
   @Override

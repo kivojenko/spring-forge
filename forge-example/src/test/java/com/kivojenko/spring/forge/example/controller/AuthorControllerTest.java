@@ -88,7 +88,7 @@ public class AuthorControllerTest extends WithPostgres {
                 .title("Book 1")
                 .categories(List.of(Category.builder().id(categoryId).build()))
                 .build())))
-        .andExpect(status().isOk());
+        .andExpect(status().isCreated());
 
     mockMvc
         .perform(get("/authors/{id}/books", authorId))
@@ -119,7 +119,7 @@ public class AuthorControllerTest extends WithPostgres {
                 .title("Book Title 1")
                 .categories(List.of(Category.builder().id(categoryId).build()))
                 .build())))
-        .andExpect(status().isOk());
+        .andExpect(status().isCreated());
 
     mockMvc
         .perform(post("/authors/{id}/books", authorId)
@@ -129,7 +129,7 @@ public class AuthorControllerTest extends WithPostgres {
                 .title("Book Title 2")
                 .categories(List.of(Category.builder().id(categoryId).build()))
                 .build())))
-        .andExpect(status().isOk());
+        .andExpect(status().isCreated());
 
     mockMvc
         .perform(get("/authors/{id}/booksTitles", authorId))
@@ -161,7 +161,7 @@ public class AuthorControllerTest extends WithPostgres {
                 .title("New Book")
                 .categories(List.of(Category.builder().id(categoryId).build()))
                 .build())))
-        .andExpect(status().isOk())
+        .andExpect(status().isCreated())
         .andExpect(jsonPath("$.title", is("New Book")));
 
     mockMvc.perform(get("/books/count")).andExpect(status().isOk()).andExpect(jsonPath("$", is(1)));
@@ -189,14 +189,14 @@ public class AuthorControllerTest extends WithPostgres {
                 .title("Book to remove")
                 .categories(List.of(Category.builder().id(categoryId).build()))
                 .build())))
-        .andExpect(status().isOk())
+        .andExpect(status().isCreated())
         .andReturn()
         .getResponse()
         .getContentAsString();
 
     Long bookId = objectMapper.readTree(bookJson).get("id").asLong();
 
-    mockMvc.perform(delete("/authors/{id}/books/{subId}", authorId, bookId)).andExpect(status().isOk());
+    mockMvc.perform(delete("/authors/{id}/books/{subId}", authorId, bookId)).andExpect(status().isNoContent());
 
     mockMvc
         .perform(get("/authors/{id}/books", authorId))

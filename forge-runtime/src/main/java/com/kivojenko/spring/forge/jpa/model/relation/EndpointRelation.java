@@ -1,12 +1,8 @@
 package com.kivojenko.spring.forge.jpa.model.relation;
 
 import com.kivojenko.spring.forge.jpa.model.base.JpaEntityModel;
-import com.squareup.javapoet.AnnotationSpec;
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.FieldSpec;
-import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterSpec;
-import com.squareup.javapoet.TypeSpec;
+import com.kivojenko.spring.forge.jpa.utils.HttpStatusValue;
+import com.squareup.javapoet.*;
 import lombok.Data;
 import lombok.Getter;
 import lombok.experimental.SuperBuilder;
@@ -14,8 +10,7 @@ import lombok.experimental.SuperBuilder;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.VariableElement;
 
-import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.AUTOWIRED;
-import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.PATH_VARIABLE;
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.*;
 import static com.kivojenko.spring.forge.jpa.utils.StringUtils.decapitalize;
 
 /**
@@ -111,6 +106,10 @@ public abstract class EndpointRelation {
    */
   protected AnnotationSpec annotation(ClassName mapping) {
     return AnnotationSpec.builder(mapping).addMember("value", "$S", uri()).build();
+  }
+
+  protected AnnotationSpec responseStatus(HttpStatusValue status) {
+    return AnnotationSpec.builder(RESPONSE_STATUS).addMember("code", "$L.$L", HTTP_STATUS, status.toString()).build();
   }
 
   protected void addFindBase(MethodSpec.Builder methodSpec) {

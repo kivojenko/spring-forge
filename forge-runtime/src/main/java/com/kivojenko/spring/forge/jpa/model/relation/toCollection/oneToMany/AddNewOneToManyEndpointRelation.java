@@ -8,6 +8,7 @@ import lombok.experimental.SuperBuilder;
 import javax.lang.model.element.Modifier;
 
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.*;
+import static com.kivojenko.spring.forge.jpa.utils.HttpStatusValue.CREATED;
 import static com.kivojenko.spring.forge.jpa.utils.StringUtils.capitalize;
 import static com.kivojenko.spring.forge.jpa.utils.StringUtils.setterName;
 
@@ -37,6 +38,7 @@ public class AddNewOneToManyEndpointRelation extends OneToManyEndpointRelation {
     return MethodSpec
         .methodBuilder(generatedMethodName())
         .addAnnotation(annotation(mapping()))
+        .addAnnotation(responseStatus(CREATED))
         .addModifiers(Modifier.PUBLIC)
         .returns(targetEntityModel.getEntityType())
         .addParameter(baseParamSpec(true))

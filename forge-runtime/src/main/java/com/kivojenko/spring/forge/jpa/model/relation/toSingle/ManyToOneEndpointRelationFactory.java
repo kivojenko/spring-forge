@@ -1,7 +1,10 @@
-package com.kivojenko.spring.forge.jpa.model.relation.toSingle.manyToOne;
+package com.kivojenko.spring.forge.jpa.model.relation.toSingle;
 
 import com.kivojenko.spring.forge.jpa.model.relation.EndpointRelation;
 import com.kivojenko.spring.forge.jpa.model.relation.EndpointRelationFactory;
+import com.kivojenko.spring.forge.jpa.model.relation.toSingle.manyToOne.LinkExistingManyToOneEndpointRelation;
+import com.kivojenko.spring.forge.jpa.model.relation.toSingle.manyToOne.ReadManyToOneEndpointRelation;
+import com.kivojenko.spring.forge.jpa.model.relation.toSingle.manyToOne.UnlinkManyToOneEndpointRelation;
 import lombok.experimental.SuperBuilder;
 
 @SuperBuilder

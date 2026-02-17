@@ -28,7 +28,7 @@ public abstract class ForgeController<E, ID, R extends JpaRepository<E, ID>, S e
   }
 
   @PostMapping
-  @ResponseStatus(HttpStatus.CREATED)
+  @ResponseStatus(code = HttpStatus.CREATED)
   public E create(@Valid @RequestBody E entity) {
     return service.create(entity);
   }

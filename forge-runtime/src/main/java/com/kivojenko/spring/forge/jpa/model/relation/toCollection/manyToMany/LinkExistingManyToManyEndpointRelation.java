@@ -1,14 +1,16 @@
 package com.kivojenko.spring.forge.jpa.model.relation.toCollection.manyToMany;
 
 import com.kivojenko.spring.forge.jpa.model.relation.ServiceRepositoryEndpointRelation;
+import com.kivojenko.spring.forge.jpa.utils.HttpStatusValue;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterizedTypeName;
 import lombok.experimental.SuperBuilder;
 
 import javax.lang.model.element.Modifier;
 
-import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.*;
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.PUT_MAPPING;
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.TRANSACTIONAL;
+import static com.kivojenko.spring.forge.jpa.utils.HttpStatusValue.NO_CONTENT;
 import static com.kivojenko.spring.forge.jpa.utils.StringUtils.capitalize;
 import static com.kivojenko.spring.forge.jpa.utils.StringUtils.getterName;
 
@@ -21,6 +23,11 @@ public class LinkExistingManyToManyEndpointRelation extends ServiceRepositoryEnd
   @Override
   protected String generatedMethodName() {
     return "addExisting" + capitalize(getFieldName());
+  }
+
+  @Override
+  protected HttpStatusValue httpStatus() {
+    return NO_CONTENT;
   }
 
   @Override
@@ -39,7 +46,7 @@ public class LinkExistingManyToManyEndpointRelation extends ServiceRepositoryEnd
         .methodBuilder(generatedMethodName())
         .addModifiers(Modifier.PUBLIC)
         .addAnnotation(TRANSACTIONAL)
-        .returns(ParameterizedTypeName.get(ITERABLE, targetEntityModel.getEntityType()));
+        .returns(void.class);
 
     addFindBase(builder);
     addFindSub(builder);
@@ -47,7 +54,7 @@ public class LinkExistingManyToManyEndpointRelation extends ServiceRepositoryEnd
     return builder
         .addStatement("hooks.forEach(hook -> hook.beforeAdd($L, $L));", BASE_VAR_NAME, SUB_VAR_NAME)
         .beginControlFlow("if ($L.$L().contains($L))", BASE_VAR_NAME, getterName(getFieldName()), SUB_VAR_NAME)
-        .addStatement("return $L.$L()", BASE_VAR_NAME, getterName(getFieldName()))
+        .addStatement("return")
         .endControlFlow()
         .addStatement("$L.$L().add($L)", BASE_VAR_NAME, getterName(getFieldName()), SUB_VAR_NAME)
         .addStatement("var $L = repository.save($L)", UPDATED_BASE_VAR_NAME, BASE_VAR_NAME)
@@ -57,7 +64,6 @@ public class LinkExistingManyToManyEndpointRelation extends ServiceRepositoryEnd
             UPDATED_BASE_VAR_NAME,
             getterName(getFieldName())
         )
-        .addStatement("return $L.$L()", UPDATED_BASE_VAR_NAME, getterName(getFieldName()))
         .build();
   }
 }

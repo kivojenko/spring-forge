@@ -1,5 +1,6 @@
 package com.kivojenko.spring.forge.jpa.model.relation.toSingle.manyToOne;
 
+import com.kivojenko.spring.forge.jpa.utils.HttpStatusValue;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.MethodSpec;
 import lombok.experimental.SuperBuilder;
@@ -7,6 +8,7 @@ import lombok.experimental.SuperBuilder;
 import javax.lang.model.element.Modifier;
 
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.TRANSACTIONAL;
+import static com.kivojenko.spring.forge.jpa.utils.HttpStatusValue.NO_CONTENT;
 import static com.kivojenko.spring.forge.jpa.utils.StringUtils.setterName;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.DELETE_MAPPING;
 import static com.kivojenko.spring.forge.jpa.utils.StringUtils.capitalize;
@@ -17,6 +19,11 @@ public class UnlinkManyToOneEndpointRelation extends ManyToOneEndpointRelation {
   @Override
   protected ClassName mapping() {
     return DELETE_MAPPING;
+  }
+
+  @Override
+  protected HttpStatusValue httpStatus() {
+    return NO_CONTENT;
   }
 
   protected String uri() {

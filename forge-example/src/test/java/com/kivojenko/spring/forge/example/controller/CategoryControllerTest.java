@@ -157,7 +157,7 @@ public class CategoryControllerTest extends WithPostgres {
 
     Long categoryId = objectMapper.readTree(categoryJson).get("id").asLong();
 
-    mockMvc.perform(delete("/categories/{id}/nameTranslation", categoryId)).andExpect(status().isOk());
+    mockMvc.perform(delete("/categories/{id}/nameTranslation", categoryId)).andExpect(status().isNoContent());
 
     mockMvc
         .perform(get("/categories/{id}/nameTranslation", categoryId))

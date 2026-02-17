@@ -7,7 +7,6 @@ import lombok.experimental.SuperBuilder;
 import javax.lang.model.element.Modifier;
 
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.GET_MAPPING;
-import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.TRANSACTIONAL;
 import static com.kivojenko.spring.forge.jpa.utils.StringUtils.getterName;
 
 /**

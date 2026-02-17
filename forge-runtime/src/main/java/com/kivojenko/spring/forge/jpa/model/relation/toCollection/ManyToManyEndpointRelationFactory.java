@@ -1,16 +1,18 @@
-package com.kivojenko.spring.forge.jpa.model.relation.toCollection.oneToMany;
+package com.kivojenko.spring.forge.jpa.model.relation.toCollection;
 
 import com.kivojenko.spring.forge.jpa.model.relation.EndpointRelation;
 import com.kivojenko.spring.forge.jpa.model.relation.EndpointRelationFactory;
+import com.kivojenko.spring.forge.jpa.model.relation.toCollection.manyToMany.LinkExistingManyToManyEndpointRelation;
+import com.kivojenko.spring.forge.jpa.model.relation.toCollection.manyToMany.ReadManyToManyEndpointRelation;
+import com.kivojenko.spring.forge.jpa.model.relation.toCollection.manyToMany.UnlinkManyToManyEndpointRelation;
 import lombok.experimental.SuperBuilder;
 
 @SuperBuilder
-public class OneToManyEndpointRelationFactory extends EndpointRelationFactory {
-  protected String mappedBy;
+public class ManyToManyEndpointRelationFactory extends EndpointRelationFactory {
 
   @Override
   public EndpointRelation getReadRelation() {
-    return ReadOneToManyEndpointRelation
+    return ReadManyToManyEndpointRelation
         .builder()
         .path(path)
         .field(field)
@@ -20,26 +22,24 @@ public class OneToManyEndpointRelationFactory extends EndpointRelationFactory {
   }
 
   @Override
-  public EndpointRelation getAddNewRelation() {
-    return AddNewOneToManyEndpointRelation
+  public EndpointRelation getLinkExistingRelation() {
+    return LinkExistingManyToManyEndpointRelation
         .builder()
         .path(path)
         .field(field)
         .entityModel(entityModel)
         .targetEntityModel(targetEntityModel)
-        .mappedBy(mappedBy)
         .build();
   }
 
   @Override
   public EndpointRelation getUnlinkRelation() {
-    return UnlinkOneToManyEndpointRelation
+    return UnlinkManyToManyEndpointRelation
         .builder()
         .path(path)
         .field(field)
         .entityModel(entityModel)
         .targetEntityModel(targetEntityModel)
-        .mappedBy(mappedBy)
         .build();
   }
 }
