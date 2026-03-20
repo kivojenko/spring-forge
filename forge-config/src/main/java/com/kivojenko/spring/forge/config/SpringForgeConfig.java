@@ -17,102 +17,114 @@ import java.util.Map;
 @Data
 public final class SpringForgeConfig {
 
-    /**
-     * The base package for generated repositories.
-     */
-    public static String repositoryPackage;
+  /**
+   * The base package for generated repositories.
+   */
+  public static String repositoryPackage;
 
-    /**
-     * The base package for generated services.
-     */
-    public static String servicePackage;
+  /**
+   * The base package for generated services.
+   */
+  public static String servicePackage;
 
-    /**
-     * The base package for generated controllers.
-     */
-    public static String controllerPackage;
+  /**
+   * The base package for generated controllers.
+   */
+  public static String controllerPackage;
 
-    /**
-     * The base package for generated filters.
-     */
-    public static String filterPackage;
+  /**
+   * The base package for generated filters.
+   */
+  public static String filterPackage;
 
-    public static int pageSize = 20;
+  public static int pageSize = 20;
 
-    public static int getAllPageSize = Integer.MAX_VALUE;
+  public static int getAllPageSize = Integer.MAX_VALUE;
 
-    /**
-     * Indicates whether the configuration has been loaded.
-     */
-    public static boolean isLoaded = false;
+  private static Map<String, Object> yaml = null;
 
-    /**
-     * Loads the configuration using the provided processing environment.
-     * Configuration is first attempted to be loaded from {@code src/main/resources/springforge.yml},
-     * and then merged with or overridden by compiler options prefixed with {@code springforge.}.
-     *
-     * @param env the processing environment
-     */
-    public static void load(ProcessingEnvironment env) {
-        var yaml = loadYaml(env);
+  /**
+   * Indicates whether the configuration has been loaded.
+   */
+  public static boolean isLoaded() {
+    return yaml != null && !yaml.isEmpty();
+  }
 
-        repositoryPackage = fromYaml(yaml, "repository.package").toString();
-        servicePackage = fromYaml(yaml, "service.package").toString();
-        controllerPackage = fromYaml(yaml, "controller.package").toString();
-        filterPackage = fromYaml(yaml, "filter.package").toString();
+  /**
+   * Loads the configuration using the provided processing environment.
+   * Configuration is first attempted to be loaded from {@code src/main/resources/springforge.yml},
+   * and then merged with or overridden by compiler options prefixed with {@code springforge.}.
+   *
+   * @param env the processing environment
+   */
+  public static void load(ProcessingEnvironment env) {
+    yaml = loadYaml(env);
 
-        var newPageSize = fromYaml(yaml, "page.size");
-        if (newPageSize != null) {
-            pageSize = Integer.parseInt(newPageSize.toString());
-        }
-        var newGetAllPageSize = fromYaml(yaml, "getAll.page.size");
-        if (newGetAllPageSize != null) {
-            getAllPageSize = Integer.parseInt(newGetAllPageSize.toString());
-        }
-        isLoaded = true;
+    repositoryPackage = stringFromYaml("repository.package");
+    servicePackage = stringFromYaml("service.package");
+    controllerPackage = stringFromYaml("controller.package");
+    filterPackage = stringFromYaml("filter.package");
+
+    var newPageSize = stringFromYaml("page.size");
+    if (newPageSize != null) {
+      pageSize = Integer.parseInt(newPageSize);
     }
-
-    /**
-     * Loads the YAML configuration from the project resources.
-     *
-     * @param env the processing environment
-     * @return a map representing the YAML content, or an empty map if not found
-     */
-    @SneakyThrows
-    private static Map<String, Object> loadYaml(ProcessingEnvironment env) {
-        try {
-            var r = env.getFiler().getResource(StandardLocation.CLASS_OUTPUT, "", "doesntmatter").toUri();
-            var projectRoot = Path.of(r).getParent().getParent().getParent().getParent().getParent();
-
-            var properties = Path.of(projectRoot.toString(), "src", "main", "resources", "springforge.yml");
-            return new Yaml().load(new FileInputStream(properties.toFile()));
-
-        } catch (Exception e) {
-            env.getMessager().printMessage(
-                    Diagnostic.Kind.WARNING,
-                    "Failed to read springforge.yml: " + e.getClass().getName() + ": " + e.getMessage()
-            );
-
-            return Map.of();
-        }
+    var newGetAllPageSize = stringFromYaml("getAll.page.size");
+    if (newGetAllPageSize != null) {
+      getAllPageSize = Integer.parseInt(newGetAllPageSize);
     }
+  }
 
+  /**
+   * Loads the YAML configuration from the project resources.
+   *
+   * @param env the processing environment
+   * @return a map representing the YAML content, or an empty map if not found
+   */
+  @SneakyThrows
+  private static Map<String, Object> loadYaml(ProcessingEnvironment env) {
+    try {
+      var r = env.getFiler().getResource(StandardLocation.CLASS_OUTPUT, "", "doesntmatter").toUri();
+      var projectRoot = Path.of(r).getParent().getParent().getParent().getParent().getParent();
 
-    /**
-     * Retrieves a string value from a nested map based on a dot-separated path.
-     *
-     * @param yaml the configuration map
-     * @param path the dot-separated path (e.g., "service.package")
-     * @return the string value if found and is a string, {@code null} otherwise
-     */
-    private static Object fromYaml(Map<String, Object> yaml, String path) {
-        if (yaml == null || yaml.isEmpty()) return null;
+      var properties = Path.of(projectRoot.toString(), "src", "main", "resources", "springforge.yml");
+      return new Yaml().load(new FileInputStream(properties.toFile()));
 
-        Object current = yaml;
-        for (var key : path.split("\\.")) {
-            if (!(current instanceof Map<?, ?> map)) return null;
-            current = map.get(key);
-        }
-        return current;
+    } catch (Exception e) {
+      env.getMessager()
+          .printMessage(Diagnostic.Kind.WARNING,
+                        "Failed to read springforge.yml: " + e.getClass().getName() + ": " + e.getMessage());
+
+      return Map.of();
     }
+  }
+
+  private static String stringFromYaml(String path) {
+    Object value = fromYaml(path);
+    if (value == null) {
+      return null;
+    }
+    return value.toString();
+  }
+
+  /**
+   * Retrieves a string value from a nested map based on a dot-separated path.
+   *
+   * @param path the dot-separated path (e.g., "service.package")
+   * @return the string value if found and is a string, {@code null} otherwise
+   */
+  private static Object fromYaml(String path) {
+      if (yaml == null || yaml.isEmpty()) {
+          return null;
+      }
+
+    Object current = yaml;
+    for (var key : path.split("\\.")) {
+        if (!(current instanceof Map<?, ?> map)) {
+            return null;
+        }
+      current = map.get(key);
+    }
+    return current;
+  }
 }
