@@ -1,4 +1,4 @@
-package com.kivojenko.spring.forge.example.model;
+package com.kivojenko.spring.forge.example.model.general;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.kivojenko.spring.forge.annotation.GetOrCreate;
@@ -41,6 +41,16 @@ public class Author implements HasName {
    */
   @Column(nullable = false, unique = true)
   private String name;
+
+  @Override
+  public String getName() {
+    return name;
+  }
+
+  @Override
+  public void setName(String name) {
+    this.name = name;
+  }
 
   /**
    * Books written by this author. Endpoints will be generated for this association.

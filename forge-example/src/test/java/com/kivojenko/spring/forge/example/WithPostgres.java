@@ -24,7 +24,46 @@ public abstract class WithPostgres {
 
 
   @AfterEach
-  void cleanUp() throws Exception {
+  public void cleanUp() throws Exception {
+    String productsJson = mockMvc
+        .perform(get("/products"))
+        .andExpect(status().isOk())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+
+    JsonNode productsRoot = objectMapper.readTree(productsJson);
+    for (JsonNode product : productsRoot.get("content")) {
+      Long productId = product.get("id").asLong();
+      mockMvc.perform(delete("/products/{id}", productId)).andExpect(status().isNoContent());
+    }
+
+    String productCategoriesJson = mockMvc
+        .perform(get("/productCategories"))
+        .andExpect(status().isOk())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+
+    JsonNode productCategoriesRoot = objectMapper.readTree(productCategoriesJson);
+    for (JsonNode category : productCategoriesRoot.get("content")) {
+      Long categoryId = category.get("id").asLong();
+      mockMvc.perform(delete("/productCategories/{id}", categoryId)).andExpect(status().isNoContent());
+    }
+
+    String tagsJson = mockMvc
+        .perform(get("/tags"))
+        .andExpect(status().isOk())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+
+    JsonNode tagsRoot = objectMapper.readTree(tagsJson);
+    for (JsonNode tag : tagsRoot.get("content")) {
+      Long tagId = tag.get("id").asLong();
+      mockMvc.perform(delete("/tags/{id}", tagId)).andExpect(status().isNoContent());
+    }
+
     String booksJson = mockMvc
         .perform(get("/books"))
         .andExpect(status().isOk())

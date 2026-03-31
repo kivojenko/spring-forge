@@ -69,4 +69,24 @@ public final class StringUtils {
 
     return "set" + capitalize(fieldName);
   }
+
+  /**
+   * Constructs a standard name for a field representing a minimum value.
+   *
+   * @param fieldName the name of the field
+   * @return the constructed name prefixed with "min"
+   */
+  public static String minName(String fieldName) {
+    return "min" + capitalize(fieldName);
+  }
+
+  /**
+   * Constructs a standard name for a field representing a maximum value.
+   *
+   * @param fieldName the name of the field
+   * @return the constructed name prefixed with "max"
+   */
+  public static String maxName(String fieldName) {
+    return "max" + capitalize(fieldName);
+  }
 }

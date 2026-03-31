@@ -17,7 +17,7 @@ tasks.register<Javadoc>("aggregateJavadoc") {
 
 plugins {
     id("java")
-    id("org.springframework.boot") version "4.0.2"
+    id("org.springframework.boot") version "4.0.5"
     id("io.spring.dependency-management") version "1.1.7"
 }
 
@@ -40,7 +40,7 @@ subprojects {
 
     dependencyManagement {
         imports {
-            mavenBom("org.testcontainers:testcontainers-bom:1.21.3")
+            mavenBom("org.testcontainers:testcontainers-bom:1.21.4")
             mavenBom("net.javacrumbs.shedlock:shedlock-bom:7.5.0")
         }
     }

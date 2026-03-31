@@ -245,10 +245,9 @@ public final class JpaEntityModel {
                 );
 
         for (var field : getFilterableFields()) {
-            field.addBuilderStatement(builder);
+            field.addFiltering(builder);
         }
         return builder.addStatement("return $L", BUILDER_VAR_NAME).build();
     }
-
 
 }

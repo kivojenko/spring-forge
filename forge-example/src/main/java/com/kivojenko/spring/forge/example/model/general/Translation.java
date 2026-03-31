@@ -1,8 +1,12 @@
-package com.kivojenko.spring.forge.example.model;
+package com.kivojenko.spring.forge.example.model.general;
 
 import com.kivojenko.spring.forge.annotation.WithRestController;
 import jakarta.annotation.Nullable;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

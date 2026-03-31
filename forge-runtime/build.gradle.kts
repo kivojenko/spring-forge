@@ -85,9 +85,10 @@ dependencies {
     compileOnly("jakarta.validation:jakarta.validation-api")
     compileOnly("jakarta.persistence:jakarta.persistence-api")
 
-    implementation("com.querydsl:querydsl-core:5.1.0")
-    implementation("com.querydsl:querydsl-jpa:5.1.0:jakarta")
-    annotationProcessor("com.querydsl:querydsl-apt:5.1.0:jakarta")
+    implementation("io.github.openfeign.querydsl:querydsl-core:7.1")
+    implementation("io.github.openfeign.querydsl:querydsl-jpa:7.1")
+    annotationProcessor("io.github.openfeign.querydsl:querydsl-apt:7.1")
+
     annotationProcessor("jakarta.persistence:jakarta.persistence-api")
     annotationProcessor("jakarta.annotation:jakarta.annotation-api")
 

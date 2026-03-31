@@ -14,7 +14,7 @@ dependencies {
     implementation(project(":forge-runtime"))
     annotationProcessor(project(":forge-processor"))
 
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.1")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.2")
 
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
@@ -27,9 +27,9 @@ dependencies {
     annotationProcessor("jakarta.persistence:jakarta.persistence-api")
     annotationProcessor("jakarta.annotation:jakarta.annotation-api")
 
-    implementation("com.querydsl:querydsl-core:5.1.0")
-    implementation("com.querydsl:querydsl-jpa:5.1.0:jakarta")
-    annotationProcessor("com.querydsl:querydsl-apt:5.1.0:jakarta")
+    implementation("io.github.openfeign.querydsl:querydsl-core:7.1")
+    implementation("io.github.openfeign.querydsl:querydsl-jpa:7.1")
+    annotationProcessor("io.github.openfeign.querydsl:querydsl-apt:7.1:jpa")
 
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")

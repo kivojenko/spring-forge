@@ -4,7 +4,10 @@ import com.kivojenko.spring.forge.jpa.contract.ForgeController;
 import com.kivojenko.spring.forge.jpa.contract.ForgeService;
 import com.kivojenko.spring.forge.jpa.contract.HasNameRepository;
 import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.TypeName;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -66,5 +69,23 @@ public interface ClassNameUtils {
   ClassName LIST = ClassName.get(List.class);
   ClassName ARRAY_LIST = ClassName.get(ArrayList.class);
   ClassName STRING = ClassName.get(String.class);
-  ClassName BOOLEAN = ClassName.get(Boolean.class);
+
+  Set<TypeName> BOOLEAN_TYPES = Set.of(TypeName.BOOLEAN, ClassName.get(Boolean.class));
+
+  Set<TypeName> NUMERIC_TYPES = Set.of(
+      TypeName.BYTE,
+      TypeName.SHORT,
+      TypeName.INT,
+      TypeName.LONG,
+      TypeName.FLOAT,
+      TypeName.DOUBLE,
+      ClassName.get(Byte.class),
+      ClassName.get(Short.class),
+      ClassName.get(Integer.class),
+      ClassName.get(Long.class),
+      ClassName.get(Float.class),
+      ClassName.get(Double.class),
+      ClassName.get(BigDecimal.class),
+      ClassName.get(BigInteger.class)
+  );
 }

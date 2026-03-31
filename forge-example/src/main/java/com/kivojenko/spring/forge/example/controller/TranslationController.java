@@ -1,6 +1,6 @@
 package com.kivojenko.spring.forge.example.controller;
 
-import com.kivojenko.spring.forge.example.model.TranslationForgeController;
+import com.kivojenko.spring.forge.example.model.general.TranslationForgeController;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;

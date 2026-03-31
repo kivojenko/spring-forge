@@ -46,7 +46,7 @@ public class FilterGenerator {
                 .addAnnotation(REQUIRED_ARGS);
 
         for (var field : model.getFilterableFields()) {
-            builder.addField(field.getFieldSpec());
+            field.addFieldSpec(builder);
         }
 
         builder.addMethod(model.toPredicateMethod());

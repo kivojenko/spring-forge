@@ -1,9 +1,9 @@
 package com.kivojenko.spring.forge.example.controller;
 
 import com.kivojenko.spring.forge.example.WithPostgres;
-import com.kivojenko.spring.forge.example.model.Author;
-import com.kivojenko.spring.forge.example.model.Book;
-import com.kivojenko.spring.forge.example.model.Category;
+import com.kivojenko.spring.forge.example.model.general.Author;
+import com.kivojenko.spring.forge.example.model.general.Book;
+import com.kivojenko.spring.forge.example.model.general.Category;
 import jakarta.servlet.ServletException;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

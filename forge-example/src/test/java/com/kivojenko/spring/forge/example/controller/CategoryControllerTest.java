@@ -1,8 +1,8 @@
 package com.kivojenko.spring.forge.example.controller;
 
 import com.kivojenko.spring.forge.example.WithPostgres;
-import com.kivojenko.spring.forge.example.model.Category;
-import com.kivojenko.spring.forge.example.model.Translation;
+import com.kivojenko.spring.forge.example.model.general.Category;
+import com.kivojenko.spring.forge.example.model.general.Translation;
 import jakarta.servlet.ServletException;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

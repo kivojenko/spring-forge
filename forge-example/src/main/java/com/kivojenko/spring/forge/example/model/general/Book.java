@@ -1,9 +1,27 @@
-package com.kivojenko.spring.forge.example.model;
+package com.kivojenko.spring.forge.example.model.general;
 
 import com.kivojenko.spring.forge.annotation.WithRestController;
 import com.kivojenko.spring.forge.annotation.endpoint.WithEndpoints;
-import jakarta.persistence.*;
-import lombok.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * A simple entity that belongs to an {@link Author}.
@@ -34,7 +52,7 @@ public class Book {
     @WithEndpoints
     @Builder.Default
     @ToString.Exclude
-    private java.util.List<Category> categories = new java.util.ArrayList<>();
+    private List<Category> categories = new ArrayList<>();
 
     @ManyToOne(optional = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "author_id")

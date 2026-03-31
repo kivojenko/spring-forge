@@ -1,9 +1,8 @@
 package com.kivojenko.spring.forge.example.controller;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kivojenko.spring.forge.example.WithPostgres;
-import com.kivojenko.spring.forge.example.model.Translation;
+import com.kivojenko.spring.forge.example.model.general.Translation;
 import jakarta.servlet.ServletException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,8 +15,13 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThrows;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -34,58 +38,8 @@ public class TranslationControllerTest extends WithPostgres {
   }
 
   @AfterEach
-  void cleanUp() throws Exception {
-    String translationsJson = mockMvc
-        .perform(get("/translations"))
-        .andExpect(status().isOk())
-        .andReturn()
-        .getResponse()
-        .getContentAsString();
-
-    JsonNode translationsRoot = objectMapper.readTree(translationsJson);
-    for (JsonNode translation : translationsRoot.get("content")) {
-      Long translationId = translation.get("id").asLong();
-      mockMvc.perform(delete("/translations/{id}", translationId)).andExpect(status().isNoContent());
-    }
-
-    String authorsJson = mockMvc
-        .perform(get("/authors"))
-        .andExpect(status().isOk())
-        .andReturn()
-        .getResponse()
-        .getContentAsString();
-
-    JsonNode authorsRoot = objectMapper.readTree(authorsJson);
-    for (JsonNode author : authorsRoot.get("content")) {
-      Long authorId = author.get("id").asLong();
-      mockMvc.perform(delete("/authors/{id}", authorId)).andExpect(status().isNoContent());
-    }
-
-    String booksJson = mockMvc
-        .perform(get("/books"))
-        .andExpect(status().isOk())
-        .andReturn()
-        .getResponse()
-        .getContentAsString();
-
-    JsonNode booksRoot = objectMapper.readTree(booksJson);
-    for (JsonNode book : booksRoot.get("content")) {
-      Long bookId = book.get("id").asLong();
-      mockMvc.perform(delete("/books/{id}", bookId)).andExpect(status().isNoContent());
-    }
-
-    String categoriesJson = mockMvc
-        .perform(get("/categories"))
-        .andExpect(status().isOk())
-        .andReturn()
-        .getResponse()
-        .getContentAsString();
-
-    JsonNode categoriesRoot = objectMapper.readTree(categoriesJson);
-    for (JsonNode category : categoriesRoot.get("content")) {
-      Long categoryId = category.get("id").asLong();
-      mockMvc.perform(delete("/categories/{id}", categoryId)).andExpect(status().isNoContent());
-    }
+  public void cleanUp() throws Exception {
+    super.cleanUp();
   }
 
   @Test

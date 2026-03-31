@@ -2,6 +2,7 @@ package com.kivojenko.spring.forge.jpa.factory;
 
 import com.kivojenko.spring.forge.annotation.filter.FilterField;
 import com.kivojenko.spring.forge.annotation.filter.IterableFilterField;
+import com.kivojenko.spring.forge.annotation.filter.NumberRangeFilterField;
 import com.kivojenko.spring.forge.annotation.filter.StringFilterField;
 import com.kivojenko.spring.forge.jpa.model.FilterFieldModel;
 import com.kivojenko.spring.forge.jpa.utils.LoggingUtils;
@@ -48,6 +49,9 @@ public class FilterFieldModelFactory {
             !typeUtils.isSameType(type, elementUtils.getTypeElement(STRING.canonicalName()).asType())) {
           LoggingUtils.error(env, field, "@StringFilterField is only allowed on String types");
         }
+      }
+      if (annotation == null) {
+        annotation = field.getAnnotation(NumberRangeFilterField.class);
       }
 
       if (annotation == null) continue;
