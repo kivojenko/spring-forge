@@ -37,6 +37,10 @@ public class AddNewOneToManyEndpointRelation extends OneToManyEndpointRelation {
 
     return MethodSpec
         .methodBuilder(generatedMethodName())
+        .addJavadoc("Creates and adds a new {@link $T} entity to a {@link $T} entity.\n", targetEntityModel.getEntityType(), entityModel.getEntityType())
+        .addJavadoc("@param $L the ID of the {@link $T} entity\n", BASE_ID_PARAM_NAME, entityModel.getEntityType())
+        .addJavadoc("@param $L the new {@link $T} entity to create and add\n", SUB_VAR_NAME, targetEntityModel.getEntityType())
+        .addJavadoc("@return the newly created and added {@link $T} entity\n", targetEntityModel.getEntityType())
         .addAnnotation(annotation(mapping()))
         .addAnnotation(responseStatus(CREATED))
         .addModifiers(Modifier.PUBLIC)
@@ -53,6 +57,10 @@ public class AddNewOneToManyEndpointRelation extends OneToManyEndpointRelation {
 
     var builder = MethodSpec
         .methodBuilder(generatedMethodName())
+        .addJavadoc("Creates and adds a new {@link $T} entity to a {@link $T} entity.\n", targetEntityModel.getEntityType(), entityModel.getEntityType())
+        .addJavadoc("@param $L the ID of the {@link $T} entity\n", BASE_ID_PARAM_NAME, entityModel.getEntityType())
+        .addJavadoc("@param $L the new {@link $T} entity to create and add\n", SUB_VAR_NAME, targetEntityModel.getEntityType())
+        .addJavadoc("@return the newly created and added {@link $T} entity\n", targetEntityModel.getEntityType())
         .returns(targetEntityModel.getEntityType())
         .addModifiers(Modifier.PUBLIC)
         .addAnnotation(TRANSACTIONAL);

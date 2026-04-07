@@ -62,6 +62,9 @@ public final class ControllerGenerator {
       var nameParam = ParameterSpec.builder(String.class, "name").addAnnotation(REQUEST_PARAM).build();
       var getOrCreate = MethodSpec
           .methodBuilder("getOrCreate")
+          .addJavadoc("Retrieves an existing {@link $T} by name or creates it if it does not exist.\n", model.getEntityType())
+          .addJavadoc("@param name the name of the entity\n")
+          .addJavadoc("@return the retrieved or newly created entity\n")
           .addModifiers(Modifier.PUBLIC)
           .addAnnotation(annotation)
           .addParameter(nameParam)
@@ -78,6 +81,8 @@ public final class ControllerGenerator {
     var pageableParam = ParameterSpec.builder(PAGEABLE, "pageable").addAnnotation(pageableAnnotation).build();
     var findAllBuilder = MethodSpec
         .methodBuilder("findAll")
+        .addJavadoc("Retrieves a paged result of all {@link $T} entities.\n", model.getEntityType())
+        .addJavadoc("@param pageable the pagination information\n")
         .addModifiers(Modifier.PUBLIC)
         .addAnnotation(GET_MAPPING)
         .returns(ParameterizedTypeName.get(PAGE, model.getEntityType()))
@@ -88,10 +93,13 @@ public final class ControllerGenerator {
       findAllBuilder
           .addParameter(filterParam)
           .addJavadoc("@param filter the filter criteria\n")
+          .addJavadoc("@return a page of entities matching the filter criteria\n")
           .addStatement("return service.findAll(pageable, filter)");
       builder.addMethod(findAllBuilder.build());
     } else {
-      findAllBuilder.addStatement("return service.findAll(pageable)");
+      findAllBuilder
+          .addJavadoc("@return a page of entities\n")
+          .addStatement("return service.findAll(pageable)");
       builder.addMethod(findAllBuilder.build());
     }
 

@@ -107,6 +107,9 @@ public final class JpaEntityModel {
     public MethodSpec setIdMethod() {
         return MethodSpec
                 .methodBuilder("setId")
+                .addJavadoc("Sets the ID of the given {@link $T} entity.\n", getEntityType())
+                .addJavadoc("@param entity the entity to update\n")
+                .addJavadoc("@param id the new ID\n")
                 .addAnnotation(Override.class)
                 .addModifiers(Modifier.PROTECTED)
                 .returns(TypeName.VOID)
@@ -131,6 +134,9 @@ public final class JpaEntityModel {
     private MethodSpec createViaCtor() {
         return MethodSpec
                 .methodBuilder("create")
+                .addJavadoc("Creates a new instance of {@link $T} with the given name using the constructor.\n", getEntityType())
+                .addJavadoc("@param name the name of the entity\n")
+                .addJavadoc("@return the newly created entity\n")
                 .addModifiers(Modifier.PROTECTED)
                 .returns(getEntityType())
                 .addParameter(String.class, "name")
@@ -141,6 +147,9 @@ public final class JpaEntityModel {
     private MethodSpec createViaBuilder() {
         return MethodSpec
                 .methodBuilder("create")
+                .addJavadoc("Creates a new instance of {@link $T} with the given name using the builder.\n", getEntityType())
+                .addJavadoc("@param name the name of the entity\n")
+                .addJavadoc("@return the newly created entity\n")
                 .addModifiers(Modifier.PROTECTED)
                 .returns(getEntityType())
                 .addParameter(String.class, "name")
@@ -151,6 +160,9 @@ public final class JpaEntityModel {
     private MethodSpec createViaEmptyCtorAndSetter() {
         return MethodSpec
                 .methodBuilder("create")
+                .addJavadoc("Creates a new instance of {@link $T} with the given name using the empty constructor and a setter.\n", getEntityType())
+                .addJavadoc("@param name the name of the entity\n")
+                .addJavadoc("@return the newly created entity\n")
                 .addModifiers(Modifier.PROTECTED)
                 .returns(getEntityType())
                 .addParameter(String.class, "name")
@@ -163,6 +175,9 @@ public final class JpaEntityModel {
     private MethodSpec createViaBuilderAndSetter() {
         return MethodSpec
                 .methodBuilder("create")
+                .addJavadoc("Creates a new instance of {@link $T} with the given name using the builder and a setter.\n", getEntityType())
+                .addJavadoc("@param name the name of the entity\n")
+                .addJavadoc("@return the newly created entity\n")
                 .addModifiers(Modifier.PROTECTED)
                 .returns(getEntityType())
                 .addParameter(String.class, "name")
@@ -234,6 +249,8 @@ public final class JpaEntityModel {
     public MethodSpec toPredicateMethod() {
         var builder = MethodSpec
                 .methodBuilder("toPredicate")
+                .addJavadoc("Converts the filter criteria into a QueryDSL {@link $T}.\n", BooleanBuilder.class)
+                .addJavadoc("@return the predicate representing the filter criteria\n")
                 .addModifiers(Modifier.PUBLIC)
                 .returns(BooleanBuilder.class)
                 .addStatement("var $L = new $T()", BUILDER_VAR_NAME, BooleanBuilder.class)

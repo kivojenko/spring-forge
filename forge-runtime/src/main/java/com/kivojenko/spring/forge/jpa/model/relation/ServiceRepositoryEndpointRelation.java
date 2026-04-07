@@ -35,6 +35,9 @@ public abstract class ServiceRepositoryEndpointRelation extends EndpointRelation
   public MethodSpec getControllerMethod() {
     var spec = MethodSpec
         .methodBuilder(generatedMethodName())
+        .addJavadoc("Executes the {@link $T} operation for association between {@link $T} and {@link $T}.\n", mapping(), entityModel.getEntityType(), targetEntityModel.getEntityType())
+        .addJavadoc("@param $L the ID of the base {@link $T} entity\n", BASE_ID_PARAM_NAME, entityModel.getEntityType())
+        .addJavadoc("@param $L the ID of the target {@link $T} entity\n", SUB_ID_PARAM_NAME, targetEntityModel.getEntityType())
         .returns(void.class)
         .addModifiers(Modifier.PUBLIC)
         .addParameter(baseParamSpec(true))

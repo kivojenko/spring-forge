@@ -53,6 +53,10 @@ public final class ServiceGenerator {
     if (model.getRequirements().hasName()) {
       var create = MethodSpec
           .methodBuilder("create")
+          .addJavadoc("Creates a new {@link $T} entity after checking that its name is unique.\n", model.getEntityType())
+          .addJavadoc("@param entity the entity to create\n")
+          .addJavadoc("@return the created entity\n")
+          .addJavadoc("@throws IllegalArgumentException if an entity with the same name already exists\n")
           .addAnnotation(TRANSACTIONAL)
           .addModifiers(Modifier.PUBLIC)
           .returns(model.getEntityType())
@@ -72,6 +76,9 @@ public final class ServiceGenerator {
       if (model.getRequirements().getOrCreateAnnotation() != null) {
         var getOrCreate = MethodSpec
             .methodBuilder("getOrCreate")
+            .addJavadoc("Retrieves an existing {@link $T} by name or creates it if it does not exist.\n", model.getEntityType())
+            .addJavadoc("@param name the name of the entity\n")
+            .addJavadoc("@return the retrieved or newly created entity\n")
             .addModifiers(Modifier.PUBLIC)
             .addAnnotation(TRANSACTIONAL)
             .returns(model.getEntityType())
@@ -81,6 +88,9 @@ public final class ServiceGenerator {
 
         MethodSpec createSafely = MethodSpec
             .methodBuilder("createSafely")
+            .addJavadoc("Attempts to create an entity with the given name, handling race conditions where another thread might have created it.\n")
+            .addJavadoc("@param name the name of the entity\n")
+            .addJavadoc("@return the retrieved or newly created entity\n")
             .addModifiers(Modifier.PROTECTED)
             .returns(model.getEntityType())
             .addParameter(String.class, "name")
@@ -101,6 +111,10 @@ public final class ServiceGenerator {
       var filterParam = ParameterSpec.builder(model.getFilterType(), "filter").build();
       var findAllPagedFiltered = MethodSpec
           .methodBuilder("findAll")
+          .addJavadoc("Retrieves a paged result of {@link $T} entities matching the filter criteria.\n", model.getEntityType())
+          .addJavadoc("@param pageable the pagination information\n")
+          .addJavadoc("@param filter the filter criteria\n")
+          .addJavadoc("@return a page of entities matching the filter\n")
           .addModifiers(Modifier.PUBLIC)
           .returns(ParameterizedTypeName.get(PAGE, model.getEntityType()))
           .addParameter(pageableParam)
@@ -111,6 +125,9 @@ public final class ServiceGenerator {
 
       var findAllFiltered = MethodSpec
           .methodBuilder("findAll")
+          .addJavadoc("Retrieves all {@link $T} entities matching the filter criteria.\n", model.getEntityType())
+          .addJavadoc("@param filter the filter criteria\n")
+          .addJavadoc("@return a list of entities matching the filter\n")
           .addModifiers(Modifier.PUBLIC)
           .returns(ParameterizedTypeName.get(ARRAY_LIST, model.getEntityType()))
           .addParameter(filterParam)

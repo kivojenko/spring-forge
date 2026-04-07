@@ -41,6 +41,9 @@ public class UnlinkOneToManyEndpointRelation extends OneToManyEndpointRelation {
   public MethodSpec getServiceMethod() {
     var builder = MethodSpec
         .methodBuilder(generatedMethodName())
+        .addJavadoc("Removes the association between {@link $T} and {@link $T}.\n", entityModel.getEntityType(), targetEntityModel.getEntityType())
+        .addJavadoc("@param $L the ID of the {@link $T} entity\n", BASE_ID_PARAM_NAME, entityModel.getEntityType())
+        .addJavadoc("@param $L the ID of the {@link $T} entity to unlink\n", SUB_ID_PARAM_NAME, targetEntityModel.getEntityType())
         .addAnnotation(TRANSACTIONAL)
         .addModifiers(Modifier.PUBLIC)
         .returns(void.class);

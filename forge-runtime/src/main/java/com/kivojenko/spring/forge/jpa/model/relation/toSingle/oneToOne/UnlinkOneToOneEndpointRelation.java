@@ -37,6 +37,8 @@ public class UnlinkOneToOneEndpointRelation extends ServiceRepositoryEndpointRel
   public MethodSpec getControllerMethod() {
     return MethodSpec
         .methodBuilder(generatedMethodName())
+        .addJavadoc("Removes the association between {@link $T} and its {@link $T}.\n", entityModel.getEntityType(), targetEntityModel.getEntityType())
+        .addJavadoc("@param $L the ID of the {@link $T} entity\n", BASE_ID_PARAM_NAME, entityModel.getEntityType())
         .addAnnotation(annotation(mapping()))
         .addAnnotation(responseStatus(NO_CONTENT))
         .returns(void.class)
@@ -55,6 +57,8 @@ public class UnlinkOneToOneEndpointRelation extends ServiceRepositoryEndpointRel
   public MethodSpec getServiceMethod() {
     var builder = MethodSpec
         .methodBuilder(generatedMethodName())
+        .addJavadoc("Removes the association between {@link $T} and its {@link $T}.\n", entityModel.getEntityType(), targetEntityModel.getEntityType())
+        .addJavadoc("@param $L the ID of the {@link $T} entity\n", BASE_ID_PARAM_NAME, entityModel.getEntityType())
         .addModifiers(Modifier.PUBLIC)
         .returns(void.class)
         .addAnnotation(TRANSACTIONAL);

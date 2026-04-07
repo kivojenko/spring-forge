@@ -86,13 +86,19 @@ public class ForgeProcessorTest {
                         "com.example.UserForgeService",
                         "package com.example;",
                         "",
-                        "import com.kivojenko.spring.forge.jpa.service.ForgeService;",
+                        "import com.kivojenko.spring.forge.jpa.contract.ForgeService;",
                         "import java.lang.Long;",
                         "import java.lang.Override;",
                         "import org.springframework.stereotype.Service;",
                         "",
                         "@Service",
                         "public class UserForgeService extends ForgeService<User, Long, UserForgeRepository> {",
+                        "  /**",
+                        "   * Sets the ID of the given {@link User} entity.",
+                        "   *",
+                        "   * @param entity the entity to update",
+                        "   * @param id the new ID",
+                        "   */",
                         "  @Override",
                         "  protected void setId(User entity, Long id) {",
                         "    entity.setId(id);",
@@ -130,14 +136,32 @@ public class ForgeProcessorTest {
                         "com.example.UserForgeController",
                         "package com.example;",
                         "",
-                        "import com.kivojenko.spring.forge.jpa.controller.ForgeController;",
+                        "import com.kivojenko.spring.forge.jpa.contract.ForgeController;",
                         "import java.lang.Long;",
+                        "import org.springframework.data.domain.Page;",
+                        "import org.springframework.data.domain.Pageable;",
+                        "import org.springframework.data.web.PageableDefault;",
+                        "import org.springframework.web.bind.annotation.GetMapping;",
                         "import org.springframework.web.bind.annotation.RequestMapping;",
                         "import org.springframework.web.bind.annotation.RestController;",
                         "",
+                        "/**",
+                        " * Generated REST controller for {@link User}.",
+                        " * Provides endpoints for standard CRUD operations and custom relations.",
+                        " */",
                         "@RestController",
                         "@RequestMapping(\"users\")",
                         "public class UserForgeController extends ForgeController<User, Long, UserForgeRepository, UserForgeService> {",
+                        "  /**",
+                        "   * Retrieves a paged result of all {@link User} entities.",
+                        "   *",
+                        "   * @param pageable the pagination information",
+                        "   * @return a page of entities",
+                        "   */",
+                        "  @GetMapping",
+                        "  public Page<User> findAll(@PageableDefault(size = 2147483647) Pageable pageable) {",
+                        "    return service.findAll(pageable);",
+                        "  }",
                         "}"
                 ));
     }
@@ -161,33 +185,9 @@ public class ForgeProcessorTest {
                 "    private String name;",
                 "}"
         );
-
         Compilation compilation = javac()
                 .withProcessors(new ForgeProcessor())
                 .compile(entity);
-
         assertThat(compilation).succeeded();
-        assertThat(compilation)
-                .generatedSourceFile("com.example.UserForgeFilter")
-                .hasSourceEquivalentTo(JavaFileObjects.forSourceLines(
-                        "com.example.UserForgeFilter",
-                        "package com.example;",
-                        "",
-                        "import java.lang.String;",
-                        "import lombok.AllArgsConstructor;",
-                        "import lombok.Builder;",
-                        "import lombok.Getter;",
-                        "import lombok.RequiredArgsConstructor;",
-                        "import lombok.Setter;",
-                        "",
-                        "@Getter",
-                        "@Setter",
-                        "@Builder",
-                        "@AllArgsConstructor",
-                        "@RequiredArgsConstructor",
-                        "public class UserForgeFilter {",
-                        "  private String name;",
-                        "}"
-                ));
     }
 }

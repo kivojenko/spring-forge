@@ -44,6 +44,9 @@ public class LinkExistingManyToManyEndpointRelation extends ServiceRepositoryEnd
   public MethodSpec getServiceMethod() {
     var builder = MethodSpec
         .methodBuilder(generatedMethodName())
+        .addJavadoc("Links an existing {@link $T} entity to a {@link $T} entity.\n", targetEntityModel.getEntityType(), entityModel.getEntityType())
+        .addJavadoc("@param $L the ID of the {@link $T} entity\n", BASE_ID_PARAM_NAME, entityModel.getEntityType())
+        .addJavadoc("@param $L the ID of the {@link $T} entity to link\n", SUB_ID_PARAM_NAME, targetEntityModel.getEntityType())
         .addModifiers(Modifier.PUBLIC)
         .addAnnotation(TRANSACTIONAL)
         .returns(void.class);

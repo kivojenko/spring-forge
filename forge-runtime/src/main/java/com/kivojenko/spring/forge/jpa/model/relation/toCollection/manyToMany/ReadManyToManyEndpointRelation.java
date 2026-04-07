@@ -23,6 +23,9 @@ public class ReadManyToManyEndpointRelation extends EndpointRelation {
   public MethodSpec getControllerMethod() {
     return MethodSpec
         .methodBuilder(generatedMethodName())
+        .addJavadoc("Retrieves the {@link $T} associated with the {@link $T} by its ID.\n", targetEntityModel.getEntityType(), entityModel.getEntityType())
+        .addJavadoc("@param $L the ID of the {@link $T} entity\n", BASE_ID_PARAM_NAME, entityModel.getEntityType())
+        .addJavadoc("@return the associated {@link $T} entities\n", targetEntityModel.getEntityType())
         .addModifiers(Modifier.PUBLIC)
         .addAnnotation(annotation(GET_MAPPING))
         .returns(TypeName.get(field.asType()))

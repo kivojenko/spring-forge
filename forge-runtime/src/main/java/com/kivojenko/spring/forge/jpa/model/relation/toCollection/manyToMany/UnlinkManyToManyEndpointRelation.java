@@ -42,6 +42,9 @@ public class UnlinkManyToManyEndpointRelation extends ServiceRepositoryEndpointR
   public MethodSpec getServiceMethod() {
     var builder = MethodSpec
         .methodBuilder(generatedMethodName())
+        .addJavadoc("Removes (unlinks) an existing {@link $T} entity from a {@link $T} entity.\n", targetEntityModel.getEntityType(), entityModel.getEntityType())
+        .addJavadoc("@param $L the ID of the {@link $T} entity\n", BASE_ID_PARAM_NAME, entityModel.getEntityType())
+        .addJavadoc("@param $L the ID of the {@link $T} entity to remove\n", SUB_ID_PARAM_NAME, targetEntityModel.getEntityType())
         .addModifiers(Modifier.PUBLIC)
         .addAnnotation(TRANSACTIONAL)
         .returns(void.class);

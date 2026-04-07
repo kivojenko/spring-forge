@@ -35,6 +35,7 @@ public final class ForgeProcessor extends AbstractProcessor {
 
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+    if (annotations.isEmpty()) return false;
     if (!SpringForgeConfig.isLoaded()) SpringForgeConfig.load(processingEnv);
 
     JpaEntityModelFactory.setEnv(processingEnv);
