@@ -1,7 +1,7 @@
 package com.kivojenko.spring.forge.example.model.filter;
 
 import com.kivojenko.spring.forge.annotation.WithRestController;
-import com.kivojenko.spring.forge.annotation.filter.StringFilterField;
+import com.kivojenko.spring.forge.annotation.filter.FilterField;
 import com.kivojenko.spring.forge.jpa.contract.HasName;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -32,6 +32,6 @@ public class Tag implements HasName {
     private Long id;
 
     @Column(nullable = false, unique = true)
-    @StringFilterField
+    @FilterField
     private String name;
 }

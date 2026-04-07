@@ -1,11 +1,9 @@
 package com.kivojenko.spring.forge.example.model.filter;
 
 import com.kivojenko.spring.forge.annotation.WithRestController;
+import com.kivojenko.spring.forge.annotation.filter.ComparisonMatchMode;
 import com.kivojenko.spring.forge.annotation.filter.FilterField;
-import com.kivojenko.spring.forge.annotation.filter.IterableFilterField;
 import com.kivojenko.spring.forge.annotation.filter.IterableMatchMode;
-import com.kivojenko.spring.forge.annotation.filter.RangeFilterField;
-import com.kivojenko.spring.forge.annotation.filter.StringFilterField;
 import com.kivojenko.spring.forge.annotation.filter.StringMatchMode;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -39,28 +37,28 @@ public class Product {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @StringFilterField(match = StringMatchMode.CONTAINS)
+  @FilterField(stringMatchMode = StringMatchMode.CONTAINS)
   private String name;
 
-  @StringFilterField(match = StringMatchMode.EQUALS_IGNORE_CASE)
+  @FilterField(stringMatchMode = StringMatchMode.EQUALS_IGNORE_CASE)
   private String sku;
 
-  @RangeFilterField
+  @FilterField
   private BigDecimal price;
 
-  @RangeFilterField
+  @FilterField
   private LocalDateTime createdAt;
 
   @FilterField
   private Boolean active;
 
-  @StringFilterField
+  @FilterField
   private String brand;
 
   @FilterField
   private boolean inStock;
 
-  @FilterField
+  @FilterField(comparisonMatchMode = ComparisonMatchMode.EXACT)
   private Double weight;
 
   @ManyToOne
@@ -68,7 +66,7 @@ public class Product {
   private ProductCategory category;
 
   @ManyToMany
-  @IterableFilterField(match = IterableMatchMode.ANY)
+  @FilterField(iterableMatchMode = IterableMatchMode.ANY)
   @Builder.Default
   private Set<Tag> tags = new HashSet<>();
 }

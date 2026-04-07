@@ -11,4 +11,14 @@ import java.lang.annotation.Target;
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.SOURCE)
 public @interface FilterField {
+  StringMatchMode stringMatchMode() default StringMatchMode.CONTAINS;
+
+  IterableMatchMode iterableMatchMode() default IterableMatchMode.ANY;
+
+  ComparisonMatchMode comparisonMatchMode() default ComparisonMatchMode.RANGE;
+
+  RangeBoundMode minBoundMode() default RangeBoundMode.INCLUDES;
+
+  RangeBoundMode maxBoundMode() default RangeBoundMode.INCLUDES;
+
 }

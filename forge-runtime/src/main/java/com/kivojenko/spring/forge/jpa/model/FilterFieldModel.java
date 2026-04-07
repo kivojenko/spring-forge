@@ -1,10 +1,9 @@
 package com.kivojenko.spring.forge.jpa.model;
 
-import com.kivojenko.spring.forge.annotation.filter.IterableFilterField;
+import com.kivojenko.spring.forge.annotation.filter.FilterField;
 import com.kivojenko.spring.forge.annotation.filter.IterableMatchMode;
+import com.kivojenko.spring.forge.annotation.filter.ComparisonMatchMode;
 import com.kivojenko.spring.forge.annotation.filter.RangeBoundMode;
-import com.kivojenko.spring.forge.annotation.filter.RangeFilterField;
-import com.kivojenko.spring.forge.annotation.filter.StringFilterField;
 import com.kivojenko.spring.forge.jpa.factory.JpaEntityModelFactory;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
@@ -21,7 +20,6 @@ import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
-import java.lang.annotation.Annotation;
 
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.BOOLEAN_TYPES;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.BUILDER_DEFAULT;
@@ -44,7 +42,7 @@ public class FilterFieldModel {
   TypeMirror type;
   TypeMirror entityCandidate;
   TypeElement typeElement;
-  Annotation annotation;
+  FilterField annotation;
   boolean iterable;
   boolean singleEntity;
   ProcessingEnvironment env;
@@ -53,7 +51,11 @@ public class FilterFieldModel {
   private final String name = element.getSimpleName().toString();
 
   public TypeSpec.Builder addFieldSpec(TypeSpec.Builder builder) {
-    if (annotation instanceof RangeFilterField) {
+    if (NUMERIC_TYPES.contains(typeName) || DATE_TYPES.contains(typeName)) {
+      if (annotation.comparisonMatchMode() == ComparisonMatchMode.EXACT) {
+        var fieldTypeName = typeName;
+        return builder.addField(fieldTypeName, getName(), PRIVATE);
+      }
       var minField = FieldSpec.builder(typeName, minName(getName()), Modifier.PRIVATE).build();
       var maxField = FieldSpec.builder(typeName, maxName(getName()), Modifier.PRIVATE).build();
       builder.addField(minField);
@@ -92,79 +94,51 @@ public class FilterFieldModel {
 
     if (typeName.equals(STRING)) {
       builder.beginControlFlow("if ($L != null && !$L.isBlank())", getName(), getName());
-      if (annotation instanceof StringFilterField stringAnnotation) {
-        switch (stringAnnotation.match()) {
-        case STARTS_WITH:
-          builder.addStatement("builder.and(entity.$L.startsWith($L))", getName(), getName());
-          break;
-        case ENDS_WITH:
-          builder.addStatement("builder.and(entity.$L.endsWith($L))", getName(), getName());
-          break;
-        case CONTAINS:
-          builder.addStatement("builder.and(entity.$L.contains($L))", getName(), getName());
-          break;
-        case CONTAINS_IGNORE_CASE:
-          builder.addStatement("builder.and(entity.$L.containsIgnoreCase($L))", getName(), getName());
-          break;
-        case EQUALS:
-          builder.addStatement("builder.and(entity.$L.eq($L))", getName(), getName());
-          break;
-        case EQUALS_IGNORE_CASE:
-          builder.addStatement("builder.and(entity.$L.equalsIgnoreCase($L))", getName(), getName());
-          break;
-        default:
-          break;
-        }
-      } else {
+      switch (annotation.stringMatchMode()) {
+      case STARTS_WITH:
+        builder.addStatement("builder.and(entity.$L.startsWith($L))", getName(), getName());
+        break;
+      case ENDS_WITH:
+        builder.addStatement("builder.and(entity.$L.endsWith($L))", getName(), getName());
+        break;
+      case CONTAINS:
         builder.addStatement("builder.and(entity.$L.contains($L))", getName(), getName());
+        break;
+      case CONTAINS_IGNORE_CASE:
+        builder.addStatement("builder.and(entity.$L.containsIgnoreCase($L))", getName(), getName());
+        break;
+      case EQUALS:
+        builder.addStatement("builder.and(entity.$L.eq($L))", getName(), getName());
+        break;
+      case EQUALS_IGNORE_CASE:
+        builder.addStatement("builder.and(entity.$L.equalsIgnoreCase($L))", getName(), getName());
+        break;
+      default:
+        break;
       }
       builder.endControlFlow();
-    } else if (NUMERIC_TYPES.contains(typeName)) {
-      if (annotation instanceof RangeFilterField rangeAnnotation) {
+    } else if (NUMERIC_TYPES.contains(typeName) || DATE_TYPES.contains(typeName)) {
+      if (annotation.comparisonMatchMode() == ComparisonMatchMode.EXACT) {
+        builder.beginControlFlow("if ($L != null)", getName());
+        builder.addStatement("builder.and(entity.$L.eq($L))", getName(), getName());
+        builder.endControlFlow();
+      } else {
         builder.beginControlFlow("if ($L != null)", minName(getName()));
 
-        if (rangeAnnotation.minBoundMode() == RangeBoundMode.INCLUDES) {
+        if (annotation.minBoundMode() == RangeBoundMode.INCLUDES) {
           builder.addStatement("builder.and(entity.$L.goe($L))", getName(), minName(getName()));
         } else {
           builder.addStatement("builder.and(entity.$L.gt($L))", getName(), minName(getName()));
         }
         builder.endControlFlow();
         builder.beginControlFlow("if ($L != null)", maxName(getName()));
-        if (rangeAnnotation.maxBoundMode() == RangeBoundMode.INCLUDES) {
+        if (annotation.maxBoundMode() == RangeBoundMode.INCLUDES) {
           builder.addStatement("builder.and(entity.$L.loe($L))", getName(), maxName(getName()));
         } else {
           builder.addStatement("builder.and(entity.$L.lt($L))", getName(), maxName(getName()));
         }
         builder.endControlFlow();
-      } else {
-        builder.beginControlFlow("if ($L != null)", getName());
-        builder.addStatement("builder.and(entity.$L.eq($L))", getName(), getName());
-        builder.endControlFlow();
       }
-
-    } else if (DATE_TYPES.contains(typeName)) {
-      if (annotation instanceof RangeFilterField rangeAnnotation) {
-        builder.beginControlFlow("if ($L != null)", minName(getName()));
-
-        if (rangeAnnotation.minBoundMode() == RangeBoundMode.INCLUDES) {
-          builder.addStatement("builder.and(entity.$L.goe($L))", getName(), minName(getName()));
-        } else {
-          builder.addStatement("builder.and(entity.$L.gt($L))", getName(), minName(getName()));
-        }
-        builder.endControlFlow();
-        builder.beginControlFlow("if ($L != null)", maxName(getName()));
-        if (rangeAnnotation.maxBoundMode() == RangeBoundMode.INCLUDES) {
-          builder.addStatement("builder.and(entity.$L.loe($L))", getName(), maxName(getName()));
-        } else {
-          builder.addStatement("builder.and(entity.$L.lt($L))", getName(), maxName(getName()));
-        }
-        builder.endControlFlow();
-      } else {
-        builder.beginControlFlow("if ($L != null)", getName());
-        builder.addStatement("builder.and(entity.$L.eq($L))", getName(), getName());
-        builder.endControlFlow();
-      }
-
     } else if (BOOLEAN_TYPES.contains(typeName)) {
       builder.beginControlFlow("if ($L != null)", getName());
       builder.addStatement("builder.and(entity.$L.eq($L))", getName(), getName());
@@ -175,8 +149,7 @@ public class FilterFieldModel {
       builder.endControlFlow();
     } else if (isIterable()) {
       builder.beginControlFlow("if ($L != null && !$L.isEmpty())", getName(), getName());
-      if (annotation instanceof IterableFilterField iterableAnnotation
-          && iterableAnnotation.match() == IterableMatchMode.ALL) {
+      if (annotation.iterableMatchMode() == IterableMatchMode.ALL) {
         builder.beginControlFlow("for (var $L : $L)", "sub", getName());
         builder.addStatement("builder.and(entity.$L.any().id.eq($L))", getName(), "sub");
         builder.endControlFlow();
