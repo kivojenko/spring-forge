@@ -8,6 +8,11 @@ import com.squareup.javapoet.TypeName;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -87,5 +92,16 @@ public interface ClassNameUtils {
       ClassName.get(Double.class),
       ClassName.get(BigDecimal.class),
       ClassName.get(BigInteger.class)
+  );
+
+  Set<TypeName> DATE_TYPES = Set.of(
+      ClassName.get(LocalDate.class),
+      ClassName.get(LocalDateTime.class),
+      ClassName.get(LocalTime.class),
+      ClassName.get(OffsetDateTime.class),
+      ClassName.get(ZonedDateTime.class),
+      ClassName.get("java.util", "Date"),
+      ClassName.get("java.sql", "Date"),
+      ClassName.get("java.sql", "Timestamp")
   );
 }

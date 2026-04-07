@@ -11,6 +11,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Set;
 
 import static org.hamcrest.Matchers.hasSize;
@@ -36,7 +37,7 @@ class ProductControllerTest extends WithPostgres {
     tag1Id = createTag("Sale");
     tag2Id = createTag("New");
 
-    createProduct("Laptop", "SKU001", new BigDecimal("999.99"), true, "Apple", true, 1.2, category1Id, Set.of(tag1Id));
+    createProduct("Laptop", "SKU001", new BigDecimal("999.99"), true, "Apple", true, 1.2, category1Id, Set.of(tag1Id), LocalDateTime.now());
     createProduct("Smartphone",
                   "SKU002",
                   new BigDecimal("599.99"),
@@ -45,7 +46,8 @@ class ProductControllerTest extends WithPostgres {
                   true,
                   0.2,
                   category1Id,
-                  Set.of(tag1Id, tag2Id));
+                  Set.of(tag1Id, tag2Id),
+                  LocalDateTime.now().minusDays(5));
     createProduct("Java Book",
                   "SKU003",
                   new BigDecimal("49.99"),
@@ -54,7 +56,8 @@ class ProductControllerTest extends WithPostgres {
                   false,
                   0.8,
                   category2Id,
-                  Set.of(tag2Id));
+                  Set.of(tag2Id),
+                  LocalDateTime.now().minusDays(10));
   }
 
   private Long createCategory(String name) throws Exception {
@@ -87,7 +90,8 @@ class ProductControllerTest extends WithPostgres {
                              boolean inStock,
                              Double weight,
                              Long categoryId,
-                             Set<Long> tagIds) throws Exception {
+                             Set<Long> tagIds,
+                             LocalDateTime createdAt) throws Exception {
     Product.ProductBuilder builder = Product.builder()
         .name(name)
         .sku(sku)
@@ -96,7 +100,8 @@ class ProductControllerTest extends WithPostgres {
         .brand(brand)
         .inStock(inStock)
         .weight(weight)
-        .category(ProductCategory.builder().id(categoryId).build());
+        .category(ProductCategory.builder().id(categoryId).build())
+        .createdAt(createdAt);
 
     Product product = builder.build();
     tagIds.forEach(id -> product.getTags().add(Tag.builder().id(id).build()));
@@ -201,6 +206,29 @@ class ProductControllerTest extends WithPostgres {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.content", hasSize(1)))
         .andExpect(jsonPath("$.content[0].name", is("Java Book")));
+  }
+
+  @Test
+  void testFilterByCreatedAtRange() throws Exception {
+    LocalDateTime now = LocalDateTime.now();
+    String minDate = now.minusDays(7).toString();
+    String maxDate = now.minusDays(3).toString();
+
+    // minCreatedAt only
+    mockMvc.perform(get("/products").param("minCreatedAt", minDate))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(2))); // Laptop (now) and Smartphone (now-5d)
+
+    // maxCreatedAt only
+    mockMvc.perform(get("/products").param("maxCreatedAt", maxDate))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(2))); // Smartphone (now-5d) and Java Book (now-10d)
+
+    // both
+    mockMvc.perform(get("/products").param("minCreatedAt", minDate).param("maxCreatedAt", maxDate))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(1)))
+        .andExpect(jsonPath("$.content[0].name", is("Smartphone")));
   }
 
   @Test

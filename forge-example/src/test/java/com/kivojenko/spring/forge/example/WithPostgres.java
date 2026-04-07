@@ -2,6 +2,7 @@ package com.kivojenko.spring.forge.example;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +21,7 @@ public abstract class WithPostgres {
   @Autowired
   protected MockMvc mockMvc;
 
-  protected final ObjectMapper objectMapper = new ObjectMapper();
+  protected final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
 
   @AfterEach

@@ -1,6 +1,7 @@
 package com.kivojenko.spring.forge.example.model.filter;
 
 import com.kivojenko.spring.forge.annotation.WithRestController;
+import com.kivojenko.spring.forge.annotation.filter.DateRangeFilterField;
 import com.kivojenko.spring.forge.annotation.filter.FilterField;
 import com.kivojenko.spring.forge.annotation.filter.IterableFilterField;
 import com.kivojenko.spring.forge.annotation.filter.IterableMatchMode;
@@ -21,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -46,6 +48,9 @@ public class Product {
 
   @NumberRangeFilterField
   private BigDecimal price;
+
+  @DateRangeFilterField
+  private LocalDateTime createdAt;
 
   @FilterField
   private Boolean active;

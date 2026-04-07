@@ -1,5 +1,6 @@
 package com.kivojenko.spring.forge.jpa.factory;
 
+import com.kivojenko.spring.forge.annotation.filter.DateRangeFilterField;
 import com.kivojenko.spring.forge.annotation.filter.FilterField;
 import com.kivojenko.spring.forge.annotation.filter.IterableFilterField;
 import com.kivojenko.spring.forge.annotation.filter.NumberRangeFilterField;
@@ -52,6 +53,9 @@ public class FilterFieldModelFactory {
       }
       if (annotation == null) {
         annotation = field.getAnnotation(NumberRangeFilterField.class);
+      }
+      if (annotation == null) {
+        annotation = field.getAnnotation(DateRangeFilterField.class);
       }
 
       if (annotation == null) continue;

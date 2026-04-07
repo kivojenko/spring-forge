@@ -1,9 +1,10 @@
 package com.kivojenko.spring.forge.jpa.model;
 
+import com.kivojenko.spring.forge.annotation.filter.DateRangeFilterField;
 import com.kivojenko.spring.forge.annotation.filter.IterableFilterField;
 import com.kivojenko.spring.forge.annotation.filter.IterableMatchMode;
-import com.kivojenko.spring.forge.annotation.filter.NumberRangeBoundMode;
 import com.kivojenko.spring.forge.annotation.filter.NumberRangeFilterField;
+import com.kivojenko.spring.forge.annotation.filter.RangeBoundMode;
 import com.kivojenko.spring.forge.annotation.filter.StringFilterField;
 import com.kivojenko.spring.forge.jpa.factory.JpaEntityModelFactory;
 import com.squareup.javapoet.ClassName;
@@ -25,6 +26,7 @@ import java.lang.annotation.Annotation;
 
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.BOOLEAN_TYPES;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.BUILDER_DEFAULT;
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.DATE_TYPES;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.HASH_SET;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.NUMERIC_TYPES;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.SET;
@@ -52,7 +54,7 @@ public class FilterFieldModel {
   private final String name = element.getSimpleName().toString();
 
   public TypeSpec.Builder addFieldSpec(TypeSpec.Builder builder) {
-    if (annotation instanceof NumberRangeFilterField) {
+    if (annotation instanceof NumberRangeFilterField || annotation instanceof DateRangeFilterField) {
       var minField = FieldSpec.builder(typeName, minName(getName()), Modifier.PRIVATE).build();
       var maxField = FieldSpec.builder(typeName, maxName(getName()), Modifier.PRIVATE).build();
       builder.addField(minField);
@@ -122,14 +124,37 @@ public class FilterFieldModel {
       if (annotation instanceof NumberRangeFilterField rangeAnnotation) {
         builder.beginControlFlow("if ($L != null)", minName(getName()));
 
-        if (rangeAnnotation.minBoundMode() == NumberRangeBoundMode.INCLUDES) {
+        if (rangeAnnotation.minBoundMode() == RangeBoundMode.INCLUDES) {
           builder.addStatement("builder.and(entity.$L.goe($L))", getName(), minName(getName()));
         } else {
           builder.addStatement("builder.and(entity.$L.gt($L))", getName(), minName(getName()));
         }
         builder.endControlFlow();
         builder.beginControlFlow("if ($L != null)", maxName(getName()));
-        if (rangeAnnotation.maxBoundMode() == NumberRangeBoundMode.INCLUDES) {
+        if (rangeAnnotation.maxBoundMode() == RangeBoundMode.INCLUDES) {
+          builder.addStatement("builder.and(entity.$L.loe($L))", getName(), maxName(getName()));
+        } else {
+          builder.addStatement("builder.and(entity.$L.lt($L))", getName(), maxName(getName()));
+        }
+        builder.endControlFlow();
+      } else {
+        builder.beginControlFlow("if ($L != null)", getName());
+        builder.addStatement("builder.and(entity.$L.eq($L))", getName(), getName());
+        builder.endControlFlow();
+      }
+
+    } else if (DATE_TYPES.contains(typeName)) {
+      if (annotation instanceof DateRangeFilterField rangeAnnotation) {
+        builder.beginControlFlow("if ($L != null)", minName(getName()));
+
+        if (rangeAnnotation.minBoundMode() == RangeBoundMode.INCLUDES) {
+          builder.addStatement("builder.and(entity.$L.goe($L))", getName(), minName(getName()));
+        } else {
+          builder.addStatement("builder.and(entity.$L.gt($L))", getName(), minName(getName()));
+        }
+        builder.endControlFlow();
+        builder.beginControlFlow("if ($L != null)", maxName(getName()));
+        if (rangeAnnotation.maxBoundMode() == RangeBoundMode.INCLUDES) {
           builder.addStatement("builder.and(entity.$L.loe($L))", getName(), maxName(getName()));
         } else {
           builder.addStatement("builder.and(entity.$L.lt($L))", getName(), maxName(getName()));

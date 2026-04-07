@@ -1,5 +1,5 @@
 package com.kivojenko.spring.forge.annotation.filter;
 
-public enum NumberRangeBoundMode {
+public enum RangeBoundMode {
   INCLUDES, EXCLUDES
 }
