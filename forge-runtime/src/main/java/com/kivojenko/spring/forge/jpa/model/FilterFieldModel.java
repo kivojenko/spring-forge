@@ -1,8 +1,8 @@
 package com.kivojenko.spring.forge.jpa.model;
 
+import com.kivojenko.spring.forge.annotation.filter.ComparisonMatchMode;
 import com.kivojenko.spring.forge.annotation.filter.FilterField;
 import com.kivojenko.spring.forge.annotation.filter.IterableMatchMode;
-import com.kivojenko.spring.forge.annotation.filter.ComparisonMatchMode;
 import com.kivojenko.spring.forge.annotation.filter.RangeBoundMode;
 import com.kivojenko.spring.forge.jpa.factory.JpaEntityModelFactory;
 import com.squareup.javapoet.ClassName;
@@ -52,14 +52,17 @@ public class FilterFieldModel {
 
   public TypeSpec.Builder addFieldSpec(TypeSpec.Builder builder) {
     if (NUMERIC_TYPES.contains(typeName) || DATE_TYPES.contains(typeName)) {
-      if (annotation.comparisonMatchMode() == ComparisonMatchMode.EXACT) {
-        var fieldTypeName = typeName;
-        return builder.addField(fieldTypeName, getName(), PRIVATE);
+      if (annotation.comparisonMatchMode() == ComparisonMatchMode.EXACT
+          || annotation.comparisonMatchMode() == ComparisonMatchMode.EXACT_OR_RANGE) {
+        builder.addField(typeName, getName(), PRIVATE);
       }
-      var minField = FieldSpec.builder(typeName, minName(getName()), Modifier.PRIVATE).build();
-      var maxField = FieldSpec.builder(typeName, maxName(getName()), Modifier.PRIVATE).build();
-      builder.addField(minField);
-      builder.addField(maxField);
+      if (annotation.comparisonMatchMode() == ComparisonMatchMode.RANGE
+          || annotation.comparisonMatchMode() == ComparisonMatchMode.EXACT_OR_RANGE) {
+        var minField = FieldSpec.builder(typeName, minName(getName()), Modifier.PRIVATE).build();
+        var maxField = FieldSpec.builder(typeName, maxName(getName()), Modifier.PRIVATE).build();
+        builder.addField(minField);
+        builder.addField(maxField);
+      }
       return builder;
     }
 
@@ -118,11 +121,14 @@ public class FilterFieldModel {
       }
       builder.endControlFlow();
     } else if (NUMERIC_TYPES.contains(typeName) || DATE_TYPES.contains(typeName)) {
-      if (annotation.comparisonMatchMode() == ComparisonMatchMode.EXACT) {
+      if (annotation.comparisonMatchMode() == ComparisonMatchMode.EXACT
+          || annotation.comparisonMatchMode() == ComparisonMatchMode.EXACT_OR_RANGE) {
         builder.beginControlFlow("if ($L != null)", getName());
         builder.addStatement("builder.and(entity.$L.eq($L))", getName(), getName());
         builder.endControlFlow();
-      } else {
+      }
+      if (annotation.comparisonMatchMode() == ComparisonMatchMode.RANGE
+          || annotation.comparisonMatchMode() == ComparisonMatchMode.EXACT_OR_RANGE) {
         builder.beginControlFlow("if ($L != null)", minName(getName()));
 
         if (annotation.minBoundMode() == RangeBoundMode.INCLUDES) {

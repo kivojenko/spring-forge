@@ -15,7 +15,7 @@ public @interface FilterField {
 
   IterableMatchMode iterableMatchMode() default IterableMatchMode.ANY;
 
-  ComparisonMatchMode comparisonMatchMode() default ComparisonMatchMode.RANGE;
+  ComparisonMatchMode comparisonMatchMode() default ComparisonMatchMode.EXACT_OR_RANGE;
 
   RangeBoundMode minBoundMode() default RangeBoundMode.INCLUDES;
 
