@@ -1,11 +1,10 @@
 package com.kivojenko.spring.forge.example.model.filter;
 
 import com.kivojenko.spring.forge.annotation.WithRestController;
-import com.kivojenko.spring.forge.annotation.filter.DateRangeFilterField;
 import com.kivojenko.spring.forge.annotation.filter.FilterField;
 import com.kivojenko.spring.forge.annotation.filter.IterableFilterField;
 import com.kivojenko.spring.forge.annotation.filter.IterableMatchMode;
-import com.kivojenko.spring.forge.annotation.filter.NumberRangeFilterField;
+import com.kivojenko.spring.forge.annotation.filter.RangeFilterField;
 import com.kivojenko.spring.forge.annotation.filter.StringFilterField;
 import com.kivojenko.spring.forge.annotation.filter.StringMatchMode;
 import jakarta.persistence.Entity;
@@ -46,10 +45,10 @@ public class Product {
   @StringFilterField(match = StringMatchMode.EQUALS_IGNORE_CASE)
   private String sku;
 
-  @NumberRangeFilterField
+  @RangeFilterField
   private BigDecimal price;
 
-  @DateRangeFilterField
+  @RangeFilterField
   private LocalDateTime createdAt;
 
   @FilterField

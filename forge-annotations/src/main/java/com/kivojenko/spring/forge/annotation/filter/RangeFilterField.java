@@ -6,12 +6,11 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Indicates that the annotated iterable field should be used as a filter field.
+ * Indicates that the annotated field should be used as a range filter field (for numbers and dates).
  */
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.SOURCE)
-public @interface NumberRangeFilterField {
+public @interface RangeFilterField {
   RangeBoundMode minBoundMode() default RangeBoundMode.INCLUDES;
   RangeBoundMode maxBoundMode() default RangeBoundMode.INCLUDES;
 }
-

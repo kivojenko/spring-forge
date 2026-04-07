@@ -1,10 +1,9 @@
 package com.kivojenko.spring.forge.jpa.model;
 
-import com.kivojenko.spring.forge.annotation.filter.DateRangeFilterField;
 import com.kivojenko.spring.forge.annotation.filter.IterableFilterField;
 import com.kivojenko.spring.forge.annotation.filter.IterableMatchMode;
-import com.kivojenko.spring.forge.annotation.filter.NumberRangeFilterField;
 import com.kivojenko.spring.forge.annotation.filter.RangeBoundMode;
+import com.kivojenko.spring.forge.annotation.filter.RangeFilterField;
 import com.kivojenko.spring.forge.annotation.filter.StringFilterField;
 import com.kivojenko.spring.forge.jpa.factory.JpaEntityModelFactory;
 import com.squareup.javapoet.ClassName;
@@ -54,7 +53,7 @@ public class FilterFieldModel {
   private final String name = element.getSimpleName().toString();
 
   public TypeSpec.Builder addFieldSpec(TypeSpec.Builder builder) {
-    if (annotation instanceof NumberRangeFilterField || annotation instanceof DateRangeFilterField) {
+    if (annotation instanceof RangeFilterField) {
       var minField = FieldSpec.builder(typeName, minName(getName()), Modifier.PRIVATE).build();
       var maxField = FieldSpec.builder(typeName, maxName(getName()), Modifier.PRIVATE).build();
       builder.addField(minField);
@@ -121,7 +120,7 @@ public class FilterFieldModel {
       }
       builder.endControlFlow();
     } else if (NUMERIC_TYPES.contains(typeName)) {
-      if (annotation instanceof NumberRangeFilterField rangeAnnotation) {
+      if (annotation instanceof RangeFilterField rangeAnnotation) {
         builder.beginControlFlow("if ($L != null)", minName(getName()));
 
         if (rangeAnnotation.minBoundMode() == RangeBoundMode.INCLUDES) {
@@ -144,7 +143,7 @@ public class FilterFieldModel {
       }
 
     } else if (DATE_TYPES.contains(typeName)) {
-      if (annotation instanceof DateRangeFilterField rangeAnnotation) {
+      if (annotation instanceof RangeFilterField rangeAnnotation) {
         builder.beginControlFlow("if ($L != null)", minName(getName()));
 
         if (rangeAnnotation.minBoundMode() == RangeBoundMode.INCLUDES) {
