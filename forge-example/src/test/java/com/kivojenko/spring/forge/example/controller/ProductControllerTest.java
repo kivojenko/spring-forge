@@ -240,4 +240,34 @@ class ProductControllerTest extends WithPostgres {
         .andExpect(jsonPath("$.content", hasSize(1)))
         .andExpect(jsonPath("$.content[0].name", is("Laptop")));
   }
+
+  @Test
+  void testSortByPriceAsc() throws Exception {
+    mockMvc.perform(get("/products").param("sort", "price,asc"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(3)))
+        .andExpect(jsonPath("$.content[0].name", is("Java Book"))) // 49.99
+        .andExpect(jsonPath("$.content[1].name", is("Smartphone"))) // 599.99
+        .andExpect(jsonPath("$.content[2].name", is("Laptop"))); // 999.99
+  }
+
+  @Test
+  void testSortByPriceDesc() throws Exception {
+    mockMvc.perform(get("/products").param("sort", "price,desc"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(3)))
+        .andExpect(jsonPath("$.content[0].name", is("Laptop")))
+        .andExpect(jsonPath("$.content[1].name", is("Smartphone")))
+        .andExpect(jsonPath("$.content[2].name", is("Java Book")));
+  }
+
+  @Test
+  void testSortByName() throws Exception {
+    mockMvc.perform(get("/products").param("sort", "name,asc"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(3)))
+        .andExpect(jsonPath("$.content[0].name", is("Java Book")))
+        .andExpect(jsonPath("$.content[1].name", is("Laptop")))
+        .andExpect(jsonPath("$.content[2].name", is("Smartphone")));
+  }
 }
