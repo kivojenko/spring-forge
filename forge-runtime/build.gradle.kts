@@ -3,6 +3,7 @@ import org.gradle.api.publish.maven.MavenPublication
 
 plugins {
     `java-library`
+    id("org.springframework.boot") version "4.0.5"
 }
 
 java {

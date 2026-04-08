@@ -1,5 +1,6 @@
 plugins {
     `java-library`
+    id("org.springframework.boot") version "4.0.5"
 }
 
 
