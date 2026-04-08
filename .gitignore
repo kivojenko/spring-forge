@@ -1,12 +1,9 @@
 .gradle
 .idea
 build/
-docs/javadoc
-docs/javadoc/**
 !**/src/main/**/build/
 !**/src/test/**/build/
 .kotlin
-**/docs/javadoc/**
 
 ### IntelliJ IDEA ###
 .idea/modules.xml
