@@ -20,23 +20,31 @@ public @interface WithEndpoints {
   String path() default "";
 
   /**
+   * Whether to generate a GET endpoint to read items from this association.
+   *
    * @return true if a GET endpoint should be generated, false otherwise
    */
   boolean read() default true;
 
   /**
-   * @return true if a POST endpoint for adding completely new entity this association should be generated, false
-   * otherwise
+   * Whether to generate a POST endpoint that creates a brand-new entity and adds it to this association.
+   *
+   * @return true if a POST endpoint for adding a completely new entity to this association should be generated,
+   * false otherwise
    */
   boolean addNew() default true;
 
   /**
+   * Whether to generate a POST endpoint that links an existing entity to this association (without creating it).
+   *
    * @return true if a POST endpoint for linking an existing entity to this association should be generated, false
    * otherwise
    */
   boolean linkExisting() default true;
 
   /**
+   * Whether to generate a DELETE endpoint to remove an item from this association.
+   *
    * @return true if a DELETE endpoint should be generated, false otherwise
    */
   boolean remove() default true;

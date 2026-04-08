@@ -1,6 +1,11 @@
 package com.kivojenko.spring.forge.annotation.filter;
 
+/**
+ * Defines how a collection/iterable field should satisfy provided filter values.
+ */
 public enum IterableMatchMode {
-  ANY,   // at least one matches
-  ALL    // must contain all
+  /** At least one element must match. */
+  ANY,
+  /** All specified elements must be present/match. */
+  ALL
 }

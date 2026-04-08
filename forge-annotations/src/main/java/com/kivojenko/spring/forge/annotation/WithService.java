@@ -23,7 +23,7 @@ public @interface WithService {
      * Whether the generated service should be abstract.
      * If true, the service will be abstract, allowing for custom implementation later.
      *
-     * @return true if the controller should be abstract, false otherwise
+     * @return true if the service should be abstract, false otherwise
      */
     boolean makeAbstract() default false;
 }

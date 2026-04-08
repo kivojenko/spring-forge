@@ -23,7 +23,7 @@ public @interface WithJpaRepository {
      * Whether the generated repository should be abstract.
      * If true, the repository will be abstract, allowing for custom implementation later.
      *
-     * @return true if the controller should be abstract, false otherwise
+     * @return true if the repository should be abstract, false otherwise
      */
     boolean makeAbstract() default false;
 }
