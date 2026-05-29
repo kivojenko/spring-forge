@@ -50,9 +50,7 @@ public class UnlinkOneToManyEndpointRelation extends OneToManyEndpointRelation {
     addFindBase(builder);
     addFindSub(builder);
     return builder
-        .addStatement("hooks.forEach(hook -> hook.beforeDelete($L, $L))", BASE_VAR_NAME, SUB_VAR_NAME)
         .addStatement("$N.$L(null)", SUB_VAR_NAME, setterName(mappedBy))
-        .addStatement("hooks.forEach(hook -> hook.afterDelete($L, $L))", BASE_VAR_NAME, SUB_VAR_NAME)
         .build();
   }
 }

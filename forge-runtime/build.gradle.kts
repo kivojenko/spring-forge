@@ -82,6 +82,7 @@ dependencies {
 
     compileOnly("org.springframework:spring-web")
     compileOnly("org.springframework.data:spring-data-jpa")
+    implementation("org.springframework.boot:spring-boot-starter-aspectj")
 
     compileOnly("jakarta.validation:jakarta.validation-api")
     compileOnly("jakarta.persistence:jakarta.persistence-api")

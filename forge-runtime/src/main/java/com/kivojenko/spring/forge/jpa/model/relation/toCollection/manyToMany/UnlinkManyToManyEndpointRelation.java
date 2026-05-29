@@ -50,10 +50,9 @@ public class UnlinkManyToManyEndpointRelation extends ServiceRepositoryEndpointR
         .returns(void.class);
 
     addFindBase(builder);
-    addFindSub(builder);
+    builder.addParameter(subParamSpec(false));
 
     return builder
-        .addStatement("hooks.forEach(hook -> hook.beforeDelete($L, $L))", BASE_VAR_NAME, SUB_VAR_NAME)
         .addStatement(
             "$L.$L().removeIf(e -> e.$L() == $L)",
             BASE_VAR_NAME,
@@ -61,7 +60,6 @@ public class UnlinkManyToManyEndpointRelation extends ServiceRepositoryEndpointR
             getterName("id"),
             SUB_ID_PARAM_NAME
         )
-        .addStatement("hooks.forEach(hook -> hook.afterDelete($L, $L))", BASE_VAR_NAME, SUB_VAR_NAME)
         .build();
   }
 

@@ -55,18 +55,11 @@ public class LinkExistingManyToManyEndpointRelation extends ServiceRepositoryEnd
     addFindSub(builder);
 
     return builder
-        .addStatement("hooks.forEach(hook -> hook.beforeAdd($L, $L));", BASE_VAR_NAME, SUB_VAR_NAME)
         .beginControlFlow("if ($L.$L().contains($L))", BASE_VAR_NAME, getterName(getFieldName()), SUB_VAR_NAME)
         .addStatement("return")
         .endControlFlow()
         .addStatement("$L.$L().add($L)", BASE_VAR_NAME, getterName(getFieldName()), SUB_VAR_NAME)
-        .addStatement("var $L = repository.save($L)", UPDATED_BASE_VAR_NAME, BASE_VAR_NAME)
-        .addStatement(
-            "hooks.forEach(hook -> hook.afterAdd($L, $L.$L()));",
-            UPDATED_BASE_VAR_NAME,
-            UPDATED_BASE_VAR_NAME,
-            getterName(getFieldName())
-        )
+        .addStatement("repository.save($L)", BASE_VAR_NAME)
         .build();
   }
 }

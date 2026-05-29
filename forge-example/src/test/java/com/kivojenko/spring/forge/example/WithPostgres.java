@@ -6,6 +6,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -17,6 +18,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Testcontainers
 @Import(TestPostgresConfig.class)
+@AutoConfigureMockMvc
 public abstract class WithPostgres {
   @Autowired
   protected MockMvc mockMvc;
@@ -115,6 +117,19 @@ public abstract class WithPostgres {
     for (JsonNode translation : translationsRoot.get("content")) {
       Long translationId = translation.get("id").asLong();
       mockMvc.perform(delete("/translations/{id}", translationId)).andExpect(status().isNoContent());
+    }
+
+    String itemsJson = mockMvc
+        .perform(get("/items"))
+        .andExpect(status().isOk())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+
+    JsonNode itemsRoot = objectMapper.readTree(itemsJson);
+    for (JsonNode item : itemsRoot.get("content")) {
+      Long itemId = item.get("id").asLong();
+      mockMvc.perform(delete("/items/{id}", itemId)).andExpect(status().isNoContent());
     }
   }
 

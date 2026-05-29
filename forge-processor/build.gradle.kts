@@ -3,7 +3,7 @@ import org.gradle.api.publish.maven.MavenPublication
 
 plugins {
     `java-library`
-    id("org.springframework.boot") version "4.0.5"
+    id("org.springframework.boot") version "4.0.6"
 }
 
 java {
@@ -80,12 +80,5 @@ dependencies {
     implementation(project(":forge-runtime"))
 
     implementation("com.squareup:javapoet:1.13.0")
-
-
-    testImplementation("com.google.testing.compile:compile-testing:0.23.0")
-    testImplementation("jakarta.persistence:jakarta.persistence-api")
-    testImplementation("org.springframework.data:spring-data-jpa")
-    testImplementation("org.springframework:spring-web")
-    testImplementation("org.projectlombok:lombok")
-    testAnnotationProcessor("org.projectlombok:lombok")
+    implementation("jakarta.persistence:jakarta.persistence-api")
 }

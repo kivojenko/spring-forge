@@ -10,7 +10,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -23,7 +23,7 @@ public class CategoryControllerTest extends WithPostgres {
     mockMvc
         .perform(post("/categories")
             .contentType(MediaType.APPLICATION_JSON)
-            .content(objectMapper.writeValueAsString(Category.builder().name("Category 1").build())))
+            .content(objectMapper.writeValueAsString(Category.builder().name("ItemCategory 1").build())))
         .andExpect(status().isCreated());
 
     mockMvc.perform(get("/categories/count")).andExpect(status().isOk()).andExpect(jsonPath("$", is(1)));
@@ -34,9 +34,9 @@ public class CategoryControllerTest extends WithPostgres {
     mockMvc
         .perform(post("/categories")
             .contentType(MediaType.APPLICATION_JSON)
-            .content(objectMapper.writeValueAsString(Category.builder().name("New Category").build())))
+            .content(objectMapper.writeValueAsString(Category.builder().name("New ItemCategory").build())))
         .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.name", is("New Category")))
+        .andExpect(jsonPath("$.name", is("New ItemCategory")))
         .andExpect(jsonPath("$.id").exists());
   }
 
@@ -99,18 +99,18 @@ public class CategoryControllerTest extends WithPostgres {
   void testGetOrCreate() throws Exception {
     // The first call creates the category
     mockMvc
-        .perform(post("/categories/get-or-create").param("name", "Unique Category"))
+        .perform(post("/categories/get-or-create").param("name", "Unique ItemCategory"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.name", is("Unique Category")))
+        .andExpect(jsonPath("$.name", is("Unique ItemCategory")))
         .andExpect(jsonPath("$.id").exists());
 
     mockMvc.perform(get("/categories/count")).andExpect(status().isOk()).andExpect(jsonPath("$", is(1)));
 
     // The second call returns the same category
     mockMvc
-        .perform(post("/categories/get-or-create").param("name", "Unique Category"))
+        .perform(post("/categories/get-or-create").param("name", "Unique ItemCategory"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.name", is("Unique Category")))
+        .andExpect(jsonPath("$.name", is("Unique ItemCategory")))
         .andExpect(jsonPath("$.id").exists());
 
     mockMvc.perform(get("/categories/count")).andExpect(status().isOk()).andExpect(jsonPath("$", is(1)));
@@ -124,8 +124,8 @@ public class CategoryControllerTest extends WithPostgres {
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(Category
                 .builder()
-                .name("Translated Category")
-                .nameTranslation(Translation.builder().enUS("Category Name").build())
+                .name("Translated ItemCategory")
+                .nameTranslation(Translation.builder().enUS("ItemCategory Name").build())
                 .build())))
         .andExpect(status().isCreated())
         .andReturn()
@@ -137,7 +137,7 @@ public class CategoryControllerTest extends WithPostgres {
     mockMvc
         .perform(get("/categories/{id}/nameTranslation", categoryId))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.enUS", is("Category Name")));
+        .andExpect(jsonPath("$.enUS", is("ItemCategory Name")));
   }
 
   @Test
@@ -147,8 +147,8 @@ public class CategoryControllerTest extends WithPostgres {
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(Category
                 .builder()
-                .name("Category with Translation")
-                .nameTranslation(Translation.builder().enUS("Category Name").build())
+                .name("ItemCategory with Translation")
+                .nameTranslation(Translation.builder().enUS("ItemCategory Name").build())
                 .build())))
         .andExpect(status().isCreated())
         .andReturn()

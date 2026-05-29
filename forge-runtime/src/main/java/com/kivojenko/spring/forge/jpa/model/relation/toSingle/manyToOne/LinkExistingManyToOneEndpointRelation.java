@@ -45,15 +45,8 @@ public class LinkExistingManyToOneEndpointRelation extends ManyToOneEndpointRela
     addFindSub(builder);
 
     return builder
-        .addStatement("hooks.forEach(hook -> hook.beforeAdd($L, $L));", BASE_VAR_NAME, SUB_VAR_NAME)
         .addStatement("$L.$L($L)", BASE_VAR_NAME, StringUtils.setterName(getFieldName()), SUB_VAR_NAME)
         .addStatement("var $L = repository.save($L)", UPDATED_BASE_VAR_NAME, BASE_VAR_NAME)
-        .addStatement(
-            "hooks.forEach(hook -> hook.afterAdd($L, $L.$L()));",
-            UPDATED_BASE_VAR_NAME,
-            UPDATED_BASE_VAR_NAME,
-            StringUtils.getterName(getFieldName())
-        )
         .addStatement("return $L.$L()", UPDATED_BASE_VAR_NAME, StringUtils.getterName(getFieldName()))
         .build();
   }

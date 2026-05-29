@@ -1,14 +1,19 @@
 package com.kivojenko.spring.forge.jpa.generator;
 
 
+import com.kivojenko.spring.forge.jpa.model.FilterFieldModel;
 import com.kivojenko.spring.forge.jpa.model.base.JpaEntityModel;
+import com.kivojenko.spring.forge.jpa.utils.StringUtils;
 import com.squareup.javapoet.JavaFile;
+import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeSpec;
 
 import javax.lang.model.element.Modifier;
+import java.util.List;
 
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.*;
+import static com.kivojenko.spring.forge.jpa.utils.StringUtils.capitalize;
 
 /**
  * Generator for Spring Data JPA repositories.
@@ -38,9 +43,28 @@ public final class RepositoryGenerator {
 
         if (model.getRequirements().wantsAbstractRepository()) builder.addModifiers(Modifier.ABSTRACT);
         if (model.getRequirements().hasName()) builder.addSuperinterface(hasNameRepositoryOf(model));
-        if (model.wantsFilter()) builder.addSuperinterface(queryDslPredicateExecutorOf(model));
+        if (model.wantsFilter()) {
+            builder.addSuperinterface(queryDslPredicateExecutorOf(model));
+            addFilterMethods(builder, model);
+        }
 
         return builder.build();
+    }
+
+    private static void addFilterMethods(TypeSpec.Builder builder, JpaEntityModel model) {
+        for (FilterFieldModel field : model.getFilterableFields()) {
+            if (field.isIterable() || field.isSingleEntity()) {
+                continue;
+            }
+
+            var methodName = "findBy" + capitalize(field.getName());
+            var method = MethodSpec.methodBuilder(methodName)
+                    .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
+                    .returns(ParameterizedTypeName.get(LIST, model.getEntityType()))
+                    .addParameter(field.getTypeName(), field.getName())
+                    .build();
+            builder.addMethod(method);
+        }
     }
 
     private static ParameterizedTypeName jpaRepositoryOf(JpaEntityModel model) {

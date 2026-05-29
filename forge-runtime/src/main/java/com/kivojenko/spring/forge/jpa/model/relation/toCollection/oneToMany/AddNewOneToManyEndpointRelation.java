@@ -69,11 +69,8 @@ public class AddNewOneToManyEndpointRelation extends OneToManyEndpointRelation {
 
     return builder
         .addParameter(subParam)
-        .addStatement("hooks.forEach(hook -> hook.beforeAdd($L, $L));", BASE_VAR_NAME, SUB_VAR_NAME)
         .addStatement("$L.$L($L)", SUB_VAR_NAME, setterName(mappedBy), BASE_VAR_NAME)
-        .addStatement("var $L = $L.save($L)", UPDATED_SUB_VAR_NAME, getTargetRepositorygetFieldName(), SUB_VAR_NAME)
-        .addStatement("hooks.forEach(hook -> hook.afterAdd($L, $L));", BASE_VAR_NAME, UPDATED_SUB_VAR_NAME)
-        .addStatement("return $L", UPDATED_SUB_VAR_NAME)
+        .addStatement("return $L.save($L)", getTargetRepositorygetFieldName(), SUB_VAR_NAME)
         .build();
   }
 }

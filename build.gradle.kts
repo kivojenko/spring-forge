@@ -43,7 +43,7 @@ subprojects {
             mavenBom("net.javacrumbs.shedlock:shedlock-bom:7.5.0")
         }
         dependencies {
-            dependency("org.projectlombok:lombok:1.18.32")
+            dependency("org.projectlombok:lombok:1.18.46")
         }
     }
 }
