@@ -35,19 +35,18 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get added release notes
-        id: changed-files
-        uses: tj-actions/changed-files@v45
-        with:
-          files: docs/releases/v*.md
-
-      - name: Create Release
-        if: steps.changed-files.outputs.any_added == 'true'
+      - name: Create Releases
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          for file in ${{ steps.changed-files.outputs.added_files }}; do
-            VERSION=$(basename "$file" .md)
-            echo "Creating release for $VERSION"
-            gh release create "$VERSION" --title "Release $VERSION" --notes-file "$file" || echo "Release $VERSION already exists"
+          for file in docs/releases/v*.md; do
+            if [ -f "$file" ]; then
+              VERSION=$(basename "$file" .md)
+              if ! gh release view "$VERSION" > /dev/null 2>&1; then
+                echo "Creating release for $VERSION"
+                gh release create "$VERSION" --title "Release $VERSION" --notes-file "$file"
+              else
+                echo "Release $VERSION already exists"
+              fi
+            fi
           done
