@@ -42,7 +42,13 @@ public final class ServiceGenerator {
         .classBuilder(model.getServiceName())
         .addModifiers(Modifier.PUBLIC)
         .superclass(superClass)
-        .addMethod(model.setIdMethod());
+        .addMethod(model.setIdMethod())
+        .addMethod(MethodSpec.methodBuilder("getEntityClass")
+            .addAnnotation(Override.class)
+            .addModifiers(Modifier.PUBLIC)
+            .returns(ParameterizedTypeName.get(ClassName.get(Class.class), model.getEntityType()))
+            .addStatement("return $T.class", model.getEntityType())
+            .build());
 
     if (model.getRequirements().wantsAbstractService()) {
       builder.addModifiers(Modifier.ABSTRACT);

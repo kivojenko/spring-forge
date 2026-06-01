@@ -267,12 +267,14 @@ Spring Forge can extend generated repositories based on **marker interfaces** im
 ### @FilterField
 
 You can use `@FilterField` on entity fields to generate a filter class that can be used for searching.
-It supports `targetField` attribute to map a filter field to a different (possibly nested) field in the entity.
+It supports the following attributes:
+- `targetField`: Map a filter field to a different (possibly nested) field in the entity (e.g., `category.name`).
+- `name`: Custom name for the query parameter in the filter DTO and REST endpoints.
 
 ```java
 public class Brand implements HasName {
 
-    @FilterField
+    @FilterField(name = "manufacturer")
     protected String name;
 
     @FilterField
@@ -363,31 +365,36 @@ Spring Data will generate the query implementations automatically.
 
 ---
 
-### ForgePersistenceHook
+### ForgePersistenceAspect
 
-You can implement `ForgePersistenceHook<E>` to intercept persistence operations in the generated service.
-Hooks are automatically detected by Spring if they are marked as `@Component`.
+You can extend `ForgePersistenceAspect<E>` to intercept persistence operations in the generated service using AOP.
+Subclasses must implement `entityType()` and be marked as `@Component`.
 
 Example for logging entity creation:
 
 ```java
 @Component
 @Slf4j
-public class AuditLogger implements ForgePersistenceHook<Product> {
+public class AuditLogger extends ForgePersistenceAspect<Product> {
+
+    @Override
+    protected Class<Product> entityType() {
+        return Product.class;
+    }
 
     @Override
     public void afterCreate(Product product) {
-        log.atInfo().setMessage("Created {}").addArgument(product);
+        log.info("Created {}", product);
     }
 }
 ```
 
-Available methods in `ForgePersistenceHook`:
+Available methods in `ForgePersistenceAspect`:
 - `beforeCreate(E entity)` / `afterCreate(E entity)`
 - `beforeUpdate(E entity)` / `afterUpdate(E entity)`
 - `beforeDelete(E entity)` / `afterDelete(E entity)`
-- `beforeAdd(E mainEntity, Object subEntity)` / `afterAdd(E mainEntity, Object subEntity)`
-- `beforeDelete(E mainEntity, Object subEntity)` / `afterDelete(E mainEntity, Object subEntity)`
+- `beforeAdd(Object mainEntity, Object subEntity)` / `afterAdd(Object mainEntity, Object subEntity)`
+- `beforeDelete(Object mainEntity, Object subEntity)` / `afterDelete(Object mainEntity, Object subEntity)`
 
 ---
 

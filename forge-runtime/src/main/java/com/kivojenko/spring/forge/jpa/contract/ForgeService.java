@@ -94,6 +94,13 @@ public abstract class ForgeService<E, ID, R extends JpaRepository<E, ID>> {
    */
   protected abstract void setId(E entity, ID id);
 
+  /**
+   * Returns the class of the entity handled by this service.
+   *
+   * @return the entity class
+   */
+  public abstract Class<E> getEntityClass();
+
 
   /**
    * Counts the total number of entities.
