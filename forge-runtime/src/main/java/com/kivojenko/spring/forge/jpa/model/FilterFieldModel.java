@@ -45,10 +45,31 @@ public class FilterFieldModel {
   FilterField annotation;
   boolean iterable;
   boolean singleEntity;
+  boolean originalIterable;
+  boolean originalSingleEntity;
   ProcessingEnvironment env;
+  String targetField;
 
   @Getter(lazy = true)
-  private final String name = element.getSimpleName().toString();
+  private final String name = annotation.name().isEmpty() ? element.getSimpleName().toString() : annotation.name();
+
+  public String getOriginalName() {
+    return element.getSimpleName().toString();
+  }
+
+  public String getTargetFieldName() {
+    String fieldName = element.getSimpleName().toString();
+    if (targetField == null || targetField.isEmpty()) {
+      return fieldName;
+    }
+    if (originalIterable) {
+      return fieldName + ".any()." + targetField;
+    }
+    if (originalSingleEntity) {
+      return fieldName + "." + targetField;
+    }
+    return targetField;
+  }
 
   public TypeSpec.Builder addFieldSpec(TypeSpec.Builder builder) {
     if (NUMERIC_TYPES.contains(typeName) || DATE_TYPES.contains(typeName)) {
@@ -99,22 +120,22 @@ public class FilterFieldModel {
       builder.beginControlFlow("if ($L != null && !$L.isBlank())", getName(), getName());
       switch (annotation.stringMatchMode()) {
       case STARTS_WITH:
-        builder.addStatement("builder.and(entity.$L.startsWith($L))", getName(), getName());
+        builder.addStatement("builder.and(entity.$L.startsWith($L))", getTargetFieldName(), getName());
         break;
       case ENDS_WITH:
-        builder.addStatement("builder.and(entity.$L.endsWith($L))", getName(), getName());
+        builder.addStatement("builder.and(entity.$L.endsWith($L))", getTargetFieldName(), getName());
         break;
       case CONTAINS:
-        builder.addStatement("builder.and(entity.$L.contains($L))", getName(), getName());
+        builder.addStatement("builder.and(entity.$L.contains($L))", getTargetFieldName(), getName());
         break;
       case CONTAINS_IGNORE_CASE:
-        builder.addStatement("builder.and(entity.$L.containsIgnoreCase($L))", getName(), getName());
+        builder.addStatement("builder.and(entity.$L.containsIgnoreCase($L))", getTargetFieldName(), getName());
         break;
       case EQUALS:
-        builder.addStatement("builder.and(entity.$L.eq($L))", getName(), getName());
+        builder.addStatement("builder.and(entity.$L.eq($L))", getTargetFieldName(), getName());
         break;
       case EQUALS_IGNORE_CASE:
-        builder.addStatement("builder.and(entity.$L.equalsIgnoreCase($L))", getName(), getName());
+        builder.addStatement("builder.and(entity.$L.equalsIgnoreCase($L))", getTargetFieldName(), getName());
         break;
       default:
         break;
@@ -124,7 +145,7 @@ public class FilterFieldModel {
       if (annotation.comparisonMatchMode() == ComparisonMatchMode.EXACT
           || annotation.comparisonMatchMode() == ComparisonMatchMode.EXACT_OR_RANGE) {
         builder.beginControlFlow("if ($L != null)", getName());
-        builder.addStatement("builder.and(entity.$L.eq($L))", getName(), getName());
+        builder.addStatement("builder.and(entity.$L.eq($L))", getTargetFieldName(), getName());
         builder.endControlFlow();
       }
       if (annotation.comparisonMatchMode() == ComparisonMatchMode.RANGE
@@ -132,35 +153,35 @@ public class FilterFieldModel {
         builder.beginControlFlow("if ($L != null)", minName(getName()));
 
         if (annotation.minBoundMode() == RangeBoundMode.INCLUDES) {
-          builder.addStatement("builder.and(entity.$L.goe($L))", getName(), minName(getName()));
+          builder.addStatement("builder.and(entity.$L.goe($L))", getTargetFieldName(), minName(getName()));
         } else {
-          builder.addStatement("builder.and(entity.$L.gt($L))", getName(), minName(getName()));
+          builder.addStatement("builder.and(entity.$L.gt($L))", getTargetFieldName(), minName(getName()));
         }
         builder.endControlFlow();
         builder.beginControlFlow("if ($L != null)", maxName(getName()));
         if (annotation.maxBoundMode() == RangeBoundMode.INCLUDES) {
-          builder.addStatement("builder.and(entity.$L.loe($L))", getName(), maxName(getName()));
+          builder.addStatement("builder.and(entity.$L.loe($L))", getTargetFieldName(), maxName(getName()));
         } else {
-          builder.addStatement("builder.and(entity.$L.lt($L))", getName(), maxName(getName()));
+          builder.addStatement("builder.and(entity.$L.lt($L))", getTargetFieldName(), maxName(getName()));
         }
         builder.endControlFlow();
       }
     } else if (BOOLEAN_TYPES.contains(typeName)) {
       builder.beginControlFlow("if ($L != null)", getName());
-      builder.addStatement("builder.and(entity.$L.eq($L))", getName(), getName());
+      builder.addStatement("builder.and(entity.$L.eq($L))", getTargetFieldName(), getName());
       builder.endControlFlow();
     } else if (isSingleEntity()) {
       builder.beginControlFlow("if ($L != null && !$L.isEmpty())", fieldName, fieldName);
-      builder.addStatement("builder.and(entity.$L.id.in($L))", getName(), fieldName);
+      builder.addStatement("builder.and(entity.$L.id.in($L))", getTargetFieldName(), fieldName);
       builder.endControlFlow();
     } else if (isIterable()) {
       builder.beginControlFlow("if ($L != null && !$L.isEmpty())", getName(), getName());
       if (annotation.iterableMatchMode() == IterableMatchMode.ALL) {
         builder.beginControlFlow("for (var $L : $L)", "sub", getName());
-        builder.addStatement("builder.and(entity.$L.any().id.eq($L))", getName(), "sub");
+        builder.addStatement("builder.and(entity.$L.any().id.eq($L))", getTargetFieldName(), "sub");
         builder.endControlFlow();
       } else {
-        builder.addStatement("builder.and(entity.$L.any().id.in($L))", getName(), getName());
+        builder.addStatement("builder.and(entity.$L.any().id.in($L))", getTargetFieldName(), getName());
       }
       builder.endControlFlow();
     }

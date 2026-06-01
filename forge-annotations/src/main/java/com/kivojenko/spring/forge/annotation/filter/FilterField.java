@@ -46,4 +46,26 @@ public @interface FilterField {
    */
   RangeBoundMode maxBoundMode() default RangeBoundMode.INCLUDES;
 
+  /**
+   * The name of the parameter in the filter DTO.
+   * If empty, the name of the annotated field is used.
+   *
+   * @return the filter parameter name
+   */
+  String name() default "";
+
+  /**
+   * The name of the field in the entity that this filter field targets.
+   * If empty, the name of the annotated field is used.
+   *
+   * <p>If the annotated field is an association, the target field is resolved relative to that association
+   * (e.g., {@code @FilterField(targetField = "name")} on a {@code Category} field targets {@code category.name}).
+   *
+   * <p>If the annotated field is not an association, the target field is treated as an absolute path from the root entity
+   * (e.g., {@code @FilterField(targetField = "category.name")} on a transient {@code String} field).
+   *
+   * @return the target field name
+   */
+  String targetField() default "";
+
 }

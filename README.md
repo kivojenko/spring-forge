@@ -267,6 +267,7 @@ Spring Forge can extend generated repositories based on **marker interfaces** im
 ### @FilterField
 
 You can use `@FilterField` on entity fields to generate a filter class that can be used for searching.
+It supports `targetField` attribute to map a filter field to a different (possibly nested) field in the entity.
 
 ```java
 public class Brand implements HasName {

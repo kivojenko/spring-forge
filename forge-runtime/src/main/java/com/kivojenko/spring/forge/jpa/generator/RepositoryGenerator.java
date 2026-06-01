@@ -56,8 +56,11 @@ public final class RepositoryGenerator {
             if (field.isIterable() || field.isSingleEntity()) {
                 continue;
             }
+            if (model.getRequirements().hasName() && field.getOriginalName().equals("name")) {
+                continue;
+            }
 
-            var methodName = "findBy" + capitalize(field.getName());
+            var methodName = "findBy" + capitalize(field.getOriginalName());
             var method = MethodSpec.methodBuilder(methodName)
                     .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
                     .returns(ParameterizedTypeName.get(LIST, model.getEntityType()))

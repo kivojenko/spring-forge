@@ -163,10 +163,11 @@ class ProductControllerTest extends WithPostgres {
   }
 
   @Test
-  void testFilterByCategory() throws Exception {
-    mockMvc.perform(get("/products").param("categories", category1Id.toString()))
+  void testFilterByCategoryName() throws Exception {
+    mockMvc.perform(get("/products").param("category", "Electronics"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.content", hasSize(2)));
+        .andExpect(jsonPath("$.content", hasSize(2)))
+        .andExpect(jsonPath("$.content[0].category.name", is("Electronics")));
   }
 
   @Test
@@ -182,7 +183,7 @@ class ProductControllerTest extends WithPostgres {
 
   @Test
   void testFilterByBrand() throws Exception {
-    mockMvc.perform(get("/products").param("brand", "Samsung"))
+    mockMvc.perform(get("/products").param("manufacturer", "Samsung"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.content", hasSize(1)))
         .andExpect(jsonPath("$.content[0].brand", is("Samsung")));
@@ -233,7 +234,7 @@ class ProductControllerTest extends WithPostgres {
 
   @Test
   void testCombinedFilters() throws Exception {
-    mockMvc.perform(get("/products").param("categories", category1Id.toString())
+    mockMvc.perform(get("/products").param("category", "Electronics")
                         .param("active", "true")
                         .param("name", "Lap"))
         .andExpect(status().isOk())

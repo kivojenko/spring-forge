@@ -14,6 +14,11 @@ import org.springframework.stereotype.Component;
 @Component
 public class ItemPersistenceAspect extends ForgePersistenceAspect<Item> {
   @Override
+  protected Class<Item> entityType() {
+    return Item.class;
+  }
+
+  @Override
   public void beforeCreate(Item item) {
     log.info("[HOOK] Before creating item: {}", item.getName());
     if (item.getPrice() != null && item.getPrice() < 0) {

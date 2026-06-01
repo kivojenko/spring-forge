@@ -6,9 +6,11 @@ import com.squareup.javapoet.TypeName;
 import jakarta.persistence.Transient;
 
 import javax.annotation.processing.ProcessingEnvironment;
+import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import java.util.ArrayList;
 import java.util.List;
@@ -37,7 +39,7 @@ public class FilterFieldModelFactory {
       var isJavaTransient = field.getModifiers().contains(Modifier.TRANSIENT);
       var isJpaTransient = field.getAnnotation(Transient.class) != null;
       var isBeansTransient = field.getAnnotation(java.beans.Transient.class) != null;
-      if (isJavaTransient || isJpaTransient || isBeansTransient) {
+      if ((isJavaTransient || isJpaTransient || isBeansTransient) && annotation.targetField().isEmpty()) {
         throw new IllegalStateException(
             "@FilterField is not allowed on transient field: " + field.getSimpleName() + " in "
                 + entity.getQualifiedName());
@@ -53,19 +55,54 @@ public class FilterFieldModelFactory {
           .stream()
           .anyMatch(a -> typeUtils.isSameType(a.getAnnotationType(), entityAnnotation.asType()));
 
+      var targetField = annotation.targetField();
+      var filterType = type;
+      var filterTypeName = TypeName.get(type);
+      var originalIterable = isIterable;
+      var originalSingleEntity = singleEntity;
+
+      if (!targetField.isEmpty() && (singleEntity || isIterable)) {
+        filterType = resolveTargetFieldType(entityCandidate, targetField, env);
+        filterTypeName = TypeName.get(filterType);
+        isIterable = false;
+        singleEntity = false;
+      }
+
       filterFields.add(FilterFieldModel.builder()
                            .element(field)
-                           .type(type)
+                           .type(filterType)
                            .typeElement((TypeElement) typeElement)
-                           .typeName(TypeName.get(type))
+                           .typeName(filterTypeName)
                            .annotation(annotation)
                            .iterable(isIterable)
                            .singleEntity(singleEntity)
+                           .originalIterable(originalIterable)
+                           .originalSingleEntity(originalSingleEntity)
                            .entityCandidate(entityCandidate)
                            .env(env)
+                           .targetField(targetField)
                            .build());
     }
 
     return filterFields;
+  }
+
+  private static TypeMirror resolveTargetFieldType(TypeMirror startType, String path, ProcessingEnvironment env) {
+    var currentType = startType;
+    for (String part : path.split("\\.")) {
+      var element = env.getTypeUtils().asElement(currentType);
+      if (!(element instanceof TypeElement typeElement))
+        return currentType;
+      var field = typeElement.getEnclosedElements()
+          .stream()
+          .filter(e -> e.getKind() == ElementKind.FIELD && e.getSimpleName().toString().equals(part))
+          .findFirst();
+      if (field.isPresent()) {
+        currentType = field.get().asType();
+      } else {
+        return currentType;
+      }
+    }
+    return currentType;
   }
 }

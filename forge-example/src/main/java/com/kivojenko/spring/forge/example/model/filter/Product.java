@@ -52,7 +52,7 @@ public class Product {
   @FilterField
   private Boolean active;
 
-  @FilterField
+  @FilterField(name = "manufacturer")
   private String brand;
 
   @FilterField
@@ -62,7 +62,7 @@ public class Product {
   private Double weight;
 
   @ManyToOne
-  @FilterField
+  @FilterField(targetField = "name", stringMatchMode = StringMatchMode.CONTAINS_IGNORE_CASE)
   private ProductCategory category;
 
   @ManyToMany
