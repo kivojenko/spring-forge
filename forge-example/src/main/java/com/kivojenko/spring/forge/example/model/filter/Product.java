@@ -61,6 +61,9 @@ public class Product {
   @FilterField(comparisonMatchMode = ComparisonMatchMode.EXACT)
   private Double weight;
 
+  @FilterField
+  private ProductType type;
+
   @ManyToOne
   @FilterField(targetField = "name", stringMatchMode = StringMatchMode.CONTAINS_IGNORE_CASE)
   private ProductCategory category;

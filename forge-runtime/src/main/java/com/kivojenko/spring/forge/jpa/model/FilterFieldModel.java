@@ -71,6 +71,11 @@ public class FilterFieldModel {
     return targetField;
   }
 
+  public boolean isEnum() {
+    var element = env.getTypeUtils().asElement(type);
+    return element != null && element.getKind() == javax.lang.model.element.ElementKind.ENUM;
+  }
+
   public TypeSpec.Builder addFieldSpec(TypeSpec.Builder builder) {
     if (NUMERIC_TYPES.contains(typeName) || DATE_TYPES.contains(typeName)) {
       if (annotation.comparisonMatchMode() == ComparisonMatchMode.EXACT
@@ -95,6 +100,14 @@ public class FilterFieldModel {
           .initializer("new $T<>()", HASH_SET)
           .build();
       return builder.addField(entityField);
+    }
+    if (isEnum()) {
+      var paramTypeName = ParameterizedTypeName.get(SET, typeName);
+      FieldSpec enumField = FieldSpec.builder(paramTypeName, pluralize(decapitalize(getName())), PRIVATE)
+          .addAnnotation(BUILDER_DEFAULT)
+          .initializer("new $T<>()", HASH_SET)
+          .build();
+      return builder.addField(enumField);
     }
     if (isIterable()) {
       var relation = JpaEntityModelFactory.get(typeElement);
@@ -183,6 +196,10 @@ public class FilterFieldModel {
       } else {
         builder.addStatement("builder.and(entity.$L.any().id.in($L))", getTargetFieldName(), getName());
       }
+      builder.endControlFlow();
+    } else if (isEnum()) {
+      builder.beginControlFlow("if ($L != null && !$L.isEmpty())", fieldName, fieldName);
+      builder.addStatement("builder.and(entity.$L.in($L))", getTargetFieldName(), fieldName);
       builder.endControlFlow();
     }
   }

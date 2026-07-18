@@ -55,26 +55,29 @@ public abstract class ForgePersistenceAspect<E> {
   /**
    * Executed before a sub-entity is added to a main entity.
    *
-   * @param mainEntity the main entity service
-   * @param subEntity  the sub-entity to be added
+   * @param joinPoint the join point
    */
   @SuppressWarnings("unchecked")
-  @Before(value = "execution(* com.kivojenko.spring.forge.jpa.contract.ForgeService+.*Add*(..)) && args(mainEntity, subEntity)", argNames = "joinPoint,mainEntity,subEntity")
-  public void onBeforeAdd(JoinPoint joinPoint, Object mainEntity, Object subEntity) {
-    if (!shouldHandle(joinPoint, mainEntity)) {
-      return;
+  @Before("within(com.kivojenko.spring.forge.jpa.contract.ForgeService+) && execution(* *Add*(..))")
+  public void onBeforeAdd(JoinPoint joinPoint) {
+    if (joinPoint.getThis() instanceof ForgeService<?, ?, ?> service) {
+      Object[] args = joinPoint.getArgs();
+      if (args.length >= 2) {
+        Object mainEntity = args[0];
+        Object subEntity = args[1];
+        if (!shouldHandle(service, mainEntity)) {
+          return;
+        }
+        beforeAdd(mainEntity, subEntity);
+      }
     }
-    beforeAdd(mainEntity, subEntity);
   }
 
-  private boolean shouldHandle(JoinPoint joinPoint, Object firstArg) {
+  private boolean shouldHandle(ForgeService<?, ?, ?> service, Object firstArg) {
     if (entityType().isInstance(firstArg)) {
       return true;
     }
-    if (joinPoint.getTarget() instanceof ForgeService<?, ?, ?> service) {
-      return service.getEntityClass().equals(entityType());
-    }
-    return false;
+    return service.getEntityClass().equals(entityType());
   }
 
   public void beforeAdd(Object mainEntity, Object subEntity) {}
@@ -82,19 +85,25 @@ public abstract class ForgePersistenceAspect<E> {
   /**
    * Executed after a sub-entity is added to a main entity.
    *
-   * @param mainEntity the main entity service
-   * @param subEntity  the added sub-entity
+   * @param joinPoint the join point
    */
   @SuppressWarnings("unchecked")
-  @After(value = "execution(* com.kivojenko.spring.forge.jpa.contract.ForgeService+.*Add*(..)) && args(mainEntity, subEntity)", argNames = "joinPoint,mainEntity,subEntity")
-  public void onAfterAdd(JoinPoint joinPoint, Object mainEntity, Object subEntity) {
-    if (!shouldHandle(joinPoint, mainEntity)) {
-      return;
+  @After("within(com.kivojenko.spring.forge.jpa.contract.ForgeService+) && execution(* *Add*(..))")
+  public void onAfterAdd(JoinPoint joinPoint) {
+    if (joinPoint.getThis() instanceof ForgeService<?, ?, ?> service) {
+      Object[] args = joinPoint.getArgs();
+      if (args.length >= 2) {
+        Object mainEntity = args[0];
+        Object subEntity = args[1];
+        if (!shouldHandle(service, mainEntity)) {
+          return;
+        }
+        afterAdd(mainEntity, subEntity);
+      }
     }
-    afterAdd((E) mainEntity, subEntity);
   }
 
-  public void afterAdd(E mainEntity, Object subEntity) {}
+  public void afterAdd(Object mainEntity, Object subEntity) {}
 
   /**
    * Executed before an entity is updated.
@@ -163,16 +172,22 @@ public abstract class ForgePersistenceAspect<E> {
   /**
    * Executed before a sub-entity is deleted from a main entity.
    *
-   * @param mainEntity the main entity service
-   * @param subEntity  the sub-entity to be deleted
+   * @param joinPoint the join point
    */
   @SuppressWarnings("unchecked")
-  @Before(value = "execution(* com.kivojenko.spring.forge.jpa.contract.ForgeService+.*Remove*(..)) && args(mainEntity, subEntity)", argNames = "joinPoint,mainEntity,subEntity")
-  public void onBeforeDeleteSub(JoinPoint joinPoint, Object mainEntity, Object subEntity) {
-    if (!shouldHandle(joinPoint, mainEntity)) {
-      return;
+  @Before("within(com.kivojenko.spring.forge.jpa.contract.ForgeService+) && execution(* *Remove*(..))")
+  public void onBeforeDeleteSub(JoinPoint joinPoint) {
+    if (joinPoint.getThis() instanceof ForgeService<?, ?, ?> service) {
+      Object[] args = joinPoint.getArgs();
+      if (args.length >= 2) {
+        Object mainEntity = args[0];
+        Object subEntity = args[1];
+        if (!shouldHandle(service, mainEntity)) {
+          return;
+        }
+        beforeDelete(mainEntity, subEntity);
+      }
     }
-    beforeDelete(mainEntity, subEntity);
   }
 
   public void beforeDelete(Object mainEntity, Object subEntity) {}
@@ -180,15 +195,22 @@ public abstract class ForgePersistenceAspect<E> {
   /**
    * Executed after a sub-entity is deleted from a main entity.
    *
-   * @param subEntity the deleted sub-entity
+   * @param joinPoint the join point
    */
   @SuppressWarnings("unchecked")
-  @After(value = "execution(* com.kivojenko.spring.forge.jpa.contract.ForgeService+.*Remove*(..)) && args(mainEntity, subEntity)", argNames = "joinPoint,mainEntity,subEntity")
-  public void onAfterDeleteSub(JoinPoint joinPoint, Object mainEntity, Object subEntity) {
-    if (!shouldHandle(joinPoint, mainEntity)) {
-      return;
+  @After("within(com.kivojenko.spring.forge.jpa.contract.ForgeService+) && execution(* *Remove*(..))")
+  public void onAfterDeleteSub(JoinPoint joinPoint) {
+    if (joinPoint.getThis() instanceof ForgeService<?, ?, ?> service) {
+      Object[] args = joinPoint.getArgs();
+      if (args.length >= 2) {
+        Object mainEntity = args[0];
+        Object subEntity = args[1];
+        if (!shouldHandle(service, mainEntity)) {
+          return;
+        }
+        afterDelete(mainEntity, subEntity);
+      }
     }
-    afterDelete(mainEntity, subEntity);
   }
 
   public void afterDelete(Object mainEntity, Object subEntity) {}

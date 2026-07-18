@@ -50,7 +50,9 @@ public class UnlinkOneToManyEndpointRelation extends OneToManyEndpointRelation {
     addFindBase(builder);
     addFindSub(builder);
     return builder
+        .addStatement("$N.$L().remove($N)", BASE_VAR_NAME, getterName(getFieldName()), SUB_VAR_NAME)
         .addStatement("$N.$L(null)", SUB_VAR_NAME, setterName(mappedBy))
+        .addStatement("$L.save($N)", getTargetRepositorygetFieldName(), SUB_VAR_NAME)
         .build();
   }
 }

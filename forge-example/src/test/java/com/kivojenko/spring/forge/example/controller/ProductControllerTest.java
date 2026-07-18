@@ -3,6 +3,7 @@ package com.kivojenko.spring.forge.example.controller;
 import com.kivojenko.spring.forge.example.WithPostgres;
 import com.kivojenko.spring.forge.example.model.filter.Product;
 import com.kivojenko.spring.forge.example.model.filter.ProductCategory;
+import com.kivojenko.spring.forge.example.model.filter.ProductType;
 import com.kivojenko.spring.forge.example.model.filter.Tag;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,19 +26,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 class ProductControllerTest extends WithPostgres {
 
-  private Long category1Id;
-  private Long category2Id;
   private Long tag1Id;
   private Long tag2Id;
 
   @BeforeEach
   void setUp() throws Exception {
-    category1Id = createCategory("Electronics");
-    category2Id = createCategory("Books");
+    Long category1Id = createCategory("Electronics");
+    Long category2Id = createCategory("Books");
     tag1Id = createTag("Sale");
     tag2Id = createTag("New");
 
-    createProduct("Laptop", "SKU001", new BigDecimal("999.99"), true, "Apple", true, 1.2, category1Id, Set.of(tag1Id), LocalDateTime.now());
+    createProduct("Laptop", "SKU001", new BigDecimal("999.99"), true, "Apple", true, 1.2, ProductType.PHYSICAL,
+        category1Id, Set.of(tag1Id), LocalDateTime.now());
     createProduct("Smartphone",
                   "SKU002",
                   new BigDecimal("599.99"),
@@ -45,7 +45,7 @@ class ProductControllerTest extends WithPostgres {
                   "Samsung",
                   true,
                   0.2,
-                  category1Id,
+                  ProductType.PHYSICAL, category1Id,
                   Set.of(tag1Id, tag2Id),
                   LocalDateTime.now().minusDays(5));
     createProduct("Java Book",
@@ -55,7 +55,7 @@ class ProductControllerTest extends WithPostgres {
                   "O'Reilly",
                   false,
                   0.8,
-                  category2Id,
+                  ProductType.DIGITAL, category2Id,
                   Set.of(tag2Id),
                   LocalDateTime.now().minusDays(10));
   }
@@ -89,6 +89,7 @@ class ProductControllerTest extends WithPostgres {
                              String brand,
                              boolean inStock,
                              Double weight,
+                             ProductType type,
                              Long categoryId,
                              Set<Long> tagIds,
                              LocalDateTime createdAt) throws Exception {
@@ -100,6 +101,7 @@ class ProductControllerTest extends WithPostgres {
         .brand(brand)
         .inStock(inStock)
         .weight(weight)
+        .type(type)
         .category(ProductCategory.builder().id(categoryId).build())
         .createdAt(createdAt);
 
@@ -207,6 +209,22 @@ class ProductControllerTest extends WithPostgres {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.content", hasSize(1)))
         .andExpect(jsonPath("$.content[0].name", is("Java Book")));
+  }
+
+  @Test
+  void testFilterByType() throws Exception {
+    mockMvc.perform(get("/products").param("types", "PHYSICAL"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(2)));
+
+    mockMvc.perform(get("/products").param("types", "DIGITAL"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(1)))
+        .andExpect(jsonPath("$.content[0].name", is("Java Book")));
+
+    mockMvc.perform(get("/products").param("types", "PHYSICAL,DIGITAL"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(3)));
   }
 
   @Test

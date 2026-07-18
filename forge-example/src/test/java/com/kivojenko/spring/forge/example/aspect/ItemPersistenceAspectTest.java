@@ -62,8 +62,8 @@ public class ItemPersistenceAspectTest extends WithPostgres {
 
     List<SubItem> subItems = subItemForgeRepository.findAll();
     assertEquals(1, subItems.size());
-    assertEquals("Valid SubItem", subItems.get(0).getName());
-    assertEquals(item.getId(), subItems.get(0).getItem().getId());
+    assertEquals("Valid SubItem", subItems.getFirst().getName());
+    assertEquals(item.getId(), subItems.getFirst().getItem().getId());
 
     itemService.removeSubItem(item.getId(), subItem.getId());
     subItems = subItemForgeRepository.findAll();
