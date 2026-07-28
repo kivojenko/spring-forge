@@ -82,6 +82,7 @@ public class FilterFieldModelFactory {
                            .env(env)
                            .targetField(targetField)
                            .required(annotation.required())
+                           .orNull(annotation.orNull())
                            .build());
     }
 

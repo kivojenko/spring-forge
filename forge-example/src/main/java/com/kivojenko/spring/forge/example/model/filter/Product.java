@@ -55,6 +55,9 @@ public class Product {
   @FilterField(name = "manufacturer")
   private String brand;
 
+  @FilterField(orNull = true)
+  private String description;
+
   @FilterField
   private boolean inStock;
 

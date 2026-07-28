@@ -76,5 +76,12 @@ public @interface FilterField {
    * @return {@code true} if the field is required, {@code false} otherwise
    */
   boolean required() default false;
+  /**
+   * Indicates whether this filter field should also match null values in the database.
+   * If {@code true}, the generated filtering logic will include an OR condition for the field being null.
+   *
+   * @return {@code true} if null values should be included, {@code false} otherwise
+   */
+  boolean orNull() default false;
 
 }

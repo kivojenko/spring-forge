@@ -36,13 +36,14 @@ class ProductControllerTest extends WithPostgres {
     tag1Id = createTag("Sale");
     tag2Id = createTag("New");
 
-    createProduct("Laptop", "SKU001", new BigDecimal("999.99"), true, "Apple", true, 1.2, ProductType.PHYSICAL,
+    createProduct("Laptop", "SKU001", new BigDecimal("999.99"), true, "Apple", "High-end laptop", true, 1.2, ProductType.PHYSICAL,
         category1Id, Set.of(tag1Id), LocalDateTime.now());
     createProduct("Smartphone",
                   "SKU002",
                   new BigDecimal("599.99"),
                   true,
                   "Samsung",
+                  "Latest model",
                   true,
                   0.2,
                   ProductType.PHYSICAL, category1Id,
@@ -53,11 +54,23 @@ class ProductControllerTest extends WithPostgres {
                   new BigDecimal("49.99"),
                   false,
                   "O'Reilly",
+                  "Educational",
                   false,
                   0.8,
                   ProductType.DIGITAL, category2Id,
                   Set.of(tag2Id),
                   LocalDateTime.now().minusDays(10));
+    createProduct("Generic Product",
+                  "SKU004",
+                  new BigDecimal("10.00"),
+                  true,
+                  null,
+                  null,
+                  true,
+                  0.1,
+                  ProductType.PHYSICAL, category1Id,
+                  Set.of(),
+                  LocalDateTime.now());
   }
 
   private Long createCategory(String name) throws Exception {
@@ -87,6 +100,7 @@ class ProductControllerTest extends WithPostgres {
                              BigDecimal price,
                              boolean active,
                              String brand,
+                             String description,
                              boolean inStock,
                              Double weight,
                              ProductType type,
@@ -99,6 +113,7 @@ class ProductControllerTest extends WithPostgres {
         .price(price)
         .active(active)
         .brand(brand)
+        .description(description)
         .inStock(inStock)
         .weight(weight)
         .type(type)
@@ -142,8 +157,9 @@ class ProductControllerTest extends WithPostgres {
     // maxPrice only
     mockMvc.perform(get("/products").param("maxPrice", "100"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.content", hasSize(1)))
-        .andExpect(jsonPath("$.content[0].name", is("Java Book"))); // Java Book (49.99)
+        .andExpect(jsonPath("$.content", hasSize(2))) // Java Book (49.99) and Generic Product (10.00)
+        .andExpect(jsonPath("$.content[?(@.name == 'Java Book')]").exists())
+        .andExpect(jsonPath("$.content[?(@.name == 'Generic Product')]").exists());
 
     // both minPrice and maxPrice
     mockMvc.perform(get("/products").param("minPrice", "50").param("maxPrice", "700"))
@@ -156,7 +172,7 @@ class ProductControllerTest extends WithPostgres {
   void testFilterByActive() throws Exception {
     mockMvc.perform(get("/products").param("active", "true"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.content", hasSize(2)));
+        .andExpect(jsonPath("$.content", hasSize(3)));
 
     mockMvc.perform(get("/products").param("active", "false"))
         .andExpect(status().isOk())
@@ -165,10 +181,24 @@ class ProductControllerTest extends WithPostgres {
   }
 
   @Test
+  void testFindAllWithOrNullFilter() throws Exception {
+    // description has orNull = true
+    // Laptop has description "High-end laptop"
+    // Generic Product has description null
+    // Both should be returned when filtering by description "High-end"
+    mockMvc.perform(get("/products")
+            .param("description", "High-end"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(2)))
+        .andExpect(jsonPath("$.content[?(@.name == 'Laptop')]").exists())
+        .andExpect(jsonPath("$.content[?(@.name == 'Generic Product')]").exists());
+  }
+
+  @Test
   void testFilterByCategoryName() throws Exception {
     mockMvc.perform(get("/products").param("category", "Electronics"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.content", hasSize(2)))
+        .andExpect(jsonPath("$.content", hasSize(3)))
         .andExpect(jsonPath("$.content[0].category.name", is("Electronics")));
   }
 
@@ -195,7 +225,7 @@ class ProductControllerTest extends WithPostgres {
   void testFilterByInStock() throws Exception {
     mockMvc.perform(get("/products").param("inStock", "true"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.content", hasSize(2)));
+        .andExpect(jsonPath("$.content", hasSize(3)));
 
     mockMvc.perform(get("/products").param("inStock", "false"))
         .andExpect(status().isOk())
@@ -215,7 +245,7 @@ class ProductControllerTest extends WithPostgres {
   void testFilterByType() throws Exception {
     mockMvc.perform(get("/products").param("types", "PHYSICAL"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.content", hasSize(2)));
+        .andExpect(jsonPath("$.content", hasSize(3)));
 
     mockMvc.perform(get("/products").param("types", "DIGITAL"))
         .andExpect(status().isOk())
@@ -224,7 +254,7 @@ class ProductControllerTest extends WithPostgres {
 
     mockMvc.perform(get("/products").param("types", "PHYSICAL,DIGITAL"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.content", hasSize(3)));
+        .andExpect(jsonPath("$.content", hasSize(4)));
   }
 
   @Test
@@ -236,7 +266,7 @@ class ProductControllerTest extends WithPostgres {
     // minCreatedAt only
     mockMvc.perform(get("/products").param("minCreatedAt", minDate))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.content", hasSize(2))); // Laptop (now) and Smartphone (now-5d)
+        .andExpect(jsonPath("$.content", hasSize(3))); // Laptop (now), Smartphone (now-5d) and Generic Product (now)
 
     // maxCreatedAt only
     mockMvc.perform(get("/products").param("maxCreatedAt", maxDate))
@@ -264,29 +294,32 @@ class ProductControllerTest extends WithPostgres {
   void testSortByPriceAsc() throws Exception {
     mockMvc.perform(get("/products").param("sort", "price,asc"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.content", hasSize(3)))
-        .andExpect(jsonPath("$.content[0].name", is("Java Book"))) // 49.99
-        .andExpect(jsonPath("$.content[1].name", is("Smartphone"))) // 599.99
-        .andExpect(jsonPath("$.content[2].name", is("Laptop"))); // 999.99
+        .andExpect(jsonPath("$.content", hasSize(4)))
+        .andExpect(jsonPath("$.content[0].name", is("Generic Product"))) // 10.00
+        .andExpect(jsonPath("$.content[1].name", is("Java Book"))) // 49.99
+        .andExpect(jsonPath("$.content[2].name", is("Smartphone"))) // 599.99
+        .andExpect(jsonPath("$.content[3].name", is("Laptop"))); // 999.99
   }
 
   @Test
   void testSortByPriceDesc() throws Exception {
     mockMvc.perform(get("/products").param("sort", "price,desc"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.content", hasSize(3)))
+        .andExpect(jsonPath("$.content", hasSize(4)))
         .andExpect(jsonPath("$.content[0].name", is("Laptop")))
         .andExpect(jsonPath("$.content[1].name", is("Smartphone")))
-        .andExpect(jsonPath("$.content[2].name", is("Java Book")));
+        .andExpect(jsonPath("$.content[2].name", is("Java Book")))
+        .andExpect(jsonPath("$.content[3].name", is("Generic Product")));
   }
 
   @Test
   void testSortByName() throws Exception {
     mockMvc.perform(get("/products").param("sort", "name,asc"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.content", hasSize(3)))
-        .andExpect(jsonPath("$.content[0].name", is("Java Book")))
-        .andExpect(jsonPath("$.content[1].name", is("Laptop")))
-        .andExpect(jsonPath("$.content[2].name", is("Smartphone")));
+        .andExpect(jsonPath("$.content", hasSize(4)))
+        .andExpect(jsonPath("$.content[0].name", is("Generic Product")))
+        .andExpect(jsonPath("$.content[1].name", is("Java Book")))
+        .andExpect(jsonPath("$.content[2].name", is("Laptop")))
+        .andExpect(jsonPath("$.content[3].name", is("Smartphone")));
   }
 }
