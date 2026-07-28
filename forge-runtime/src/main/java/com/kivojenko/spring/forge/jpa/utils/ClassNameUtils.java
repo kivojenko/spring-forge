@@ -34,6 +34,10 @@ public interface ClassNameUtils {
   ClassName REQUEST_BODY = ClassName.get(BIND_ANNOTATION, "RequestBody");
   ClassName RESPONSE_STATUS = ClassName.get(BIND_ANNOTATION, "ResponseStatus");
 
+  ClassName VALID = ClassName.get("jakarta.validation", "Valid");
+  ClassName NOT_NULL = ClassName.get("jakarta.validation.constraints", "NotNull");
+  ClassName NOT_BLANK = ClassName.get("jakarta.validation.constraints", "NotBlank");
+
   ClassName HTTP_STATUS = ClassName.get("org.springframework.http", "HttpStatus");
 
   ClassName DATA_INTEGRITY_VIOLATION_EXCEPTION = ClassName.get(

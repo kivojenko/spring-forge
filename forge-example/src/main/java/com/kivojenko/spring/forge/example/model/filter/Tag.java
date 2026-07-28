@@ -32,6 +32,6 @@ public class Tag implements HasName {
     private Long id;
 
     @Column(nullable = false, unique = true)
-    @FilterField
+    @FilterField(required = true)
     private String name;
 }

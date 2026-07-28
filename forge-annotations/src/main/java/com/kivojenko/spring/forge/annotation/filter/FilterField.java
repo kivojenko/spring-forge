@@ -68,4 +68,13 @@ public @interface FilterField {
    */
   String targetField() default "";
 
+  /**
+   * Indicates whether this filter field is required.
+   * If {@code true}, the generated filter DTO will include validation annotations
+   * (like {@code @NotNull}), and the controller will enforce its presence.
+   *
+   * @return {@code true} if the field is required, {@code false} otherwise
+   */
+  boolean required() default false;
+
 }

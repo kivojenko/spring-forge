@@ -25,6 +25,8 @@ import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.BOOLEAN_TYPES;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.BUILDER_DEFAULT;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.DATE_TYPES;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.HASH_SET;
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.NOT_BLANK;
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.NOT_NULL;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.NUMERIC_TYPES;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.SET;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.STRING;
@@ -49,6 +51,7 @@ public class FilterFieldModel {
   boolean originalSingleEntity;
   ProcessingEnvironment env;
   String targetField;
+  boolean required;
 
   @Getter(lazy = true)
   private final String name = annotation.name().isEmpty() ? element.getSimpleName().toString() : annotation.name();
@@ -80,7 +83,11 @@ public class FilterFieldModel {
     if (NUMERIC_TYPES.contains(typeName) || DATE_TYPES.contains(typeName)) {
       if (annotation.comparisonMatchMode() == ComparisonMatchMode.EXACT
           || annotation.comparisonMatchMode() == ComparisonMatchMode.EXACT_OR_RANGE) {
-        builder.addField(typeName, getName(), PRIVATE);
+        var field = FieldSpec.builder(typeName, getName(), PRIVATE);
+        if (required) {
+          field.addAnnotation(NOT_NULL);
+        }
+        builder.addField(field.build());
       }
       if (annotation.comparisonMatchMode() == ComparisonMatchMode.RANGE
           || annotation.comparisonMatchMode() == ComparisonMatchMode.EXACT_OR_RANGE) {
@@ -95,35 +102,49 @@ public class FilterFieldModel {
     if (isSingleEntity()) {
       var relation = JpaEntityModelFactory.get(typeElement);
       var paramTypeName = ParameterizedTypeName.get(SET, relation.getJpaId().type());
-      FieldSpec entityField = FieldSpec.builder(paramTypeName, pluralize(decapitalize(getName())), PRIVATE)
+      var field = FieldSpec.builder(paramTypeName, pluralize(decapitalize(getName())), PRIVATE)
           .addAnnotation(BUILDER_DEFAULT)
-          .initializer("new $T<>()", HASH_SET)
-          .build();
-      return builder.addField(entityField);
+          .initializer("new $T<>()", HASH_SET);
+      if (required) {
+        field.addAnnotation(NOT_NULL);
+      }
+      return builder.addField(field.build());
     }
     if (isEnum()) {
       var paramTypeName = ParameterizedTypeName.get(SET, typeName);
-      FieldSpec enumField = FieldSpec.builder(paramTypeName, pluralize(decapitalize(getName())), PRIVATE)
+      var field = FieldSpec.builder(paramTypeName, pluralize(decapitalize(getName())), PRIVATE)
           .addAnnotation(BUILDER_DEFAULT)
-          .initializer("new $T<>()", HASH_SET)
-          .build();
-      return builder.addField(enumField);
+          .initializer("new $T<>()", HASH_SET);
+      if (required) {
+        field.addAnnotation(NOT_NULL);
+      }
+      return builder.addField(field.build());
     }
     if (isIterable()) {
       var relation = JpaEntityModelFactory.get(typeElement);
       var paramTypeName = ParameterizedTypeName.get(SET, relation.getJpaId().type());
-      FieldSpec iterableField = FieldSpec.builder(paramTypeName, getName(), PRIVATE)
+      var field = FieldSpec.builder(paramTypeName, getName(), PRIVATE)
           .addAnnotation(BUILDER_DEFAULT)
-          .initializer("new $T<>()", HASH_SET)
-          .build();
-      return builder.addField(iterableField);
+          .initializer("new $T<>()", HASH_SET);
+      if (required) {
+        field.addAnnotation(NOT_NULL);
+      }
+      return builder.addField(field.build());
     }
     var fieldTypeName = typeName;
     if (typeName.equals(TypeName.BOOLEAN)) {
       fieldTypeName = ClassName.BOOLEAN.box();
     }
 
-    return builder.addField(fieldTypeName, getName(), PRIVATE);
+    var field = FieldSpec.builder(fieldTypeName, getName(), PRIVATE);
+    if (required) {
+      if (fieldTypeName.equals(STRING)) {
+        field.addAnnotation(NOT_BLANK);
+      } else {
+        field.addAnnotation(NOT_NULL);
+      }
+    }
+    return builder.addField(field.build());
   }
 
   public void addFiltering(MethodSpec.Builder builder) {

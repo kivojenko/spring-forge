@@ -1,12 +1,26 @@
 package com.kivojenko.spring.forge.jpa.generator;
 
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.FORGE_CONTROLLER;
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.GET_MAPPING;
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.PAGE;
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.PAGEABLE;
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.PAGEABLE_DEFAULT;
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.POST_MAPPING;
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.REQUEST_MAPPING;
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.REQUEST_PARAM;
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.REST_CONTROLLER;
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.VALID;
+
 import com.kivojenko.spring.forge.config.SpringForgeConfig;
 import com.kivojenko.spring.forge.jpa.model.base.JpaEntityModel;
-import com.squareup.javapoet.*;
-
+import com.squareup.javapoet.AnnotationSpec;
+import com.squareup.javapoet.CodeBlock;
+import com.squareup.javapoet.JavaFile;
+import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.ParameterSpec;
+import com.squareup.javapoet.ParameterizedTypeName;
+import com.squareup.javapoet.TypeSpec;
 import javax.lang.model.element.Modifier;
-
-import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.*;
 
 /**
  * Generator for Spring REST controllers.
@@ -89,7 +103,9 @@ public final class ControllerGenerator {
         .addParameter(pageableParam);
 
     if (model.wantsFilter()) {
-      var filterParam = ParameterSpec.builder(model.getFilterType(), "filter").build();
+      var filterParam = ParameterSpec.builder(model.getFilterType(), "filter")
+          .addAnnotation(VALID)
+          .build();
       findAllBuilder
           .addParameter(filterParam)
           .addJavadoc("@param filter the filter criteria\n")

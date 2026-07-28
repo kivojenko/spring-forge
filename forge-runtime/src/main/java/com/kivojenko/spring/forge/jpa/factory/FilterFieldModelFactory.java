@@ -81,6 +81,7 @@ public class FilterFieldModelFactory {
                            .entityCandidate(entityCandidate)
                            .env(env)
                            .targetField(targetField)
+                           .required(annotation.required())
                            .build());
     }
 

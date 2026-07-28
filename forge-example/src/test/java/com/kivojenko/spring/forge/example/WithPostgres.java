@@ -8,8 +8,11 @@ import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.junit.jupiter.Testcontainers;
+
+import java.util.List;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -22,6 +25,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 public abstract class WithPostgres {
   @Autowired
   protected MockMvc mockMvc;
+
+  @Autowired
+  protected JdbcTemplate jdbcTemplate;
 
   protected final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
@@ -54,16 +60,8 @@ public abstract class WithPostgres {
       mockMvc.perform(delete("/productCategories/{id}", categoryId)).andExpect(status().isNoContent());
     }
 
-    String tagsJson = mockMvc
-        .perform(get("/tags"))
-        .andExpect(status().isOk())
-        .andReturn()
-        .getResponse()
-        .getContentAsString();
-
-    JsonNode tagsRoot = objectMapper.readTree(tagsJson);
-    for (JsonNode tag : tagsRoot.get("content")) {
-      Long tagId = tag.get("id").asLong();
+    List<Long> tagIds = jdbcTemplate.queryForList("SELECT id FROM tags", Long.class);
+    for (Long tagId : tagIds) {
       mockMvc.perform(delete("/tags/{id}", tagId)).andExpect(status().isNoContent());
     }
 
