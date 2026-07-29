@@ -11,15 +11,17 @@ import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
+import jakarta.persistence.DiscriminatorType;
 import lombok.Builder;
 import lombok.Data;
-import lombok.Getter;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
+
+import java.util.Map;
 
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.BOOLEAN_TYPES;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.BUILDER_DEFAULT;
@@ -53,15 +55,31 @@ public class FilterFieldModel {
   String targetField;
   boolean required;
   boolean orNull;
+  String name;
+  String targetFieldName;
+  boolean discriminator;
+  DiscriminatorType discriminatorType;
+  Map<String, ClassName> discriminatorMapping;
 
-  @Getter(lazy = true)
-  private final String name = annotation.name().isEmpty() ? element.getSimpleName().toString() : annotation.name();
+  public String getName() {
+    if (name != null) {
+      return name;
+    }
+    var fieldName = element.getSimpleName().toString();
+    if (annotation == null) {
+      return fieldName;
+    }
+    return annotation.name().isEmpty() ? fieldName : annotation.name();
+  }
 
   public String getOriginalName() {
-    return element.getSimpleName().toString();
+    return element != null ? element.getSimpleName().toString() : getName();
   }
 
   public String getTargetFieldName() {
+    if (targetFieldName != null) {
+      return targetFieldName;
+    }
     String fieldName = element.getSimpleName().toString();
     if (targetField == null || targetField.isEmpty()) {
       return fieldName;
@@ -149,6 +167,32 @@ public class FilterFieldModel {
   }
 
   public void addFiltering(MethodSpec.Builder builder) {
+    if (discriminator) {
+      builder.beginControlFlow("if ($L != null && !$L.isEmpty())", getName(), getName());
+      builder.addStatement("var subBuilder = new com.querydsl.core.BooleanBuilder()");
+      builder.beginControlFlow("for (var val : $L)", getName());
+      if (discriminatorMapping != null && !discriminatorMapping.isEmpty()) {
+        builder.beginControlFlow("if (val != null)");
+        boolean first = true;
+        for (var entry : discriminatorMapping.entrySet()) {
+          if (first) {
+            builder.beginControlFlow("if (String.valueOf(val).equals($S))", entry.getKey());
+            first = false;
+          } else {
+            builder.nextControlFlow("else if (String.valueOf(val).equals($S))", entry.getKey());
+          }
+          builder.addStatement("subBuilder.or(entity.instanceOf($T.class))", entry.getValue());
+        }
+        builder.endControlFlow();
+        builder.endControlFlow();
+      } else {
+        builder.addStatement("subBuilder.or(entity.as(Object.class).get($S).stringValue().eq(String.valueOf(val)))", "class");
+      }
+      builder.endControlFlow();
+      addAnd(builder, "subBuilder");
+      builder.endControlFlow();
+      return;
+    }
     var fieldName = pluralize(decapitalize(getName()));
 
     if (typeName.equals(STRING)) {

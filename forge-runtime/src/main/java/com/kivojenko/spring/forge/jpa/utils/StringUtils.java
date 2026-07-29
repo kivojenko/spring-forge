@@ -89,4 +89,24 @@ public final class StringUtils {
   public static String maxName(String fieldName) {
     return "max" + capitalize(fieldName);
   }
+
+  public static String toCamelCase(String s) {
+    if (s == null || s.isEmpty()) return s;
+    StringBuilder sb = new StringBuilder();
+    boolean nextUpper = false;
+    for (int i = 0; i < s.length(); i++) {
+      char c = s.charAt(i);
+      if (c == '_' || c == '-' || c == ' ') {
+        nextUpper = true;
+      } else {
+        if (nextUpper) {
+          sb.append(Character.toUpperCase(c));
+          nextUpper = false;
+        } else {
+          sb.append(i == 0 ? c : Character.toLowerCase(c));
+        }
+      }
+    }
+    return sb.toString();
+  }
 }

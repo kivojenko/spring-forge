@@ -4,6 +4,7 @@ import com.kivojenko.spring.forge.jpa.model.base.JpaEntityModel;
 import lombok.Setter;
 
 import javax.annotation.processing.ProcessingEnvironment;
+import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.TypeElement;
 import java.util.HashMap;
 import java.util.List;
@@ -18,6 +19,12 @@ public final class JpaEntityModelFactory {
     private static final Map<TypeElement, JpaEntityModel> CACHE = new HashMap<>();
     @Setter
     private static ProcessingEnvironment env;
+    @Setter
+    private static RoundEnvironment roundEnv;
+
+    public static RoundEnvironment getRoundEnv() {
+        return roundEnv;
+    }
 
     /**
      * Returns all cached entity models.

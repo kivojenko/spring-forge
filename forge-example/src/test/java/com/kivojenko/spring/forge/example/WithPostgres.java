@@ -129,6 +129,18 @@ public abstract class WithPostgres {
       Long itemId = item.get("id").asLong();
       mockMvc.perform(delete("/items/{id}", itemId)).andExpect(status().isNoContent());
     }
-  }
 
+    String vehiclesJson = mockMvc
+        .perform(get("/vehicles"))
+        .andExpect(status().isOk())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+
+    JsonNode vehiclesRoot = objectMapper.readTree(vehiclesJson);
+    for (JsonNode vehicle : vehiclesRoot.get("content")) {
+      Long vehicleId = vehicle.get("id").asLong();
+      mockMvc.perform(delete("/vehicles/{id}", vehicleId)).andExpect(status().isNoContent());
+    }
+  }
 }

@@ -1,19 +1,19 @@
 package com.kivojenko.spring.forge.jpa.generator;
 
 
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.HAS_NAME_REPOSITORY;
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.JPA_REPOSITORY;
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.LIST;
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.QUERY_DSL_PREDICATE_EXECUTOR;
+import static com.kivojenko.spring.forge.jpa.utils.StringUtils.capitalize;
+
 import com.kivojenko.spring.forge.jpa.model.FilterFieldModel;
 import com.kivojenko.spring.forge.jpa.model.base.JpaEntityModel;
-import com.kivojenko.spring.forge.jpa.utils.StringUtils;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeSpec;
-
 import javax.lang.model.element.Modifier;
-import java.util.List;
-
-import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.*;
-import static com.kivojenko.spring.forge.jpa.utils.StringUtils.capitalize;
 
 /**
  * Generator for Spring Data JPA repositories.
@@ -53,7 +53,7 @@ public final class RepositoryGenerator {
 
     private static void addFilterMethods(TypeSpec.Builder builder, JpaEntityModel model) {
         for (FilterFieldModel field : model.getFilterableFields()) {
-            if (field.isIterable() || field.isSingleEntity()) {
+            if (field.isIterable() || field.isSingleEntity() || field.isDiscriminator()) {
                 continue;
             }
             if (model.getRequirements().hasName() && field.getOriginalName().equals("name")) {

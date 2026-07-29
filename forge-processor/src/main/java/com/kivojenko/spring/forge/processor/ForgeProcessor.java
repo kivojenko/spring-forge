@@ -39,6 +39,7 @@ public final class ForgeProcessor extends AbstractProcessor {
     if (!SpringForgeConfig.isLoaded()) SpringForgeConfig.load(processingEnv);
 
     JpaEntityModelFactory.setEnv(processingEnv);
+    JpaEntityModelFactory.setRoundEnv(roundEnv);
     var annotationTypes = Set.of(
         WithJpaRepository.class,
         WithService.class,
