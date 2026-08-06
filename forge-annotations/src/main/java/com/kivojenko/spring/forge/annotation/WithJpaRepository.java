@@ -26,4 +26,11 @@ public @interface WithJpaRepository {
      * @return true if the repository should be abstract, false otherwise
      */
     boolean makeAbstract() default false;
+
+    /**
+     * Additional interfaces that the generated repository should implement.
+     *
+     * @return the interfaces
+     */
+    Class<?>[] interfaces() default {};
 }

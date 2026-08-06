@@ -43,6 +43,9 @@ public final class RepositoryGenerator {
 
         if (model.getRequirements().wantsAbstractRepository()) builder.addModifiers(Modifier.ABSTRACT);
         if (model.getRequirements().hasName()) builder.addSuperinterface(hasNameRepositoryOf(model));
+        for (var repositoryInterface : model.getRequirements().repositoryInterfaces()) {
+            builder.addSuperinterface(repositoryInterface);
+        }
         if (model.wantsFilter()) {
             builder.addSuperinterface(queryDslPredicateExecutorOf(model));
             addFilterMethods(builder, model);

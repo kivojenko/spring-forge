@@ -29,6 +29,12 @@ public interface PersonForgeRepository extends JpaRepository<Person, Long> {
 }
 ```
 
+#### Attributes
+
+- `packageName`: Custom package for the generated repository.
+- `makeAbstract` (default: `false`): If `true`, the generated repository interface will be marked as `abstract`.
+- `interfaces`: Array of interfaces that the generated repository should implement.
+
 ---
 
 ### @WithService
@@ -58,6 +64,11 @@ public interface PersonForgeRepository extends JpaRepository<Person, Long> {
 public class PersonForgeService extends ForgeService<Person, Long, PersonForgeRepository> {
 }
 ```
+
+#### Attributes
+
+- `packageName`: Custom package for the generated service.
+- `makeAbstract` (default: `false`): If `true`, the generated service class will be marked as `abstract`.
 
 If `@WithService` is used along with `@WithRestController`, the generated controller will use the service instead of the
 repository:
@@ -129,6 +140,12 @@ public interface PersonRepository extends JpaRepository<Person, Long> {
 public class PersonForgeController extends ForgeController<Person, Long, PersonForgeRepository> {
 }
 ```
+
+#### Attributes
+
+- `path`: Custom base path for the controller (defaults to decapitalized entity name + "s").
+- `packageName`: Custom package for the generated controller.
+- `makeAbstract` (default: `false`): If `true`, the generated controller class will be marked as `abstract`.
 
 ---
 
@@ -268,14 +285,22 @@ Spring Forge can extend generated repositories based on **marker interfaces** im
 
 You can use `@FilterField` on entity fields to generate a filter class that can be used for searching.
 It supports the following attributes:
-- `targetField`: Map a filter field to a different (possibly nested) field in the entity (e.g., `category.name`).
+
 - `name`: Custom name for the query parameter in the filter DTO and REST endpoints.
+- `targetField`: Map a filter field to a different (possibly nested) field in the entity (e.g., `category.name`).
+- `required` (default: `false`): If `true`, the generated filter field is marked with `@NotNull` or `@NotBlank` (for Strings), and the controller uses `@Valid` to enforce its presence.
+- `orNull` (default: `false`): If `true`, the generated filtering logic will include an OR condition to match records where the field is `null`.
+- `stringMatchMode` (default: `CONTAINS`): Defines how string values are matched (`EQUALS`, `CONTAINS`, `STARTS_WITH`, etc.).
+- `comparisonMatchMode` (default: `EXACT_OR_RANGE`): Defines how numbers or dates are matched (exact value or range).
 
 ```java
 public class Brand implements HasName {
 
-    @FilterField(name = "manufacturer")
+    @FilterField(name = "manufacturer", required = true)
     protected String name;
+
+    @FilterField(orNull = true)
+    private String description;
 
     @FilterField
     private boolean vegan;
@@ -299,7 +324,10 @@ This generates:
 @AllArgsConstructor
 @RequiredArgsConstructor
 public class BrandForgeFilter {
-  private String name;
+  @NotBlank
+  private String manufacturer;
+
+  private String description;
 
   private boolean vegan;
 
@@ -311,7 +339,15 @@ public class BrandForgeFilter {
 }
 ```
 
-The filter class uses the ID type of the related entities for associations, making it easy to filter by foreign keys.
+The filter class uses the ID type of the related entities for associations (unless `targetField` is used), making it easy to filter by foreign keys.
+
+#### Automatic Inheritance Filtering
+
+If an entity hierarchy uses JPA inheritance with `@DiscriminatorColumn`, Spring Forge automatically adds a discriminator filter field to the generated filter class.
+
+- Supports all `DiscriminatorType`s: `STRING`, `INTEGER`, and `CHAR`.
+- Uses `List<T>` to allow filtering by multiple types at once.
+- Leverages QueryDSL `instanceOf` for type-safe filtering based on the discriminator mapping.
 
 ### HasName
 
@@ -408,7 +444,7 @@ If a repository or service already exists **in the configured package**, Spring 
 
 ### Dependencies
 ```kotlin
-mavenBom("com.kivojenko.spring.forge:spring-forge-bom:0.1.11")
+mavenBom("com.kivojenko.spring.forge:spring-forge-bom:0.1.17")
 ```
 
 ```kotlin

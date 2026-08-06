@@ -5,15 +5,20 @@ import com.kivojenko.spring.forge.annotation.WithJpaRepository;
 import com.kivojenko.spring.forge.annotation.WithRestController;
 import com.kivojenko.spring.forge.annotation.WithService;
 import com.kivojenko.spring.forge.jpa.utils.LoggingUtils;
+import com.squareup.javapoet.TypeName;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.MirroredTypesException;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Requirements and configuration flags for a JPA entity model.
  *
  * @param hasName               whether the entity has name property
  * @param repositoryAnnotation  annotation for repository configuration
+ * @param repositoryInterfaces  additional interfaces for the repository
  * @param serviceAnnotation     annotation for service configuration
  * @param controllerAnnotation  annotation for controller configuration
  * @param getOrCreateAnnotation annotation for "get or create" operation configuration
@@ -21,6 +26,7 @@ import javax.lang.model.element.TypeElement;
 public record JpaEntityRequirements(
         boolean hasName,
         WithJpaRepository repositoryAnnotation,
+        List<TypeName> repositoryInterfaces,
         WithService serviceAnnotation,
         WithRestController controllerAnnotation,
         GetOrCreate getOrCreateAnnotation
@@ -43,11 +49,12 @@ public record JpaEntityRequirements(
         var controllerAnnotation = entity.getAnnotation(WithRestController.class);
         var serviceAnnotation = entity.getAnnotation(WithService.class);
         var repositoryAnnotation = entity.getAnnotation(WithJpaRepository.class);
+        var repositoryInterfaces = resolveRepositoryInterfaces(repositoryAnnotation);
 
         var getOrCreateAnnotation = entity.getAnnotation(GetOrCreate.class);
 
         if (getOrCreateAnnotation != null && !hasName) {
-            LoggingUtils.warn(
+            LoggingUtils.error(
                     env,
                     entity,
                     "Entity " +
@@ -60,10 +67,26 @@ public record JpaEntityRequirements(
         return new JpaEntityRequirements(
                 hasName,
                 repositoryAnnotation,
+                repositoryInterfaces,
                 serviceAnnotation,
                 controllerAnnotation,
                 getOrCreateAnnotation
         );
+    }
+
+    private static List<TypeName> resolveRepositoryInterfaces(WithJpaRepository repositoryAnnotation) {
+        if (repositoryAnnotation == null) {
+            return List.of();
+        }
+        try {
+            return Arrays.stream(repositoryAnnotation.interfaces())
+                    .map(TypeName::get)
+                    .toList();
+        } catch (MirroredTypesException mte) {
+            return mte.getTypeMirrors().stream()
+                    .map(TypeName::get)
+                    .toList();
+        }
     }
 
     public boolean wantsRepository() {
