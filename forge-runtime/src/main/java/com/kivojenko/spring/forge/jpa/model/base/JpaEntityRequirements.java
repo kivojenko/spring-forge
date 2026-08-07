@@ -5,12 +5,16 @@ import com.kivojenko.spring.forge.annotation.WithJpaRepository;
 import com.kivojenko.spring.forge.annotation.WithRestController;
 import com.kivojenko.spring.forge.annotation.WithService;
 import com.kivojenko.spring.forge.jpa.utils.LoggingUtils;
+import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.MirroredTypesException;
-import java.util.Arrays;
+import javax.lang.model.type.TypeMirror;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -49,7 +53,7 @@ public record JpaEntityRequirements(
         var controllerAnnotation = entity.getAnnotation(WithRestController.class);
         var serviceAnnotation = entity.getAnnotation(WithService.class);
         var repositoryAnnotation = entity.getAnnotation(WithJpaRepository.class);
-        var repositoryInterfaces = resolveRepositoryInterfaces(repositoryAnnotation);
+        var repositoryInterfaces = resolveRepositoryInterfaces(entity, repositoryAnnotation, env);
 
         var getOrCreateAnnotation = entity.getAnnotation(GetOrCreate.class);
 
@@ -74,19 +78,37 @@ public record JpaEntityRequirements(
         );
     }
 
-    private static List<TypeName> resolveRepositoryInterfaces(WithJpaRepository repositoryAnnotation) {
+    private static List<TypeName> resolveRepositoryInterfaces(TypeElement entity, WithJpaRepository repositoryAnnotation, ProcessingEnvironment env) {
         if (repositoryAnnotation == null) {
             return List.of();
         }
+        List<TypeName> result = new ArrayList<>();
+        var entityTypeName = TypeName.get(entity.asType());
+
         try {
-            return Arrays.stream(repositoryAnnotation.interfaces())
-                    .map(TypeName::get)
-                    .toList();
+            for (Class<?> clazz : repositoryAnnotation.interfaces()) {
+                var typeElement = env.getElementUtils().getTypeElement(clazz.getCanonicalName());
+                result.add(parameterizeIfGeneric(typeElement.asType(), entityTypeName));
+            }
         } catch (MirroredTypesException mte) {
-            return mte.getTypeMirrors().stream()
-                    .map(TypeName::get)
-                    .toList();
+            for (TypeMirror mirror : mte.getTypeMirrors()) {
+                result.add(parameterizeIfGeneric(mirror, entityTypeName));
+            }
         }
+        return result;
+    }
+
+    private static TypeName parameterizeIfGeneric(TypeMirror mirror, TypeName entityTypeName) {
+        var typeName = TypeName.get(mirror);
+        if (mirror instanceof DeclaredType declaredType) {
+            var element = declaredType.asElement();
+            if (element instanceof TypeElement typeElement && !typeElement.getTypeParameters().isEmpty()) {
+                if (typeElement.getTypeParameters().size() == 1 && typeName instanceof ClassName className) {
+                    return ParameterizedTypeName.get(className, entityTypeName);
+                }
+            }
+        }
+        return typeName;
     }
 
     public boolean wantsRepository() {

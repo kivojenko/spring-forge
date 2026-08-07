@@ -33,7 +33,7 @@ public interface PersonForgeRepository extends JpaRepository<Person, Long> {
 
 - `packageName`: Custom package for the generated repository.
 - `makeAbstract` (default: `false`): If `true`, the generated repository interface will be marked as `abstract`.
-- `interfaces`: Array of interfaces that the generated repository should implement.
+- `interfaces`: Array of interfaces that the generated repository should implement. If an interface has a single type parameter, it will be automatically parameterized with the entity type (e.g., `CustomRepository<T>` becomes `CustomRepository<Person>`).
 
 ---
 
@@ -398,6 +398,42 @@ public interface PersonForgeRepository extends JpaRepository<Person, Long>, HasN
 
 Generated controller will accept optional `name` query parameters: `GET /entity?page={page}&size={size}&name={name}`.
 Spring Data will generate the query implementations automatically.
+
+---
+
+### Generic Repository Interfaces
+
+Spring Forge supports automatic parameterization of generic repository interfaces. If you provide an interface with exactly one type parameter to `@WithJpaRepository(interfaces = ...)`, it will be automatically parameterized with the entity type.
+
+This is useful for creating reusable repository patterns that are not built into Spring Forge (unlike `HasName`).
+
+#### 1. Define your generic interface
+```java
+public interface WithNameTranslation<T> {
+  Optional<T> findByNameEnUS(String name);
+}
+```
+
+#### 2. Apply it to your Entity
+```java
+@Entity
+@WithJpaRepository(interfaces = {WithNameTranslation.class})
+public class Organism {
+    @Id
+    @GeneratedValue
+    private Long id;
+    private String name;
+}
+```
+
+#### 3. Resulting Generated Repository
+Spring Forge will detect that `WithNameTranslation<T>` has one type parameter and will use `Organism` as the argument.
+
+```java
+public interface OrganismForgeRepository 
+    extends JpaRepository<Organism, Long>, WithNameTranslation<Organism> {
+}
+```
 
 ---
 
