@@ -250,17 +250,19 @@ public class FilterFieldModel {
       addAnd(builder, "entity.$L.eq($L)", getTargetFieldName(), getName());
       builder.endControlFlow();
     } else if (isSingleEntity()) {
+      var relation = JpaEntityModelFactory.get(typeElement);
       builder.beginControlFlow("if ($L != null && !$L.isEmpty())", fieldName, fieldName);
-      addAnd(builder, "entity.$L.id.in($L)", getTargetFieldName(), fieldName);
+      addAnd(builder, "entity.$L.$L.in($L)", getTargetFieldName(), relation.getJpaId().name(), fieldName);
       builder.endControlFlow();
     } else if (isIterable()) {
+      var relation = JpaEntityModelFactory.get(typeElement);
       builder.beginControlFlow("if ($L != null && !$L.isEmpty())", getName(), getName());
       if (annotation.iterableMatchMode() == IterableMatchMode.ALL) {
         builder.beginControlFlow("for (var $L : $L)", "sub", getName());
-        addAnd(builder, "entity.$L.any().id.eq($L)", getTargetFieldName(), "sub");
+        addAnd(builder, "entity.$L.any().$L.eq($L)", getTargetFieldName(), relation.getJpaId().name(), "sub");
         builder.endControlFlow();
       } else {
-        addAnd(builder, "entity.$L.any().id.in($L)", getTargetFieldName(), getName());
+        addAnd(builder, "entity.$L.any().$L.in($L)", getTargetFieldName(), relation.getJpaId().name(), getName());
       }
       builder.endControlFlow();
     } else if (isEnum()) {
