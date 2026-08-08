@@ -38,7 +38,7 @@ public class AddNewOneToManyEndpointRelation extends OneToManyEndpointRelation {
     return MethodSpec
         .methodBuilder(generatedMethodName())
         .addJavadoc("Creates and adds a new {@link $T} entity to a {@link $T} entity.\n", targetEntityModel.getEntityType(), entityModel.getEntityType())
-        .addJavadoc("@param $L the ID of the {@link $T} entity\n", BASE_ID_PARAM_NAME, entityModel.getEntityType())
+        .addJavadoc("@param $L the ID of the {@link $T} entity\n", baseIdParamName(), entityModel.getEntityType())
         .addJavadoc("@param $L the new {@link $T} entity to create and add\n", SUB_VAR_NAME, targetEntityModel.getEntityType())
         .addJavadoc("@return the newly created and added {@link $T} entity\n", targetEntityModel.getEntityType())
         .addAnnotation(annotation(mapping()))
@@ -47,7 +47,7 @@ public class AddNewOneToManyEndpointRelation extends OneToManyEndpointRelation {
         .returns(targetEntityModel.getEntityType())
         .addParameter(baseParamSpec(true))
         .addParameter(subParam)
-        .addStatement("return service.$L($L, $L)", generatedMethodName(), BASE_ID_PARAM_NAME, SUB_VAR_NAME)
+        .addStatement("return service.$L($L, $L)", generatedMethodName(), baseIdParamName(), SUB_VAR_NAME)
         .build();
   }
 
@@ -58,7 +58,7 @@ public class AddNewOneToManyEndpointRelation extends OneToManyEndpointRelation {
     var builder = MethodSpec
         .methodBuilder(generatedMethodName())
         .addJavadoc("Creates and adds a new {@link $T} entity to a {@link $T} entity.\n", targetEntityModel.getEntityType(), entityModel.getEntityType())
-        .addJavadoc("@param $L the ID of the {@link $T} entity\n", BASE_ID_PARAM_NAME, entityModel.getEntityType())
+        .addJavadoc("@param $L the ID of the {@link $T} entity\n", baseIdParamName(), entityModel.getEntityType())
         .addJavadoc("@param $L the new {@link $T} entity to create and add\n", SUB_VAR_NAME, targetEntityModel.getEntityType())
         .addJavadoc("@return the newly created and added {@link $T} entity\n", targetEntityModel.getEntityType())
         .returns(targetEntityModel.getEntityType())

@@ -33,6 +33,7 @@ public interface ClassNameUtils {
   ClassName REQUEST_PARAM = ClassName.get(BIND_ANNOTATION, "RequestParam");
   ClassName REQUEST_BODY = ClassName.get(BIND_ANNOTATION, "RequestBody");
   ClassName RESPONSE_STATUS = ClassName.get(BIND_ANNOTATION, "ResponseStatus");
+  ClassName REQUEST_METHOD = ClassName.get(BIND_ANNOTATION, "RequestMethod");
 
   ClassName VALID = ClassName.get("jakarta.validation", "Valid");
   ClassName NOT_NULL = ClassName.get("jakarta.validation.constraints", "NotNull");

@@ -27,7 +27,7 @@ public class UnlinkManyToOneEndpointRelation extends ManyToOneEndpointRelation {
   }
 
   protected String uri() {
-    return super.uri() + "/{" + SUB_ID_PARAM_NAME + "}";
+    return super.uri() + "/{" + subIdParamName() + "}";
   }
 
   @Override
@@ -40,8 +40,8 @@ public class UnlinkManyToOneEndpointRelation extends ManyToOneEndpointRelation {
     var builder = MethodSpec
         .methodBuilder(generatedMethodName())
         .addJavadoc("Removes (unlinks) the {@link $T} entity from the {@link $T} entity.\n", targetEntityModel.getEntityType(), entityModel.getEntityType())
-        .addJavadoc("@param $L the ID of the {@link $T} entity\n", BASE_ID_PARAM_NAME, entityModel.getEntityType())
-        .addJavadoc("@param $L the ID of the {@link $T} entity to unlink\n", SUB_ID_PARAM_NAME, targetEntityModel.getEntityType())
+        .addJavadoc("@param $L the ID of the {@link $T} entity\n", baseIdParamName(), entityModel.getEntityType())
+        .addJavadoc("@param $L the ID of the {@link $T} entity to unlink\n", subIdParamName(), targetEntityModel.getEntityType())
         .addModifiers(Modifier.PUBLIC)
         .returns(void.class)
         .addAnnotation(TRANSACTIONAL);

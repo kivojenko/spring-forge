@@ -36,13 +36,13 @@ public abstract class ServiceRepositoryEndpointRelation extends EndpointRelation
     var spec = MethodSpec
         .methodBuilder(generatedMethodName())
         .addJavadoc("Executes the {@link $T} operation for association between {@link $T} and {@link $T}.\n", mapping(), entityModel.getEntityType(), targetEntityModel.getEntityType())
-        .addJavadoc("@param $L the ID of the base {@link $T} entity\n", BASE_ID_PARAM_NAME, entityModel.getEntityType())
-        .addJavadoc("@param $L the ID of the target {@link $T} entity\n", SUB_ID_PARAM_NAME, targetEntityModel.getEntityType())
+        .addJavadoc("@param $L the ID of the base {@link $T} entity\n", baseIdParamName(), entityModel.getEntityType())
+        .addJavadoc("@param $L the ID of the target {@link $T} entity\n", subIdParamName(), targetEntityModel.getEntityType())
         .returns(void.class)
         .addModifiers(Modifier.PUBLIC)
         .addParameter(baseParamSpec(true))
         .addParameter(subParamSpec(true))
-        .addStatement("service.$L($L, $L)", generatedMethodName(), BASE_ID_PARAM_NAME, SUB_ID_PARAM_NAME)
+        .addStatement("service.$L($L, $L)", generatedMethodName(), baseIdParamName(), subIdParamName())
         .addAnnotation(annotation(mapping()));
 
     var httpStatus = httpStatus();
@@ -61,7 +61,7 @@ public abstract class ServiceRepositoryEndpointRelation extends EndpointRelation
         "var $L = $L.findById($L).orElseThrow($T::new)",
         SUB_VAR_NAME,
         decapitalize(targetEntityModel.getRepositoryName()),
-        SUB_ID_PARAM_NAME,
+        subIdParamName(),
         EntityNotFoundException.class
     );
     checkFoundSub(methodSpec);

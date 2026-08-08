@@ -30,7 +30,7 @@ public class UnlinkManyToManyEndpointRelation extends ServiceRepositoryEndpointR
   }
 
   protected String uri() {
-    return super.uri() + "/{" + SUB_ID_PARAM_NAME + "}";
+    return super.uri() + "/{" + subIdParamName() + "}";
   }
 
   @Override
@@ -43,8 +43,8 @@ public class UnlinkManyToManyEndpointRelation extends ServiceRepositoryEndpointR
     var builder = MethodSpec
         .methodBuilder(generatedMethodName())
         .addJavadoc("Removes (unlinks) an existing {@link $T} entity from a {@link $T} entity.\n", targetEntityModel.getEntityType(), entityModel.getEntityType())
-        .addJavadoc("@param $L the ID of the {@link $T} entity\n", BASE_ID_PARAM_NAME, entityModel.getEntityType())
-        .addJavadoc("@param $L the ID of the {@link $T} entity to remove\n", SUB_ID_PARAM_NAME, targetEntityModel.getEntityType())
+        .addJavadoc("@param $L the ID of the {@link $T} entity\n", baseIdParamName(), entityModel.getEntityType())
+        .addJavadoc("@param $L the ID of the {@link $T} entity to remove\n", subIdParamName(), targetEntityModel.getEntityType())
         .addModifiers(Modifier.PUBLIC)
         .addAnnotation(TRANSACTIONAL)
         .returns(void.class);
@@ -54,11 +54,12 @@ public class UnlinkManyToManyEndpointRelation extends ServiceRepositoryEndpointR
 
     return builder
         .addStatement(
-            "$L.$L().removeIf(e -> e.$L() == $L)",
+            "$L.$L().removeIf(e -> $T.equals(e.$L(), $L))",
             BASE_VAR_NAME,
             getterName(getFieldName()),
-            getterName("id"),
-            SUB_ID_PARAM_NAME
+            java.util.Objects.class,
+            getterName(targetEntityModel.getJpaId().name()),
+            subIdParamName()
         )
         .build();
   }

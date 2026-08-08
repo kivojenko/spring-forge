@@ -23,7 +23,7 @@ public abstract class OneToManyEndpointRelation extends ServiceRepositoryEndpoin
         SUB_VAR_NAME,
         getterName(mappedBy),
         entityModel.getGetterName(),
-        BASE_ID_PARAM_NAME
+        baseIdParamName()
     ).addStatement(
         "throw new $T($S)",
         IllegalStateException.class,

@@ -11,6 +11,7 @@ import javax.lang.model.element.Modifier;
 import javax.lang.model.element.VariableElement;
 
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.*;
+import static com.kivojenko.spring.forge.jpa.utils.StringUtils.capitalize;
 import static com.kivojenko.spring.forge.jpa.utils.StringUtils.decapitalize;
 
 /**
@@ -20,11 +21,24 @@ import static com.kivojenko.spring.forge.jpa.utils.StringUtils.decapitalize;
 @SuperBuilder
 public abstract class EndpointRelation {
 
-  protected static final String BASE_ID_PARAM_NAME = "baseId";
+  protected String baseIdParamName() {
+    return entityModel.getJpaId().name();
+  }
+
+  protected String subIdParamName() {
+    if (targetEntityModel == null) {
+      return "subId";
+    }
+    String name = targetEntityModel.getJpaId().name();
+    if (name.equals(baseIdParamName())) {
+      return decapitalize(targetEntityModel.getEntityType().simpleName()) + capitalize(name);
+    }
+    return name;
+  }
+
   protected static final String BASE_VAR_NAME = "base";
   protected static final String UPDATED_BASE_VAR_NAME = "updatedBase";
 
-  protected static final String SUB_ID_PARAM_NAME = "subId";
   protected static final String SUB_VAR_NAME = "sub";
   protected static final String UPDATED_SUB_VAR_NAME = "updatedSub";
 
@@ -33,7 +47,7 @@ public abstract class EndpointRelation {
   }
 
   protected ParameterSpec baseParamSpec(boolean pathVariable) {
-    var param = ParameterSpec.builder(entityModel.getJpaId().type(), BASE_ID_PARAM_NAME);
+    var param = ParameterSpec.builder(entityModel.getJpaId().type(), baseIdParamName());
     if (pathVariable) {
       param.addAnnotation(PATH_VARIABLE);
     }
@@ -41,7 +55,7 @@ public abstract class EndpointRelation {
   }
 
   protected ParameterSpec subParamSpec(boolean pathVariable) {
-    var param = ParameterSpec.builder(targetEntityModel.getJpaId().type(), SUB_ID_PARAM_NAME);
+    var param = ParameterSpec.builder(targetEntityModel.getJpaId().type(), subIdParamName());
     if (pathVariable) {
       param.addAnnotation(PATH_VARIABLE);
     }
@@ -51,7 +65,7 @@ public abstract class EndpointRelation {
   protected String path;
 
   protected String uri() {
-    return "/{" + BASE_ID_PARAM_NAME + "}/" + path;
+    return "/{" + baseIdParamName() + "}/" + path;
   }
   
   @Getter(lazy = true)
@@ -124,7 +138,7 @@ public abstract class EndpointRelation {
   protected void addFindBase(MethodSpec.Builder methodSpec, boolean pathVariable) {
     methodSpec
         .addParameter(baseParamSpec(pathVariable))
-        .addStatement("var $L = getById($L)", BASE_VAR_NAME, BASE_ID_PARAM_NAME);
+        .addStatement("var $L = getById($L)", BASE_VAR_NAME, baseIdParamName());
   }
 
   /**

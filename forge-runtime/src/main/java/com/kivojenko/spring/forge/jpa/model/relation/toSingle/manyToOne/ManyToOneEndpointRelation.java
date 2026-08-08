@@ -20,8 +20,8 @@ public abstract class ManyToOneEndpointRelation extends ServiceRepositoryEndpoin
         getterName(getFieldName()),
         BASE_VAR_NAME,
         getterName(getFieldName()),
-        getterName("id"),
-        SUB_ID_PARAM_NAME
+        getterName(targetEntityModel.getJpaId().name()),
+        subIdParamName()
     ).addStatement(
         "throw new $T($S)",
         IllegalStateException.class,

@@ -32,7 +32,7 @@ public class LinkExistingManyToManyEndpointRelation extends ServiceRepositoryEnd
 
   @Override
   protected String uri() {
-    return super.uri() + "/{" + SUB_ID_PARAM_NAME + "}";
+    return super.uri() + "/{" + subIdParamName() + "}";
   }
 
   @Override
@@ -45,8 +45,8 @@ public class LinkExistingManyToManyEndpointRelation extends ServiceRepositoryEnd
     var builder = MethodSpec
         .methodBuilder(generatedMethodName())
         .addJavadoc("Links an existing {@link $T} entity to a {@link $T} entity.\n", targetEntityModel.getEntityType(), entityModel.getEntityType())
-        .addJavadoc("@param $L the ID of the {@link $T} entity\n", BASE_ID_PARAM_NAME, entityModel.getEntityType())
-        .addJavadoc("@param $L the ID of the {@link $T} entity to link\n", SUB_ID_PARAM_NAME, targetEntityModel.getEntityType())
+        .addJavadoc("@param $L the ID of the {@link $T} entity\n", baseIdParamName(), entityModel.getEntityType())
+        .addJavadoc("@param $L the ID of the {@link $T} entity to link\n", subIdParamName(), targetEntityModel.getEntityType())
         .addModifiers(Modifier.PUBLIC)
         .addAnnotation(TRANSACTIONAL)
         .returns(void.class);
