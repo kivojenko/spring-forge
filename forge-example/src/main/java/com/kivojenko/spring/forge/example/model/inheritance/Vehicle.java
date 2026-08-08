@@ -3,6 +3,7 @@ package com.kivojenko.spring.forge.example.model.inheritance;
 import com.kivojenko.spring.forge.annotation.WithJpaRepository;
 import com.kivojenko.spring.forge.annotation.WithRestController;
 import com.kivojenko.spring.forge.annotation.WithService;
+import com.kivojenko.spring.forge.annotation.filter.FilterField;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -20,5 +21,6 @@ public abstract class Vehicle {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @FilterField
     private String name;
 }
