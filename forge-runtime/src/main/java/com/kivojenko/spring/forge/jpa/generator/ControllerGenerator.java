@@ -79,19 +79,23 @@ public final class ControllerGenerator {
     }
 
     if (model.getRequirements().getOrCreateAnnotation() != null) {
-      var annotation = AnnotationSpec.builder(POST_MAPPING).addMember("value", "$S", "/get-or-create").build();
+      var cfg = model.getRequirements().getOrCreateAnnotation();
+      var path = cfg.path().isEmpty() ? "/get-or-create" : cfg.path();
+      var mapping = AnnotationSpec.builder(POST_MAPPING).addMember("value", "$S", path).build();
+      var field = cfg.field().isEmpty() ? "name" : cfg.field();
+      var fieldType = model.resolveFieldTypeName(field);
 
-      var nameParam = ParameterSpec.builder(String.class, "name").addAnnotation(REQUEST_PARAM).build();
+      var param = ParameterSpec.builder(fieldType, field).addAnnotation(REQUEST_PARAM).build();
       var getOrCreate = MethodSpec
           .methodBuilder("getOrCreate")
-          .addJavadoc("Retrieves an existing {@link $T} by name or creates it if it does not exist.\n", model.getEntityType())
-          .addJavadoc("@param name the name of the entity\n")
+          .addJavadoc("Retrieves an existing {@link $T} by $L or creates it if it does not exist.\n", model.getEntityType(), field)
+          .addJavadoc("@param $L the $L of the entity\n", field, field)
           .addJavadoc("@return the retrieved or newly created entity\n")
           .addModifiers(Modifier.PUBLIC)
-          .addAnnotation(annotation)
-          .addParameter(nameParam)
+          .addAnnotation(mapping)
+          .addParameter(param)
           .returns(model.getEntityType())
-          .addStatement("return service.getOrCreate(name)")
+          .addStatement("return service.getOrCreate($L)", field)
           .build();
       builder.addMethod(getOrCreate);
     }

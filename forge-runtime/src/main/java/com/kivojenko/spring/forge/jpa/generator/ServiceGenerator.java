@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.*;
+import static com.kivojenko.spring.forge.jpa.utils.StringUtils.capitalize;
 
 /**
  * Generator for Spring services.
@@ -78,37 +79,46 @@ public final class ServiceGenerator {
           .addStatement("return super.create(entity)")
           .build();
       builder.addMethod(create);
+    }
 
-      if (model.getRequirements().getOrCreateAnnotation() != null) {
-        var getOrCreate = MethodSpec
-            .methodBuilder("getOrCreate")
-            .addJavadoc("Retrieves an existing {@link $T} by name or creates it if it does not exist.\n", model.getEntityType())
-            .addJavadoc("@param name the name of the entity\n")
-            .addJavadoc("@return the retrieved or newly created entity\n")
-            .addModifiers(Modifier.PUBLIC)
-            .addAnnotation(TRANSACTIONAL)
-            .returns(model.getEntityType())
-            .addParameter(String.class, "name")
-            .addStatement("return repository.findByNameIgnoreCase(name)" + ".orElseGet(() -> createSafely(name))")
-            .build();
+    // Generate getOrCreate by configured field (defaults to "name"). Not limited to HasName.
+    if (model.getRequirements().getOrCreateAnnotation() != null) {
+      var annotation = model.getRequirements().getOrCreateAnnotation();
+      var field = annotation.field().isEmpty() ? "name" : annotation.field();
+      var fieldType = model.resolveFieldTypeName(field);
+      boolean isString = fieldType.equals(ClassName.get(String.class));
+      boolean ignoreCase = isString && annotation.ignoreCase();
+      var cap = capitalize(field);
+      var findMethod = "findBy" + cap + (ignoreCase ? "IgnoreCase" : "");
 
-        MethodSpec createSafely = MethodSpec
-            .methodBuilder("createSafely")
-            .addJavadoc("Attempts to create an entity with the given name, handling race conditions where another thread might have created it.\n")
-            .addJavadoc("@param name the name of the entity\n")
-            .addJavadoc("@return the retrieved or newly created entity\n")
-            .addModifiers(Modifier.PROTECTED)
-            .returns(model.getEntityType())
-            .addParameter(String.class, "name")
-            .beginControlFlow("try")
-            .addStatement("return repository.save(create(name))")
-            .nextControlFlow("catch ($T e)", DATA_INTEGRITY_VIOLATION_EXCEPTION)
-            .addStatement("return repository.findByNameIgnoreCase(name).orElseThrow()")
-            .endControlFlow()
-            .build();
+      var getOrCreate = MethodSpec
+          .methodBuilder("getOrCreate")
+          .addJavadoc("Retrieves an existing {@link $T} by $L or creates it if it does not exist.\n", model.getEntityType(), field)
+          .addJavadoc("@param $L the $L of the entity\n", field, field)
+          .addJavadoc("@return the retrieved or newly created entity\n")
+          .addModifiers(Modifier.PUBLIC)
+          .addAnnotation(TRANSACTIONAL)
+          .returns(model.getEntityType())
+          .addParameter(fieldType, field)
+          .addStatement("return repository.$L($L).orElseGet(() -> createSafely($L))", findMethod, field, field)
+          .build();
 
-        builder.addMethod(model.nameCreateMethod()).addMethod(getOrCreate).addMethod(createSafely);
-      }
+      MethodSpec createSafely = MethodSpec
+          .methodBuilder("createSafely")
+          .addJavadoc("Attempts to create an entity with the given $L, handling race conditions where another thread might have created it.\n", field)
+          .addJavadoc("@param $L the $L of the entity\n", field, field)
+          .addJavadoc("@return the retrieved or newly created entity\n")
+          .addModifiers(Modifier.PROTECTED)
+          .returns(model.getEntityType())
+          .addParameter(fieldType, field)
+          .beginControlFlow("try")
+          .addStatement("return repository.save(create($L))", field)
+          .nextControlFlow("catch ($T e)", DATA_INTEGRITY_VIOLATION_EXCEPTION)
+          .addStatement("return repository.$L($L).orElseThrow()", findMethod, field)
+          .endControlFlow()
+          .build();
+
+      builder.addMethod(model.createMethodForField(field)).addMethod(getOrCreate).addMethod(createSafely);
     }
 
 

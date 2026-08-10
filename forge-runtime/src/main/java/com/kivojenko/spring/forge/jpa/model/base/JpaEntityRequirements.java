@@ -4,18 +4,16 @@ import com.kivojenko.spring.forge.annotation.GetOrCreate;
 import com.kivojenko.spring.forge.annotation.WithJpaRepository;
 import com.kivojenko.spring.forge.annotation.WithRestController;
 import com.kivojenko.spring.forge.annotation.WithService;
-import com.kivojenko.spring.forge.jpa.utils.LoggingUtils;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
-
+import java.util.ArrayList;
+import java.util.List;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.MirroredTypesException;
 import javax.lang.model.type.TypeMirror;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Requirements and configuration flags for a JPA entity model.
@@ -56,17 +54,6 @@ public record JpaEntityRequirements(
         var repositoryInterfaces = resolveRepositoryInterfaces(entity, repositoryAnnotation, env);
 
         var getOrCreateAnnotation = entity.getAnnotation(GetOrCreate.class);
-
-        if (getOrCreateAnnotation != null && !hasName) {
-            LoggingUtils.error(
-                    env,
-                    entity,
-                    "Entity " +
-                            entity.getSimpleName() +
-                            " is annotated with @WithGetOrCreate but does not implement HasName"
-            );
-            getOrCreateAnnotation = null;
-        }
 
         return new JpaEntityRequirements(
                 hasName,

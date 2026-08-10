@@ -1,10 +1,12 @@
 package com.kivojenko.spring.forge.example.model.filter;
 
+import com.kivojenko.spring.forge.annotation.GetOrCreate;
 import com.kivojenko.spring.forge.annotation.WithRestController;
 import com.kivojenko.spring.forge.annotation.filter.ComparisonMatchMode;
 import com.kivojenko.spring.forge.annotation.filter.FilterField;
 import com.kivojenko.spring.forge.annotation.filter.IterableMatchMode;
 import com.kivojenko.spring.forge.annotation.filter.StringMatchMode;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -31,6 +33,7 @@ import java.util.Set;
 @Entity
 @Table(name = "products")
 @WithRestController
+@GetOrCreate(field = "sku")
 public class Product {
 
   @Id
@@ -41,6 +44,7 @@ public class Product {
   private String name;
 
   @FilterField(stringMatchMode = StringMatchMode.EQUALS_IGNORE_CASE)
+  @Column(unique = true)
   private String sku;
 
   @FilterField

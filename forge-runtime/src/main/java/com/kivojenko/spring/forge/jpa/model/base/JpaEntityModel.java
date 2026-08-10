@@ -20,8 +20,6 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.type.DeclaredType;
-import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import java.util.List;
 
@@ -123,82 +121,90 @@ public final class JpaEntityModel {
                 .build();
     }
 
-    public MethodSpec nameCreateMethod() {
+  /**
+     * Builds a {@code create(<fieldType> <fieldName>)} factory method using builder/setter/ctor paths for the given field.
+     */
+    public MethodSpec createMethodForField(String fieldName) {
+        var typeMirror = findFieldTypeMirror(fieldName);
+        if (typeMirror == null) {
+            throw new IllegalStateException("Cannot find field '" + fieldName + "' on " + getElement().getSimpleName());
+        }
+        var typeName = TypeName.get(typeMirror);
+
         if (hasBuilder()) {
-            if (builderHasNameSetter()) return createViaBuilder();
-            return createViaBuilderAndSetter();
+            if (builderHasSetter(fieldName)) return createViaBuilder(fieldName, typeName);
+            return createViaBuilderAndSetter(fieldName, typeName);
         }
 
-        if (hasEmptyCtor()) return createViaEmptyCtorAndSetter();
-        if (hasNameCtor()) return createViaCtor();
+        if (hasEmptyCtor()) return createViaEmptyCtorAndSetter(fieldName, typeName);
+        if (hasCtorWithSingleParam(typeMirror)) return createViaCtor(fieldName, typeName);
 
-        throw new IllegalStateException("Cannot generate getOrCreateAnnotation for " + getElement().getSimpleName());
+        throw new IllegalStateException("Cannot generate create(..) for field '" + fieldName + "' on " + getElement().getSimpleName());
     }
 
-    private MethodSpec createViaCtor() {
+    private MethodSpec createViaCtor(String fieldName, TypeName fieldType) {
         return MethodSpec
                 .methodBuilder("create")
-                .addJavadoc("Creates a new instance of {@link $T} with the given name using the constructor.\n", getEntityType())
-                .addJavadoc("@param name the name of the entity\n")
+                .addJavadoc("Creates a new instance of {@link $T} with the given $L using the constructor.\n", getEntityType(), fieldName)
+                .addJavadoc("@param $L the $L of the entity\n", fieldName, fieldName)
                 .addJavadoc("@return the newly created entity\n")
                 .addModifiers(Modifier.PROTECTED)
                 .returns(getEntityType())
-                .addParameter(String.class, "name")
-                .addStatement("return new $T(name)", getEntityType())
+                .addParameter(fieldType, fieldName)
+                .addStatement("return new $T($L)", getEntityType(), fieldName)
                 .build();
     }
 
-    private MethodSpec createViaBuilder() {
+    private MethodSpec createViaBuilder(String fieldName, TypeName fieldType) {
         return MethodSpec
                 .methodBuilder("create")
-                .addJavadoc("Creates a new instance of {@link $T} with the given name using the builder.\n", getEntityType())
-                .addJavadoc("@param name the name of the entity\n")
+                .addJavadoc("Creates a new instance of {@link $T} with the given $L using the builder.\n", getEntityType(), fieldName)
+                .addJavadoc("@param $L the $L of the entity\n", fieldName, fieldName)
                 .addJavadoc("@return the newly created entity\n")
                 .addModifiers(Modifier.PROTECTED)
                 .returns(getEntityType())
-                .addParameter(String.class, "name")
-                .addStatement("return $T.builder().name(name).build()", getEntityType())
+                .addParameter(fieldType, fieldName)
+                .addStatement("return $T.builder().$L($L).build()", getEntityType(), fieldName, fieldName)
                 .build();
     }
 
-    private MethodSpec createViaEmptyCtorAndSetter() {
+    private MethodSpec createViaEmptyCtorAndSetter(String fieldName, TypeName fieldType) {
         return MethodSpec
                 .methodBuilder("create")
-                .addJavadoc("Creates a new instance of {@link $T} with the given name using the empty constructor and a setter.\n", getEntityType())
-                .addJavadoc("@param name the name of the entity\n")
+                .addJavadoc("Creates a new instance of {@link $T} with the given $L using the empty constructor and a setter.\n", getEntityType(), fieldName)
+                .addJavadoc("@param $L the $L of the entity\n", fieldName, fieldName)
                 .addJavadoc("@return the newly created entity\n")
                 .addModifiers(Modifier.PROTECTED)
                 .returns(getEntityType())
-                .addParameter(String.class, "name")
+                .addParameter(fieldType, fieldName)
                 .addStatement("var entity = new $T()", getEntityType())
-                .addStatement("entity.setName(name)")
+                .addStatement("entity.$L($L)", StringUtils.setterName(fieldName), fieldName)
                 .addStatement("return entity")
                 .build();
     }
 
-    private MethodSpec createViaBuilderAndSetter() {
+    private MethodSpec createViaBuilderAndSetter(String fieldName, TypeName fieldType) {
         return MethodSpec
                 .methodBuilder("create")
-                .addJavadoc("Creates a new instance of {@link $T} with the given name using the builder and a setter.\n", getEntityType())
-                .addJavadoc("@param name the name of the entity\n")
+                .addJavadoc("Creates a new instance of {@link $T} with the given $L using the builder and a setter.\n", getEntityType(), fieldName)
+                .addJavadoc("@param $L the $L of the entity\n", fieldName, fieldName)
                 .addJavadoc("@return the newly created entity\n")
                 .addModifiers(Modifier.PROTECTED)
                 .returns(getEntityType())
-                .addParameter(String.class, "name")
+                .addParameter(fieldType, fieldName)
                 .addStatement("var entity = $T.builder().build()", getEntityType())
-                .addStatement("entity.setName(name)")
+                .addStatement("entity.$L($L)", StringUtils.setterName(fieldName), fieldName)
                 .addStatement("return entity")
                 .build();
     }
 
-    private boolean hasNameCtor() {
+    private boolean hasCtorWithSingleParam(TypeMirror paramType) {
         return getElement()
                 .getEnclosedElements()
                 .stream()
                 .filter(e -> e.getKind() == ElementKind.CONSTRUCTOR)
                 .map(ExecutableElement.class::cast)
-                .filter(c -> c.getParameters().size() == 1)
-                .anyMatch(c -> isNameType(c.getParameters().getFirst().asType()));
+                .anyMatch(c -> c.getParameters().size() == 1 && env.getTypeUtils().isSameType(c.getParameters().getFirst().asType(), paramType));
     }
 
     private boolean hasEmptyCtor() {
@@ -210,17 +216,29 @@ public final class JpaEntityModel {
                 .anyMatch(c -> c.getParameters().isEmpty());
     }
 
-    private boolean builderHasNameSetter() {
+    private boolean builderHasSetter(String fieldName) {
         return getElement()
                 .getEnclosedElements()
                 .stream()
                 .filter(c -> c.getKind() == ElementKind.FIELD)
-                .anyMatch(c -> c.getSimpleName().contentEquals("name") && isNameType(c.asType()));
+                .anyMatch(c -> c.getSimpleName().contentEquals(fieldName));
     }
 
-    private boolean isNameType(TypeMirror type) {
-        return type.getKind() == TypeKind.DECLARED &&
-                ((TypeElement) ((DeclaredType) type).asElement()).getQualifiedName().contentEquals("java.lang.String");
+    private TypeMirror findFieldTypeMirror(String fieldName) {
+        var opt = getElement()
+                .getEnclosedElements()
+                .stream()
+                .filter(e -> e.getKind() == ElementKind.FIELD && e.getSimpleName().contentEquals(fieldName))
+                .findFirst();
+        return opt.map(javax.lang.model.element.Element::asType).orElse(null);
+    }
+
+    public TypeName resolveFieldTypeName(String fieldName) {
+        var tm = findFieldTypeMirror(fieldName);
+        if (tm == null) {
+            throw new IllegalStateException("Cannot find field '" + fieldName + "' on " + getElement().getSimpleName());
+        }
+        return TypeName.get(tm);
     }
 
     private boolean hasBuilder() {

@@ -51,6 +51,30 @@ public final class RepositoryGenerator {
             addFilterMethods(builder, model);
         }
 
+        // Add minimal query support for @GetOrCreate when not covered by HasNameRepository
+        if (model.getRequirements().getOrCreateAnnotation() != null) {
+            var cfg = model.getRequirements().getOrCreateAnnotation();
+            var field = cfg.field().isEmpty() ? "name" : cfg.field();
+            var needCustom = !(model.getRequirements().hasName() && field.equals("name"));
+            if (needCustom) {
+                var cap = capitalize(field);
+                var fieldType = model.resolveFieldTypeName(field);
+                boolean isString = fieldType.equals(com.squareup.javapoet.ClassName.get(String.class));
+                boolean ignoreCase = isString && cfg.ignoreCase();
+                var optEntity = ParameterizedTypeName.get(
+                        com.squareup.javapoet.ClassName.get(java.util.Optional.class),
+                        model.getEntityType()
+                );
+                var findMethodName = "findBy" + cap + (ignoreCase ? "IgnoreCase" : "");
+                var findMethod = MethodSpec.methodBuilder(findMethodName)
+                        .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
+                        .returns(optEntity)
+                        .addParameter(fieldType, field)
+                        .build();
+                builder.addMethod(findMethod);
+            }
+        }
+
         return builder.build();
     }
 
