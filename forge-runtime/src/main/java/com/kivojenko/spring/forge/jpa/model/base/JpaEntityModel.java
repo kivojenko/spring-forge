@@ -10,6 +10,7 @@ import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeName;
 import jakarta.persistence.MappedSuperclass;
+import java.util.LinkedHashMap;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -87,6 +88,9 @@ public final class JpaEntityModel {
 
     @Getter(lazy = true)
     private final List<FilterFieldModel> filterableFields = FilterFieldModelFactory.resolve(getElement(), env);
+
+    @Getter(lazy = true)
+    private final List<FilterFieldModel> allFilterableFields = FilterFieldModelFactory.resolveAll(getElement(), env);
 
     @Getter(lazy = true)
     private final List<EndpointRelation> endpointRelations = EndpointRelationResolver.resolve(getElement(), env);
@@ -261,8 +265,57 @@ public final class JpaEntityModel {
                         StringUtils.decapitalize(getEntityType().simpleName())
                 );
 
+        // Group all filterable mappings by exposed name to allow OR-combining duplicates
+        var groups = new LinkedHashMap<String, List<FilterFieldModel>>();
+        for (var f : getAllFilterableFields()) {
+            groups.computeIfAbsent(f.getName(), k -> new java.util.ArrayList<>()).add(f);
+        }
+
         for (var field : getFilterableFields()) {
-            field.addFiltering(builder);
+            var group = groups.get(field.getName());
+            if (group == null || group.size() <= 1) {
+                // No duplicates — generate default filtering for the primary mapping
+                field.addFiltering(builder);
+                continue;
+            }
+
+            // Duplicates present: for String-typed filters, OR all mapped targets using the primary's match mode
+            if (field.getTypeName().equals(com.squareup.javapoet.ClassName.get(String.class))) {
+                var primary = group.getFirst();
+                String op;
+                switch (primary.getAnnotation().stringMatchMode()) {
+                    case STARTS_WITH -> op = "startsWith";
+                    case ENDS_WITH -> op = "endsWith";
+                    case CONTAINS -> op = "contains";
+                    case CONTAINS_IGNORE_CASE -> op = "containsIgnoreCase";
+                    case EQUALS -> op = "eq";
+                    case EQUALS_IGNORE_CASE -> op = "equalsIgnoreCase";
+                    default -> op = "containsIgnoreCase"; // sensible default
+                }
+
+                builder.beginControlFlow("if ($L != null && !$L.isBlank())", field.getName(), field.getName());
+                // Initialize OR expression with the first mapping
+                var first = group.getFirst();
+                builder.addStatement(
+                        "var __expr = entity.$L." + op + "($L)",
+                        first.getTargetFieldName(),
+                        field.getName()
+                );
+                // Chain remaining mappings with .or(...)
+                for (int i = 1; i < group.size(); i++) {
+                    var alt = group.get(i);
+                    builder.addStatement(
+                            "__expr = __expr.or(entity.$L." + op + "($L))",
+                            alt.getTargetFieldName(),
+                            field.getName()
+                    );
+                }
+                builder.addStatement("builder.and(__expr)");
+                builder.endControlFlow();
+            } else {
+                // Non-string or unsupported types — fall back to primary mapping only
+                field.addFiltering(builder);
+            }
         }
         return builder.addStatement("return $L", BUILDER_VAR_NAME).build();
     }

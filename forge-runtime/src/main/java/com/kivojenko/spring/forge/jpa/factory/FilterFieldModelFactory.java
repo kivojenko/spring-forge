@@ -49,7 +49,7 @@ public class FilterFieldModelFactory {
         if (annotation == null)
           continue;
 
-        // Skip if a field with the same name was already added from a subclass
+        // Skip if a field with the same exposed name was already added — we keep the first one for DTO uniqueness
         var fieldName = annotation.name().isEmpty() ? field.getSimpleName().toString() : annotation.name();
         if (filterFields.stream().anyMatch(f -> fieldName.equals(f.getName()))) {
           continue;
@@ -121,6 +121,99 @@ public class FilterFieldModelFactory {
 
     addDiscriminatorField(entity, filterFields, env);
 
+    return filterFields;
+  }
+
+  /**
+   * Resolve all filter field mappings including duplicates by exposed name (order preserved).
+   * This is useful for generating fallback predicates where we want to try alternative mappings
+   * when two or more fields share the same exposed filter name.
+   */
+  public static List<FilterFieldModel> resolveAll(TypeElement entity, ProcessingEnvironment env) {
+    var filterFields = new ArrayList<FilterFieldModel>();
+    if (entity == null)
+      return filterFields;
+
+    var typeUtils = env.getTypeUtils();
+    var elementUtils = env.getElementUtils();
+    var iterableElement = elementUtils.getTypeElement("java.lang.Iterable");
+    var entityAnnotation = elementUtils.getTypeElement("jakarta.persistence.Entity");
+
+    TypeElement current = entity;
+    while (current != null) {
+      var fields = ElementFilter.fieldsIn(current.getEnclosedElements());
+
+      for (var field : fields) {
+        var annotation = field.getAnnotation(FilterField.class);
+
+        if (annotation == null)
+          continue;
+
+        var type = field.asType();
+        boolean isIterable = typeUtils.isAssignable(typeUtils.erasure(field.asType()), iterableElement.asType());
+
+        var isJavaTransient = field.getModifiers().contains(Modifier.TRANSIENT);
+        var isJpaTransient = field.getAnnotation(Transient.class) != null;
+        var isBeansTransient = field.getAnnotation(java.beans.Transient.class) != null;
+        if ((isJavaTransient || isJpaTransient || isBeansTransient) && annotation.targetField().isEmpty()) {
+          throw new IllegalStateException(
+              "@FilterField is not allowed on transient field: " + field.getSimpleName() + " in "
+                  + current.getQualifiedName());
+        }
+
+        var entityCandidate =
+            isIterable && type instanceof DeclaredType declared && !declared.getTypeArguments().isEmpty() ?
+            declared.getTypeArguments().getFirst() :
+            type;
+
+        var typeElement = typeUtils.asElement(entityCandidate);
+        var singleEntity = !isIterable && typeElement != null && typeElement.getAnnotationMirrors()
+            .stream()
+            .anyMatch(a -> typeUtils.isSameType(a.getAnnotationType(), entityAnnotation.asType()));
+
+        var targetField = annotation.targetField();
+        var filterType = type;
+        var filterTypeName = TypeName.get(type);
+        var originalIterable = isIterable;
+        var originalSingleEntity = singleEntity;
+
+        if (!targetField.isEmpty() && (singleEntity || isIterable)) {
+          filterType = resolveTargetFieldType(entityCandidate, targetField, env);
+          filterTypeName = TypeName.get(filterType);
+          isIterable = false;
+          singleEntity = false;
+        }
+
+        filterFields.add(FilterFieldModel.builder()
+                             .element(field)
+                             .type(filterType)
+                             .typeElement((TypeElement) typeElement)
+                             .typeName(filterTypeName)
+                             .annotation(annotation)
+                             .iterable(isIterable)
+                             .singleEntity(singleEntity)
+                             .originalIterable(originalIterable)
+                             .originalSingleEntity(originalSingleEntity)
+                             .entityCandidate(entityCandidate)
+                             .env(env)
+                             .targetField(targetField)
+                             .required(annotation.required())
+                             .orNull(annotation.orNull())
+                             .build());
+      }
+
+      TypeMirror superclass = current.getSuperclass();
+      if (superclass.getKind() == TypeKind.DECLARED) {
+        current = (TypeElement) typeUtils.asElement(superclass);
+        if (current.getAnnotation(Entity.class) == null && current.getAnnotation(MappedSuperclass.class) == null) {
+          current = null;
+        }
+      } else {
+        current = null;
+      }
+    }
+
+    // Do not synthesize discriminator mapping here to keep raw duplicates only; the primary resolver will add it.
     return filterFields;
   }
 
