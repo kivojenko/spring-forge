@@ -328,18 +328,39 @@ public class FilterFieldModelFactory {
     var currentType = startType;
     for (String part : path.split("\\.")) {
       var element = env.getTypeUtils().asElement(currentType);
-      if (!(element instanceof TypeElement typeElement))
+      if (!(element instanceof TypeElement typeElement)) {
         return currentType;
-      var field = typeElement.getEnclosedElements()
-          .stream()
-          .filter(e -> e.getKind() == ElementKind.FIELD && e.getSimpleName().toString().equals(part))
-          .findFirst();
-      if (field.isPresent()) {
-        currentType = field.get().asType();
+      }
+
+      var field = findFieldInHierarchy(typeElement, part, env);
+      if (field != null) {
+        currentType = field.asType();
       } else {
+        // If not found anywhere in the hierarchy, keep current type (best-effort, backward compatible)
         return currentType;
       }
     }
     return currentType;
+  }
+
+  private static javax.lang.model.element.VariableElement findFieldInHierarchy(
+      TypeElement typeElement, String fieldName, ProcessingEnvironment env) {
+    TypeElement current = typeElement;
+    while (current != null) {
+      var match = current.getEnclosedElements()
+          .stream()
+          .filter(e -> e.getKind() == ElementKind.FIELD && e.getSimpleName().contentEquals(fieldName))
+          .findFirst();
+      if (match.isPresent()) {
+        return (javax.lang.model.element.VariableElement) match.get();
+      }
+      var superType = current.getSuperclass();
+      if (superType.getKind() == TypeKind.DECLARED) {
+        current = (TypeElement) ((DeclaredType) superType).asElement();
+      } else {
+        current = null;
+      }
+    }
+    return null;
   }
 }
