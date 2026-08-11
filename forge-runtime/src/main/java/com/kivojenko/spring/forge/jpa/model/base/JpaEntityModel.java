@@ -20,6 +20,8 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import java.util.List;
 
@@ -225,12 +227,28 @@ public final class JpaEntityModel {
     }
 
     private TypeMirror findFieldTypeMirror(String fieldName) {
-        var opt = getElement()
-                .getEnclosedElements()
-                .stream()
-                .filter(e -> e.getKind() == ElementKind.FIELD && e.getSimpleName().contentEquals(fieldName))
-                .findFirst();
-        return opt.map(javax.lang.model.element.Element::asType).orElse(null);
+        var varEl = findFieldInHierarchy(getElement(), fieldName);
+        return varEl != null ? varEl.asType() : null;
+    }
+
+    private javax.lang.model.element.VariableElement findFieldInHierarchy(TypeElement typeElement, String fieldName) {
+        TypeElement current = typeElement;
+        while (current != null) {
+            var match = current.getEnclosedElements()
+                    .stream()
+                    .filter(e -> e.getKind() == ElementKind.FIELD && e.getSimpleName().contentEquals(fieldName))
+                    .findFirst();
+            if (match.isPresent()) {
+                return (javax.lang.model.element.VariableElement) match.get();
+            }
+            var superType = current.getSuperclass();
+            if (superType.getKind() == TypeKind.DECLARED) {
+                current = (TypeElement) ((DeclaredType) superType).asElement();
+            } else {
+                current = null;
+            }
+        }
+        return null;
     }
 
     public TypeName resolveFieldTypeName(String fieldName) {

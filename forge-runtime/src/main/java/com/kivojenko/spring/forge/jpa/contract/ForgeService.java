@@ -1,6 +1,8 @@
 package com.kivojenko.spring.forge.jpa.contract;
 
+import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.persistence.PersistenceContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,6 +22,9 @@ import java.util.List;
 public abstract class ForgeService<E, ID, R extends JpaRepository<E, ID>> {
   @Autowired
   protected R repository;
+
+  @PersistenceContext
+  protected EntityManager entityManager;
 
   /**
    * Fixes or transforms the given entity before it is saved.
@@ -63,7 +68,10 @@ public abstract class ForgeService<E, ID, R extends JpaRepository<E, ID>> {
   public E create(E entity) {
     entity = fixParameters(entity);
 
-    return repository.save(entity);
+    // Ensure DB-generated values (e.g., defaults, triggers) are materialized
+    entity = repository.saveAndFlush(entity);
+    entityManager.refresh(entity);
+    return entity;
   }
 
   /**
