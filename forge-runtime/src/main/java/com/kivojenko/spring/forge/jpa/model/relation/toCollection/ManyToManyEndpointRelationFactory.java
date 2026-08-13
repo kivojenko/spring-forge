@@ -2,6 +2,7 @@ package com.kivojenko.spring.forge.jpa.model.relation.toCollection;
 
 import com.kivojenko.spring.forge.jpa.model.relation.EndpointRelation;
 import com.kivojenko.spring.forge.jpa.model.relation.EndpointRelationFactory;
+import com.kivojenko.spring.forge.jpa.model.relation.toCollection.manyToMany.AddNewManyToManyEndpointRelation;
 import com.kivojenko.spring.forge.jpa.model.relation.toCollection.manyToMany.LinkExistingManyToManyEndpointRelation;
 import com.kivojenko.spring.forge.jpa.model.relation.toCollection.manyToMany.ReadManyToManyEndpointRelation;
 import com.kivojenko.spring.forge.jpa.model.relation.toCollection.manyToMany.UnlinkManyToManyEndpointRelation;
@@ -24,6 +25,17 @@ public class ManyToManyEndpointRelationFactory extends EndpointRelationFactory {
   @Override
   public EndpointRelation getLinkExistingRelation() {
     return LinkExistingManyToManyEndpointRelation
+        .builder()
+        .path(path)
+        .field(field)
+        .entityModel(entityModel)
+        .targetEntityModel(targetEntityModel)
+        .build();
+  }
+
+  @Override
+  public EndpointRelation getAddNewRelation() {
+    return AddNewManyToManyEndpointRelation
         .builder()
         .path(path)
         .field(field)
