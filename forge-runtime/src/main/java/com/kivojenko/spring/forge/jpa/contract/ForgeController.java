@@ -80,6 +80,20 @@ public abstract class ForgeController<E, ID, R extends JpaRepository<E, ID>, S e
   }
 
   /**
+   * Delegates to {@link ForgeService#update(Object, Object)} using the HTTP PATCH method.
+   * Semantically this behaves as an update operation; partial update semantics are
+   * determined by the service implementation.
+   *
+   * @param id the ID of the entity to update
+   * @param entity the entity data to apply
+   * @return the updated entity
+   */
+  @PatchMapping("/{id}")
+  public E patch(@PathVariable(name = "id") ID id, @RequestBody java.util.Map<String, Object> fields) {
+    return service.patch(id, fields);
+  }
+
+  /**
    * Delegates to {@link ForgeService#deleteById(Object)}.
    *
    * @param id the ID of the entity to delete

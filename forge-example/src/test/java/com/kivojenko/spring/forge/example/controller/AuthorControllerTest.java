@@ -17,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -262,6 +263,71 @@ public class AuthorControllerTest extends WithPostgres {
             .content(objectMapper.writeValueAsString(Author.builder().name("New Name").build())))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.name", is("New Name")));
+  }
+
+  @Test
+  void testBasePatch() throws Exception {
+    String json = mockMvc
+        .perform(post("/authors")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(Author.builder().name("Old Name").build())))
+        .andExpect(status().isCreated())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+
+    Long id = objectMapper.readTree(json).get("id").asLong();
+
+    mockMvc
+        .perform(patch("/authors/{id}", id)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"name\":\"Patched Name\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.name", is("Patched Name")));
+  }
+
+  @Test
+  void testBasePatchNoFieldsNoOp() throws Exception {
+    String json = mockMvc
+        .perform(post("/authors")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(Author.builder().name("Stay Same").build())))
+        .andExpect(status().isCreated())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+
+    Long id = objectMapper.readTree(json).get("id").asLong();
+
+    mockMvc
+        .perform(patch("/authors/{id}", id)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.name", is("Stay Same")))
+        .andExpect(jsonPath("$.id", is(id.intValue())));
+  }
+
+  @Test
+  void testBasePatchIgnoresId() throws Exception {
+    String json = mockMvc
+        .perform(post("/authors")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(Author.builder().name("Before").build())))
+        .andExpect(status().isCreated())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+
+    Long id = objectMapper.readTree(json).get("id").asLong();
+
+    mockMvc
+        .perform(patch("/authors/{id}", id)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"ID\":999,\"name\":\"After\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id", is(id.intValue())))
+        .andExpect(jsonPath("$.name", is("After")));
   }
 
   @Test

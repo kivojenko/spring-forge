@@ -19,6 +19,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -321,5 +322,54 @@ class ProductControllerTest extends WithPostgres {
         .andExpect(jsonPath("$.content[1].name", is("Java Book")))
         .andExpect(jsonPath("$.content[2].name", is("Laptop")))
         .andExpect(jsonPath("$.content[3].name", is("Smartphone")));
+  }
+
+  @Test
+  void testPatchCoercesTypesFromStrings() throws Exception {
+    // create a minimal product to patch
+    String created = mockMvc.perform(post("/products").contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(Product.builder()
+                .name("To Patch Types")
+                .sku("PATCH_SKU_1001")
+                .inStock(false)
+                .type(ProductType.PHYSICAL)
+                .build())))
+        .andExpect(status().isCreated())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+
+    Long id = objectMapper.readTree(created).get("id").asLong();
+
+    mockMvc.perform(patch("/products/{id}", id)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"inStock\":\"true\",\"weight\":\"2.5\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.sku", is("PATCH_SKU_1001")))
+        .andExpect(jsonPath("$.inStock", is(true)))
+        .andExpect(jsonPath("$.weight", is(2.5)))
+        .andExpect(jsonPath("$.type", is("PHYSICAL")));
+  }
+
+  @Test
+  void testPatchUnknownFieldIsIgnored() throws Exception {
+    String created = mockMvc.perform(post("/products").contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(Product.builder()
+                .name("Keep Name")
+                .sku("PATCH_SKU_1002")
+                .build())))
+        .andExpect(status().isCreated())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+
+    Long id = objectMapper.readTree(created).get("id").asLong();
+
+    mockMvc.perform(patch("/products/{id}", id)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"unknown\":\"value\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id", is(id.intValue())))
+        .andExpect(jsonPath("$.name", is("Keep Name")));
   }
 }
