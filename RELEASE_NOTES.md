@@ -2,12 +2,13 @@
 
 All release notes have been moved to separate files in the `docs/releases` directory.
 
-- [Version 0.1.21 (2026-08-11)](docs/releases/v0.1.21.md)
-- [Version 0.1.20 (2026-08-08)](docs/releases/v0.1.20.md)
-- [Version 0.1.19 (2026-08-07)](docs/releases/v0.1.19.md)
-- [Version 0.1.18 (2026-08-07)](docs/releases/v0.1.18.md)
-- [Version 0.1.17 (2026-08-07)](docs/releases/v0.1.17.md)
-- [Version 0.1.16 (2026-07-18)](docs/releases/v0.1.16.md)
+ - [Version 0.1.22 (2026-08-13)](docs/releases/v0.1.22.md)
+ - [Version 0.1.21 (2026-08-11)](docs/releases/v0.1.21.md)
+ - [Version 0.1.20 (2026-08-08)](docs/releases/v0.1.20.md)
+ - [Version 0.1.19 (2026-08-07)](docs/releases/v0.1.19.md)
+ - [Version 0.1.18 (2026-08-07)](docs/releases/v0.1.18.md)
+ - [Version 0.1.17 (2026-08-07)](docs/releases/v0.1.17.md)
+ - [Version 0.1.16 (2026-07-18)](docs/releases/v0.1.16.md)
 - [Version 0.1.15 (2026-06-01)](docs/releases/v0.1.15.md)
 - [Version 0.1.14 (2026-04-07)](docs/releases/v0.1.14.md)
 - [Version 0.1.13 (2026-02-17)](docs/releases/v0.1.13.md)
