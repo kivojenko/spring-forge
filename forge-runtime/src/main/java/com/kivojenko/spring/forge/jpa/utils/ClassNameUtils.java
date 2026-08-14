@@ -1,5 +1,6 @@
 package com.kivojenko.spring.forge.jpa.utils;
 
+import com.kivojenko.spring.forge.jpa.contract.ForgeAbstractController;
 import com.kivojenko.spring.forge.jpa.contract.ForgeController;
 import com.kivojenko.spring.forge.jpa.contract.ForgeService;
 import com.kivojenko.spring.forge.jpa.contract.HasNameRepository;
@@ -56,6 +57,7 @@ public interface ClassNameUtils {
   ClassName JPA_REPOSITORY = ClassName.get("org.springframework.data.jpa.repository", "JpaRepository");
   ClassName SERVICE = ClassName.get("org.springframework.stereotype", "Service");
 
+  ClassName FORGE_ABSTRACT_CONTROLLER = ClassName.get(ForgeAbstractController.class);
   ClassName FORGE_CONTROLLER = ClassName.get(ForgeController.class);
   ClassName FORGE_SERVICE = ClassName.get(ForgeService.class);
   ClassName HAS_NAME_REPOSITORY = ClassName.get(HasNameRepository.class);

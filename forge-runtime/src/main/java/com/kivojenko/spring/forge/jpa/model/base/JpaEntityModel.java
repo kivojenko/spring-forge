@@ -279,6 +279,10 @@ public final class JpaEntityModel {
         return !getFilterableFields().isEmpty();
     }
 
+    public boolean isAbstract() {
+        return getElement().getModifiers().contains(Modifier.ABSTRACT);
+    }
+
     private ClassName resolveEntityPathType() {
         return ClassName.get(
                 env.getElementUtils().getPackageOf(element).getQualifiedName().toString(),

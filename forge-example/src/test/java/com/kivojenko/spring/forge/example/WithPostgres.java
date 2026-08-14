@@ -130,6 +130,19 @@ public abstract class WithPostgres {
       mockMvc.perform(delete("/items/{id}", itemId)).andExpect(status().isNoContent());
     }
 
+    String maintenanceRecordsJson = mockMvc
+        .perform(get("/maintenanceRecords"))
+        .andExpect(status().isOk())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+
+    JsonNode maintenanceRecordsRoot = objectMapper.readTree(maintenanceRecordsJson);
+    for (JsonNode record : maintenanceRecordsRoot.get("content")) {
+      Long recordId = record.get("id").asLong();
+      mockMvc.perform(delete("/maintenanceRecords/{id}", recordId)).andExpect(status().isNoContent());
+    }
+
     String vehiclesJson = mockMvc
         .perform(get("/vehicles"))
         .andExpect(status().isOk())

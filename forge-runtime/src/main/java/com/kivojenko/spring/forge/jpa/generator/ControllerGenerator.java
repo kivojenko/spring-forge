@@ -1,6 +1,7 @@
 package com.kivojenko.spring.forge.jpa.generator;
 
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.DELETE_MAPPING;
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.FORGE_ABSTRACT_CONTROLLER;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.FORGE_CONTROLLER;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.GET_MAPPING;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.HTTP_STATUS;
@@ -52,8 +53,9 @@ public final class ControllerGenerator {
    * @return the type specification
    */
   public static TypeSpec generate(JpaEntityModel model) {
+    var baseController = model.isAbstract() ? FORGE_ABSTRACT_CONTROLLER : FORGE_CONTROLLER;
     var superClass = ParameterizedTypeName.get(
-        FORGE_CONTROLLER,
+        baseController,
         model.getEntityType(),
         model.getJpaId().type(),
         model.getRepositoryType(),
@@ -78,7 +80,7 @@ public final class ControllerGenerator {
       builder.addAnnotation(REST_CONTROLLER).addAnnotation(mappingAnnotation);
     }
 
-    if (model.getRequirements().getOrCreateAnnotation() != null) {
+    if (model.getRequirements().getOrCreateAnnotation() != null && !model.isAbstract()) {
       var cfg = model.getRequirements().getOrCreateAnnotation();
       var path = cfg.path().isEmpty() ? "/get-or-create" : cfg.path();
       var mapping = AnnotationSpec.builder(POST_MAPPING).addMember("value", "$S", path).build();

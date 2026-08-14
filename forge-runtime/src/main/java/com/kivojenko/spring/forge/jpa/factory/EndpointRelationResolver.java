@@ -17,8 +17,10 @@ import org.jspecify.annotations.NonNull;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.*;
 import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
 import static java.beans.Introspector.decapitalize;
@@ -38,19 +40,37 @@ public class EndpointRelationResolver {
    */
   public static List<EndpointRelation> resolve(TypeElement entity, ProcessingEnvironment env) {
     var endpointRelations = new ArrayList<EndpointRelation>();
+    var seenFieldNames = new HashSet<String>();
+    var seenMethodNames = new HashSet<String>();
 
-    for (var enclosed : entity.getEnclosedElements()) {
-      if (enclosed instanceof VariableElement field) {
-        endpointRelations.addAll(resolveFieldEndpointRelation(field, env));
-      } else if (enclosed instanceof ExecutableElement getter) {
-        var relation = resolveGetterEndpointRelation(getter, env);
-        if (relation != null) endpointRelations.add(relation);
+    TypeElement current = entity;
+    while (current != null) {
+      for (var enclosed : current.getEnclosedElements()) {
+        if (enclosed instanceof VariableElement field) {
+          if (seenFieldNames.add(field.getSimpleName().toString())) {
+            endpointRelations.addAll(resolveFieldEndpointRelation(field, env));
+          }
+        } else if (enclosed instanceof ExecutableElement getter) {
+          if (seenMethodNames.add(getter.getSimpleName().toString())) {
+            var relation = resolveGetterEndpointRelation(getter, env);
+            if (relation != null) endpointRelations.add(relation);
+          }
+        }
       }
 
+      TypeMirror superclass = current.getSuperclass();
+      if (superclass != null && superclass.getKind() == TypeKind.DECLARED) {
+        current = (TypeElement) env.getTypeUtils().asElement(superclass);
+        if (current.getQualifiedName().contentEquals("java.lang.Object")) {
+          current = null;
+        }
+      } else {
+        current = null;
+      }
     }
+
     endpointRelations.forEach(r -> r.setEntityModel(JpaEntityModelFactory.get(entity)));
     return endpointRelations;
-
   }
 
   private static @NonNull List<EndpointRelation> resolveFieldEndpointRelation(
@@ -164,11 +184,14 @@ public class EndpointRelationResolver {
       }
     }
 
+    var targetModel = getEntityModelFromList(getter.getReturnType(), getter, env);
+    if (targetModel == null) return null;
+
     return ReadOneToManyEndpointRelation
         .builder()
         .path(path)
         .methodName(getter.getSimpleName().toString())
-        .targetEntityModel(getEntityModelFromList(getter.getReturnType(), getter, env))
+        .targetEntityModel(targetModel)
         .build();
   }
 

@@ -78,4 +78,12 @@ class VehicleControllerTest extends WithPostgres {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content", hasSize(3)));
     }
+
+    @Test
+    void testPostVehicleNotAllowed() throws Exception {
+        mockMvc.perform(post("/vehicles")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\": \"Abstract Vehicle\"}"))
+                .andExpect(status().isMethodNotAllowed());
+    }
 }

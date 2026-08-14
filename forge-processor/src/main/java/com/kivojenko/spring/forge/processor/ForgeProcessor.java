@@ -87,12 +87,14 @@ public final class ForgeProcessor extends AbstractProcessor {
       var relations = EndpointRelationResolver.resolve(entity, env);
 
       for (var rel : relations) {
-        var related = rel.getEntityModel().getElement();
+        var related = rel.getTargetEntityModel() != null ? rel.getTargetEntityModel().getElement() : null;
         if (related != null) {
           queue.add(related);
         }
       }
     }
+
+    roots.addAll(result);
   }
 
 

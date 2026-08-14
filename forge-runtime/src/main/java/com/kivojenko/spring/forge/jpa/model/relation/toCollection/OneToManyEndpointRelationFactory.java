@@ -24,6 +24,9 @@ public class OneToManyEndpointRelationFactory extends EndpointRelationFactory {
 
   @Override
   public EndpointRelation getAddNewRelation() {
+    if (targetEntityModel != null && targetEntityModel.isAbstract()) {
+      return null;
+    }
     return AddNewOneToManyEndpointRelation
         .builder()
         .path(path)

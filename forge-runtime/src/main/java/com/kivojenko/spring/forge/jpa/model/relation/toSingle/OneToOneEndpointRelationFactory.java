@@ -46,6 +46,10 @@ public class OneToOneEndpointRelationFactory extends EndpointRelationFactory {
           .build();
     }
 
+    if (targetEntityModel != null && targetEntityModel.isAbstract()) {
+      return null;
+    }
+
     return AddNewEntityOneToOneEndpointRelation
         .builder()
         .path(path)
