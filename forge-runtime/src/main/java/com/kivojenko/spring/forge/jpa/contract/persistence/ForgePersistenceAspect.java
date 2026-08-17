@@ -2,6 +2,7 @@ package com.kivojenko.spring.forge.jpa.contract.persistence;
 
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.After;
+import org.aspectj.lang.annotation.AfterReturning;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
 
@@ -55,10 +56,13 @@ public abstract class ForgePersistenceAspect<E> {
   /**
    * Executed before a sub-entity is added to a main entity.
    *
+   * <p>Matches the generated association-linking methods, which are named
+   * {@code addNew<Field>} (create + attach) or {@code addExisting<Field>} (attach by ID) —
+   * never a bare {@code *Add*}.
+   *
    * @param joinPoint the join point
    */
-  @SuppressWarnings("unchecked")
-  @Before("within(com.kivojenko.spring.forge.jpa.contract.ForgeService+) && execution(* *Add*(..))")
+  @Before("within(com.kivojenko.spring.forge.jpa.contract.ForgeService+) && (execution(* addNew*(..)) || execution(* addExisting*(..)))")
   public void onBeforeAdd(JoinPoint joinPoint) {
     if (joinPoint.getThis() instanceof ForgeService<?, ?, ?> service) {
       Object[] args = joinPoint.getArgs();
@@ -85,10 +89,11 @@ public abstract class ForgePersistenceAspect<E> {
   /**
    * Executed after a sub-entity is added to a main entity.
    *
+   * <p>See {@link #onBeforeAdd(JoinPoint)} for which generated methods this matches.
+   *
    * @param joinPoint the join point
    */
-  @SuppressWarnings("unchecked")
-  @After("within(com.kivojenko.spring.forge.jpa.contract.ForgeService+) && execution(* *Add*(..))")
+  @After("within(com.kivojenko.spring.forge.jpa.contract.ForgeService+) && (execution(* addNew*(..)) || execution(* addExisting*(..)))")
   public void onAfterAdd(JoinPoint joinPoint) {
     if (joinPoint.getThis() instanceof ForgeService<?, ?, ?> service) {
       Object[] args = joinPoint.getArgs();
@@ -106,7 +111,7 @@ public abstract class ForgePersistenceAspect<E> {
   public void afterAdd(Object mainEntity, Object subEntity) {}
 
   /**
-   * Executed before an entity is updated.
+   * Executed before an entity is updated (full update via {@code PUT}).
    *
    * @param entity the entity to be updated
    */
@@ -122,7 +127,7 @@ public abstract class ForgePersistenceAspect<E> {
   public void beforeUpdate(E entity) {}
 
   /**
-   * Executed after an entity is updated.
+   * Executed after an entity is updated (full update via {@code PUT}).
    *
    * @param entity the updated entity
    */
@@ -136,6 +141,26 @@ public abstract class ForgePersistenceAspect<E> {
   }
 
   public void afterUpdate(E entity) {}
+
+  /**
+   * Executed after an entity is partially updated via {@code PATCH}.
+   *
+   * <p>{@code ForgeService.patch(ID, Map)} does not receive the entity as an argument
+   * (only its ID and a field map), so there is no equivalent "before" hook with the
+   * pre-patch entity available through AOP. The saved entity is forwarded to
+   * {@link #afterUpdate(Object)} so that any subclass auditing updates also picks up
+   * partial updates without needing a separate override.
+   *
+   * @param entity the patched entity, as returned by {@code patch(..)}
+   */
+  @SuppressWarnings("unchecked")
+  @AfterReturning(pointcut = "execution(* com.kivojenko.spring.forge.jpa.contract.ForgeService+.patch(..))", returning = "entity")
+  public void onAfterPatch(Object entity) {
+    if (!entityType().isInstance(entity)) {
+      return;
+    }
+    afterUpdate((E) entity);
+  }
 
   /**
    * Executed before an entity is deleted.
@@ -170,12 +195,15 @@ public abstract class ForgePersistenceAspect<E> {
   public void afterDelete(E entity) {}
 
   /**
-   * Executed before a sub-entity is deleted from a main entity.
+   * Executed before a sub-entity is removed from a main entity.
+   *
+   * <p>Matches the generated association-unlinking methods, which are named
+   * {@code remove<Field>}, {@code removeRelationWith<Field>} (One-to-Many / Many-to-Many),
+   * or {@code unlink<Field>} (Many-to-One / One-to-One) — never a bare {@code *Remove*}.
    *
    * @param joinPoint the join point
    */
-  @SuppressWarnings("unchecked")
-  @Before("within(com.kivojenko.spring.forge.jpa.contract.ForgeService+) && execution(* *Remove*(..))")
+  @Before("within(com.kivojenko.spring.forge.jpa.contract.ForgeService+) && (execution(* remove*(..)) || execution(* unlink*(..)))")
   public void onBeforeDeleteSub(JoinPoint joinPoint) {
     if (joinPoint.getThis() instanceof ForgeService<?, ?, ?> service) {
       Object[] args = joinPoint.getArgs();
@@ -193,12 +221,13 @@ public abstract class ForgePersistenceAspect<E> {
   public void beforeDelete(Object mainEntity, Object subEntity) {}
 
   /**
-   * Executed after a sub-entity is deleted from a main entity.
+   * Executed after a sub-entity is removed from a main entity.
+   *
+   * <p>See {@link #onBeforeDeleteSub(JoinPoint)} for which generated methods this matches.
    *
    * @param joinPoint the join point
    */
-  @SuppressWarnings("unchecked")
-  @After("within(com.kivojenko.spring.forge.jpa.contract.ForgeService+) && execution(* *Remove*(..))")
+  @After("within(com.kivojenko.spring.forge.jpa.contract.ForgeService+) && (execution(* remove*(..)) || execution(* unlink*(..)))")
   public void onAfterDeleteSub(JoinPoint joinPoint) {
     if (joinPoint.getThis() instanceof ForgeService<?, ?, ?> service) {
       Object[] args = joinPoint.getArgs();

@@ -41,7 +41,7 @@ public class ItemPersistenceAspectTest extends WithPostgres {
     assertEquals("Item price cannot be negative", exception.getMessage());
   }
 
-//  @Test
+  @Test
   void testAddSubItemWithHookValidation() {
     Item item = Item.builder().name("Item for subitem").price(10.0).build();
     item = itemService.create(item);
