@@ -11,8 +11,17 @@ import org.springframework.transaction.annotation.Transactional;
 
 import org.springframework.util.ReflectionUtils;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 /**
  * Abstract base class for generated services.
@@ -172,6 +181,56 @@ public abstract class ForgeService<E, ID, R extends JpaRepository<E, ID>> {
       @SuppressWarnings({"unchecked", "rawtypes"})
       Object enumVal = Enum.valueOf((Class<Enum>) targetType, name);
       return enumVal;
+    }
+
+    // Collections (e.g. Set <-> List)
+    if (Collection.class.isAssignableFrom(targetType)) {
+      Collection<?> col = null;
+      if (raw instanceof Collection<?> c) {
+        col = c;
+      } else if (raw instanceof Object[] arr) {
+        col = Arrays.asList(arr);
+      } else if (raw instanceof Iterable<?> it) {
+        List<Object> list = new ArrayList<>();
+        it.forEach(list::add);
+        col = list;
+      }
+
+      if (col != null) {
+        if (Set.class.isAssignableFrom(targetType)) {
+          if (SortedSet.class.isAssignableFrom(targetType) || TreeSet.class.isAssignableFrom(targetType)) {
+            return new TreeSet<>(col);
+          } else if (targetType.isAssignableFrom(LinkedHashSet.class)) {
+            return new LinkedHashSet<>(col);
+          } else if (targetType.isAssignableFrom(HashSet.class)) {
+            return new HashSet<>(col);
+          } else {
+            try {
+              @SuppressWarnings("unchecked")
+              var constructor = ((Class<? extends Set<?>>) targetType).getDeclaredConstructor(Collection.class);
+              return constructor.newInstance(col);
+            } catch (Exception ex) {
+              return new LinkedHashSet<>(col);
+            }
+          }
+        } else if (List.class.isAssignableFrom(targetType)) {
+          if (targetType.isAssignableFrom(ArrayList.class)) {
+            return new ArrayList<>(col);
+          } else if (targetType.isAssignableFrom(LinkedList.class)) {
+            return new LinkedList<>(col);
+          } else {
+            try {
+              @SuppressWarnings("unchecked")
+              var constructor = ((Class<? extends List<?>>) targetType).getDeclaredConstructor(Collection.class);
+              return constructor.newInstance(col);
+            } catch (Exception ex) {
+              return new ArrayList<>(col);
+            }
+          }
+        } else if (targetType.isInterface()) {
+          return new ArrayList<>(col);
+        }
+      }
     }
 
     // Fallback — best effort string conversion
