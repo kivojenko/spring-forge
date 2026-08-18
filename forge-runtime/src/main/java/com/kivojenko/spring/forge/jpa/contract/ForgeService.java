@@ -1,5 +1,7 @@
 package com.kivojenko.spring.forge.jpa.contract;
 
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.PersistenceContext;
@@ -11,17 +13,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import org.springframework.util.ReflectionUtils;
 import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
 
 /**
  * Abstract base class for generated services.
@@ -35,6 +29,18 @@ public abstract class ForgeService<E, ID, R extends JpaRepository<E, ID>> {
   @Autowired
   protected R repository;
 
+  // Optional: use the application's configured ObjectMapper when present, otherwise a
+  // self-constructed default. PATCH map->entity conversion needs no app-specific config.
+  @Autowired(required = false)
+  protected ObjectMapper objectMapper;
+
+  private ObjectMapper objectMapper() {
+    if (objectMapper == null) {
+      objectMapper = new ObjectMapper().findAndRegisterModules();
+    }
+    return objectMapper;
+  }
+
   @PersistenceContext
   protected EntityManager entityManager;
 
@@ -46,6 +52,22 @@ public abstract class ForgeService<E, ID, R extends JpaRepository<E, ID>> {
    * @return the fixed entity
    */
   public E fixParameters(E entity) {
+    return entity;
+  }
+
+  /**
+   * Hook applied to the managed entity after PATCH fields have been merged in.
+   *
+   * <p>Unlike {@link #fixParameters(Object)} (used by create and PUT-update), this receives the
+   * already-managed entity with the partial changes applied in place, so overrides can wire
+   * bidirectional back-references or resolve shared values (e.g. de-duplicated translations)
+   * without swapping the entity instance. Swapping the instance here would discard the merged
+   * collections. Default implementation is a no-op.
+   *
+   * @param entity the managed entity with PATCH fields already applied
+   * @return the entity to persist
+   */
+  protected E fixPatch(E entity) {
     return entity;
   }
 
@@ -106,15 +128,18 @@ public abstract class ForgeService<E, ID, R extends JpaRepository<E, ID>> {
   }
 
   /**
-   * Applies a partial update to an existing entity. Fields present in the {@code fields} map
-   * are applied to the persisted entity by name. The {@code id} field (if present) is ignored.
+   * Applies a partial update to an existing (managed) entity. Fields present in the
+   * {@code fields} map are applied to the persisted entity by name; the {@code id} field
+   * (if present) is ignored, and fields absent from the map keep their current values.
    *
-   * <p>Notes:
-   * <ul>
-   *   <li>Only top-level scalar fields are supported by default; nested objects/collections
-   *   require a custom service override.</li>
-   *   <li>Type conversion is attempted for common cases (numbers, booleans, enums, strings).</li>
-   * </ul>
+   * <p>Each incoming value is deserialized into the target field's <em>generic</em> type via
+   * Jackson, so scalars, enums, nested objects and typed collections (e.g. {@code Set<ProductImage>})
+   * become real instances rather than raw maps. Collection-typed fields are merged in place
+   * (clear + add) so that {@code orphanRemoval}/all-delete-orphan mappings keep working and the
+   * managed collection wrapper is preserved.
+   *
+   * <p>Entity-specific wiring (bidirectional back-references, shared-value resolution) should be
+   * performed by overriding {@link #fixPatch(Object)}.
    *
    * @param id the ID of the entity to patch
    * @param fields map of field names to desired values
@@ -137,115 +162,39 @@ public abstract class ForgeService<E, ID, R extends JpaRepository<E, ID>> {
 
       Field field = ReflectionUtils.findField(clazz, name);
       if (field == null) {
-        continue; // unknown field — skip
+        continue; // unknown field - skip
       }
       field.setAccessible(true);
 
-      Object value = convertValue(entry.getValue(), field.getType());
-      ReflectionUtils.setField(field, entity, value);
-    }
+      // Deserialize into the field's generic type so collection elements and nested
+      // objects become real entities (Set<ProductImage>), not raw LinkedHashMaps.
+      JavaType javaType = objectMapper().getTypeFactory().constructType(field.getGenericType());
+      Object value = objectMapper().convertValue(entry.getValue(), javaType);
 
-    entity = fixParameters(entity);
-    return repository.save(entity);
-  }
-
-  private Object convertValue(Object raw, Class<?> targetType) {
-    if (raw == null) return null;
-
-    if (targetType.isInstance(raw)) return raw;
-
-    // Strings
-    if (targetType == String.class) return String.valueOf(raw);
-
-    // Booleans
-    if (targetType == boolean.class || targetType == Boolean.class) {
-      if (raw instanceof Boolean b) return b;
-      return Boolean.parseBoolean(String.valueOf(raw));
-    }
-
-    // Numbers
-    if (Number.class.isAssignableFrom(targetType) || targetType.isPrimitive()) {
-      Number n = (raw instanceof Number) ? (Number) raw : parseNumber(String.valueOf(raw));
-      if (n == null) return null;
-      if (targetType == byte.class || targetType == Byte.class) return n.byteValue();
-      if (targetType == short.class || targetType == Short.class) return n.shortValue();
-      if (targetType == int.class || targetType == Integer.class) return n.intValue();
-      if (targetType == long.class || targetType == Long.class) return n.longValue();
-      if (targetType == float.class || targetType == Float.class) return n.floatValue();
-      if (targetType == double.class || targetType == Double.class) return n.doubleValue();
-    }
-
-    // Enums
-    if (targetType.isEnum()) {
-      String name = String.valueOf(raw);
-      @SuppressWarnings({"unchecked", "rawtypes"})
-      Object enumVal = Enum.valueOf((Class<Enum>) targetType, name);
-      return enumVal;
-    }
-
-    // Collections (e.g. Set <-> List)
-    if (Collection.class.isAssignableFrom(targetType)) {
-      Collection<?> col = null;
-      if (raw instanceof Collection<?> c) {
-        col = c;
-      } else if (raw instanceof Object[] arr) {
-        col = Arrays.asList(arr);
-      } else if (raw instanceof Iterable<?> it) {
-        List<Object> list = new ArrayList<>();
-        it.forEach(list::add);
-        col = list;
-      }
-
-      if (col != null) {
-        if (Set.class.isAssignableFrom(targetType)) {
-          if (SortedSet.class.isAssignableFrom(targetType) || TreeSet.class.isAssignableFrom(targetType)) {
-            return new TreeSet<>(col);
-          } else if (targetType.isAssignableFrom(LinkedHashSet.class)) {
-            return new LinkedHashSet<>(col);
-          } else if (targetType.isAssignableFrom(HashSet.class)) {
-            return new HashSet<>(col);
-          } else {
-            try {
-              @SuppressWarnings("unchecked")
-              var constructor = ((Class<? extends Set<?>>) targetType).getDeclaredConstructor(Collection.class);
-              return constructor.newInstance(col);
-            } catch (Exception ex) {
-              return new LinkedHashSet<>(col);
-            }
-          }
-        } else if (List.class.isAssignableFrom(targetType)) {
-          if (targetType.isAssignableFrom(ArrayList.class)) {
-            return new ArrayList<>(col);
-          } else if (targetType.isAssignableFrom(LinkedList.class)) {
-            return new LinkedList<>(col);
-          } else {
-            try {
-              @SuppressWarnings("unchecked")
-              var constructor = ((Class<? extends List<?>>) targetType).getDeclaredConstructor(Collection.class);
-              return constructor.newInstance(col);
-            } catch (Exception ex) {
-              return new ArrayList<>(col);
-            }
-          }
-        } else if (targetType.isInterface()) {
-          return new ArrayList<>(col);
+      Object current = ReflectionUtils.getField(field, entity);
+      if (current instanceof Collection<?> && value instanceof Collection<?>) {
+        // Mutate the managed collection in place (never replace the instance, which would
+        // break all-delete-orphan mappings and detach Hibernate's collection wrapper).
+        //
+        // This replaces children via orphan-removal delete + re-insert within one flush, where
+        // Hibernate orders INSERTs before DELETEs. If the entity has a unique constraint on
+        // (child, parent) and the replacement reuses an existing key, perform it as TWO PATCH
+        // calls: first set the collection to [] (delete-only), then PATCH the new elements
+        // (insert-only). That avoids the transient collision without an intra-call flush.
+        @SuppressWarnings("unchecked")
+        Collection<Object> target = (Collection<Object>) current;
+        target.clear();
+        target.addAll((Collection<?>) value);
+      } else {
+        if (value == null && field.getType().isPrimitive()) {
+          continue; // cannot assign null to a primitive field
         }
+        ReflectionUtils.setField(field, entity, value);
       }
     }
 
-    // Fallback — best effort string conversion
-    return targetType.cast(raw);
-  }
-
-  private Number parseNumber(String s) {
-    try {
-      if (s.contains(".")) {
-        return Double.parseDouble(s);
-      }
-      return Long.parseLong(s);
-    } catch (NumberFormatException ex) {
-      return null;
-    }
+    var fixed = fixPatch(entity);
+    return repository.save(fixed);
   }
 
   /**

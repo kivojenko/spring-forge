@@ -81,6 +81,7 @@ dependencies {
     implementation("com.squareup:javapoet:1.13.0")
 
     compileOnly("org.springframework:spring-web")
+    compileOnly("com.fasterxml.jackson.core:jackson-databind")
     compileOnly("org.springframework.data:spring-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-aspectj")
 
