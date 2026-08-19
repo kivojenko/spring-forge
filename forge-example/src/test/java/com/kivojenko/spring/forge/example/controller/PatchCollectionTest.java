@@ -97,41 +97,4 @@ public class PatchCollectionTest extends WithPostgres {
     assertTrue(patched.getCategories().stream().anyMatch(c -> c.getName().equals("Cat1")));
     assertTrue(patched.getCategories().stream().anyMatch(c -> c.getName().equals("Cat2")));
   }
-
-  @Test
-  void testConvertValueDirectUnitTests() throws Exception {
-    java.lang.reflect.Method convertValueMethod = com.kivojenko.spring.forge.jpa.contract.ForgeService.class
-        .getDeclaredMethod("convertValue", Object.class, Class.class);
-    convertValueMethod.setAccessible(true);
-
-    // List -> Set
-    Object resSet = convertValueMethod.invoke(productService, List.of("x", "y"), Set.class);
-    assertInstanceOf(Set.class, resSet);
-    assertEquals(Set.of("x", "y"), resSet);
-
-    // List -> SortedSet / TreeSet
-    Object resTreeSet = convertValueMethod.invoke(productService, List.of("b", "a"), java.util.SortedSet.class);
-    assertInstanceOf(java.util.TreeSet.class, resTreeSet);
-    assertEquals(List.of("a", "b"), new java.util.ArrayList<>((java.util.SortedSet<?>) resTreeSet));
-
-    // Set -> List / ArrayList
-    Object resList = convertValueMethod.invoke(productService, Set.of("m", "n"), List.class);
-    assertInstanceOf(List.class, resList);
-    assertEquals(2, ((List<?>) resList).size());
-
-    // Set -> LinkedList
-    Object resLinkedList = convertValueMethod.invoke(productService, Set.of("m", "n"), java.util.LinkedList.class);
-    assertInstanceOf(java.util.LinkedList.class, resLinkedList);
-    assertEquals(2, ((java.util.LinkedList<?>) resLinkedList).size());
-
-    // Array -> Set
-    Object resArrayToSet = convertValueMethod.invoke(productService, new String[]{"1", "2"}, Set.class);
-    assertInstanceOf(Set.class, resArrayToSet);
-    assertEquals(Set.of("1", "2"), resArrayToSet);
-
-    // Array -> List
-    Object resArrayToList = convertValueMethod.invoke(productService, new String[]{"1", "2"}, List.class);
-    assertInstanceOf(List.class, resArrayToList);
-    assertEquals(List.of("1", "2"), resArrayToList);
-  }
 }

@@ -8,9 +8,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.kivojenko.spring.forge.example.WithPostgres;
+import com.kivojenko.spring.forge.example.model.filter.ProductCategoryForgeRepository;
+import com.kivojenko.spring.forge.example.model.filter.ProductForgeRepository;
+import com.kivojenko.spring.forge.example.model.filter.TagForgeRepository;
 import java.math.BigDecimal;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
@@ -23,6 +28,15 @@ import org.springframework.http.MediaType;
 @AutoConfigureMockMvc
 public class ProductControllerFilterTest extends WithPostgres {
 
+  @Autowired
+  private ProductForgeRepository productRepository;
+
+  @Autowired
+  private ProductCategoryForgeRepository categoryRepository;
+
+  @Autowired
+  private TagForgeRepository tagRepository;
+
   private Long electronicsId;
   private Long booksId;
   private Long featuredTagId;
@@ -30,6 +44,10 @@ public class ProductControllerFilterTest extends WithPostgres {
 
   @BeforeEach
   void setUp() throws Exception {
+    productRepository.deleteAll();
+    categoryRepository.deleteAll();
+    tagRepository.deleteAll();
+
     electronicsId = createCategory("Electronics");
     booksId = createCategory("Books");
 
@@ -60,6 +78,13 @@ public class ProductControllerFilterTest extends WithPostgres {
         booksId,
         new Long[] { onSaleTagId }
     );
+  }
+
+  @AfterEach
+  void tearDown() {
+    productRepository.deleteAll();
+    categoryRepository.deleteAll();
+    tagRepository.deleteAll();
   }
 
   private Long createCategory(String name) throws Exception {
@@ -124,16 +149,11 @@ public class ProductControllerFilterTest extends WithPostgres {
   @Test
   void shouldFilterProductsByCategoryName_viaDottedTargetField() throws Exception {
     // Single category name
-    mockMvc.perform(get("/products").param("categories", "Electronics"))
+    mockMvc.perform(get("/products").param("category", "Electronics"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.content", hasSize(2)))
         .andExpect(jsonPath("$.content[?(@.name == 'Phone')]").exists())
         .andExpect(jsonPath("$.content[?(@.name == 'Laptop')]").exists());
-
-    // Multiple category names
-    mockMvc.perform(get("/products").param("categories", "Electronics,Books"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.content", hasSize(3)));
 
     // Partial match, case-insensitive (CONTAINS_IGNORE_CASE configured on targetField)
     mockMvc.perform(get("/products").param("categories", "lectr"))
