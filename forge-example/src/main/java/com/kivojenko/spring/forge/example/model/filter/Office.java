@@ -1,5 +1,6 @@
 package com.kivojenko.spring.forge.example.model.filter;
 
+import com.kivojenko.spring.forge.annotation.GetOrCreate;
 import com.kivojenko.spring.forge.annotation.WithRestController;
 import com.kivojenko.spring.forge.annotation.filter.FilterField;
 import jakarta.persistence.Entity;
@@ -22,6 +23,7 @@ import lombok.Setter;
 @Entity
 @Table(name = "offices")
 @WithRestController
+@GetOrCreate(field = "country.code")
 public class Office {
 
     @Id

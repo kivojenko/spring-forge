@@ -127,6 +127,39 @@ public final class JpaEntityModel {
      * Builds a {@code create(<fieldType> <fieldName>)} factory method using builder/setter/ctor paths for the given field.
      */
     public MethodSpec createMethodForField(String fieldName) {
+        // Support nested path like "country.code" (relation.id)
+        if (fieldName != null && fieldName.contains(".")) {
+            var parts = fieldName.split("\\.");
+            if (parts.length < 2) {
+                throw new IllegalStateException("Invalid nested field path: " + fieldName);
+            }
+            var relationField = parts[0];
+            var idField = parts[parts.length - 1];
+
+            // Resolve relation type
+            var relationVar = findFieldInHierarchy(getElement(), relationField);
+            if (relationVar == null) {
+                throw new IllegalStateException("Cannot find relation field '" + relationField + "' on " + getElement().getSimpleName());
+            }
+            if (!(relationVar.asType() instanceof DeclaredType declared)) {
+                throw new IllegalStateException("Field '" + relationField + "' is not an entity type on " + getElement().getSimpleName());
+            }
+            var relationEl = (TypeElement) declared.asElement();
+            var relationModel = com.kivojenko.spring.forge.jpa.factory.JpaEntityModelFactory.get(relationEl);
+            if (relationModel == null) {
+                throw new IllegalStateException("Cannot resolve model for relation '" + relationField + "'");
+            }
+
+            // Ensure we target the relation's ID field
+            var expectedId = relationModel.getJpaId().name();
+            if (!expectedId.equals(idField)) {
+                throw new IllegalStateException("Nested get-or-create currently supports relation ID only: expected '" + relationField + "." + expectedId + "' but got '" + fieldName + "'");
+            }
+
+            var idType = relationModel.getJpaId().type();
+            return createViaRelationId(relationField, relationModel.getEntityType(), idType);
+        }
+
         var typeMirror = findFieldTypeMirror(fieldName);
         if (typeMirror == null) {
             throw new IllegalStateException("Cannot find field '" + fieldName + "' on " + getElement().getSimpleName());
@@ -227,8 +260,32 @@ public final class JpaEntityModel {
     }
 
     private TypeMirror findFieldTypeMirror(String fieldName) {
+        if (fieldName != null && fieldName.contains(".")) {
+            return resolveNestedFieldTypeMirror(fieldName);
+        }
         var varEl = findFieldInHierarchy(getElement(), fieldName);
         return varEl != null ? varEl.asType() : null;
+    }
+
+    private TypeMirror resolveNestedFieldTypeMirror(String path) {
+        var parts = path.split("\\.");
+        TypeElement current = getElement();
+        for (int i = 0; i < parts.length; i++) {
+            var segment = parts[i];
+            var varEl = findFieldInHierarchy(current, segment);
+            if (varEl == null) {
+                throw new IllegalStateException("Cannot find field '" + segment + "' on " + current.getSimpleName());
+            }
+            var type = varEl.asType();
+            if (i == parts.length - 1) {
+                return type; // last segment type
+            }
+            if (type.getKind() != TypeKind.DECLARED) {
+                throw new IllegalStateException("Intermediate segment '" + segment + "' is not a declared type on " + current.getSimpleName());
+            }
+            current = (TypeElement) ((DeclaredType) type).asElement();
+        }
+        return null;
     }
 
     private javax.lang.model.element.VariableElement findFieldInHierarchy(TypeElement typeElement, String fieldName) {
@@ -257,6 +314,56 @@ public final class JpaEntityModel {
             throw new IllegalStateException("Cannot find field '" + fieldName + "' on " + getElement().getSimpleName());
         }
         return TypeName.get(tm);
+    }
+
+    private MethodSpec createViaRelationId(String relationField, ClassName relationType, TypeName idType) {
+        // create(<ID> relationId)
+        var param = com.squareup.javapoet.ParameterSpec.builder(idType, relationField + "Id").build();
+
+        if (hasBuilder()) {
+            if (builderHasSetter(relationField)) {
+                return MethodSpec
+                        .methodBuilder("create")
+                        .addJavadoc("Creates a new instance of {@link $T} linking '$L' by its ID.\n", getEntityType(), relationField)
+                        .addJavadoc("@param $L the ID of $L\n", param.name, relationField)
+                        .addJavadoc("@return the newly created entity\n")
+                        .addModifiers(Modifier.PROTECTED)
+                        .returns(getEntityType())
+                        .addParameter(param)
+                        .addStatement("return $T.builder().$L(entityManager.getReference($T.class, $L)).build()", getEntityType(), relationField, relationType, param.name)
+                        .build();
+            }
+            // builder exists but no direct setter on builder -> builder + setter
+            return MethodSpec
+                    .methodBuilder("create")
+                    .addJavadoc("Creates a new instance of {@link $T} linking '$L' by its ID.\n", getEntityType(), relationField)
+                    .addJavadoc("@param $L the ID of $L\n", param.name, relationField)
+                    .addJavadoc("@return the newly created entity\n")
+                    .addModifiers(Modifier.PROTECTED)
+                    .returns(getEntityType())
+                    .addParameter(param)
+                    .addStatement("var entity = $T.builder().build()", getEntityType())
+                    .addStatement("entity.$L(entityManager.getReference($T.class, $L))", StringUtils.setterName(relationField), relationType, param.name)
+                    .addStatement("return entity")
+                    .build();
+        }
+
+        if (hasEmptyCtor()) {
+            return MethodSpec
+                    .methodBuilder("create")
+                    .addJavadoc("Creates a new instance of {@link $T} linking '$L' by its ID.\n", getEntityType(), relationField)
+                    .addJavadoc("@param $L the ID of $L\n", param.name, relationField)
+                    .addJavadoc("@return the newly created entity\n")
+                    .addModifiers(Modifier.PROTECTED)
+                    .returns(getEntityType())
+                    .addParameter(param)
+                    .addStatement("var entity = new $T()", getEntityType())
+                    .addStatement("entity.$L(entityManager.getReference($T.class, $L))", StringUtils.setterName(relationField), relationType, param.name)
+                    .addStatement("return entity")
+                    .build();
+        }
+
+        throw new IllegalStateException("Cannot generate create(..) for nested relation '" + relationField + "' on " + getElement().getSimpleName());
     }
 
     private boolean hasBuilder() {

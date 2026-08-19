@@ -54,28 +54,51 @@ public final class RepositoryGenerator {
         // Add minimal query support for @GetOrCreate when not covered by HasNameRepository
         if (model.getRequirements().getOrCreateAnnotation() != null) {
             var cfg = model.getRequirements().getOrCreateAnnotation();
-            var field = cfg.field().isEmpty() ? "name" : cfg.field();
-            var needCustom = !(model.getRequirements().hasName() && field.equals("name"));
+            var fieldPath = cfg.field().isEmpty() ? "name" : cfg.field();
+            var needCustom = !(model.getRequirements().hasName() && fieldPath.equals("name"));
             if (needCustom) {
-                var cap = capitalize(field);
-                var fieldType = model.resolveFieldTypeName(field);
+                var fieldType = model.resolveFieldTypeName(fieldPath);
                 boolean isString = fieldType.equals(com.squareup.javapoet.ClassName.get(String.class));
                 boolean ignoreCase = isString && cfg.ignoreCase();
                 var optEntity = ParameterizedTypeName.get(
                         com.squareup.javapoet.ClassName.get(java.util.Optional.class),
                         model.getEntityType()
                 );
-                var findMethodName = "findBy" + cap + (ignoreCase ? "IgnoreCase" : "");
+
+                var suffix = toPropertyPathSuffix(fieldPath); // e.g., Country_Code for country.code
+                var paramName = toSafeParamName(fieldPath);   // e.g., countryCode
+                var findMethodName = "findBy" + suffix + (ignoreCase ? "IgnoreCase" : "");
                 var findMethod = MethodSpec.methodBuilder(findMethodName)
                         .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
                         .returns(optEntity)
-                        .addParameter(fieldType, field)
+                        .addParameter(fieldType, paramName)
                         .build();
                 builder.addMethod(findMethod);
             }
         }
 
         return builder.build();
+    }
+
+    private static String toPropertyPathSuffix(String path) {
+        if (path.indexOf('.') < 0) return capitalize(path);
+        var parts = path.split("\\.");
+        var sb = new StringBuilder();
+        for (int i = 0; i < parts.length; i++) {
+            if (i > 0) sb.append('_');
+            sb.append(capitalize(parts[i]));
+        }
+        return sb.toString();
+    }
+
+    private static String toSafeParamName(String path) {
+        if (path.indexOf('.') < 0) return path;
+        var parts = path.split("\\.");
+        var sb = new StringBuilder(parts[0]);
+        for (int i = 1; i < parts.length; i++) {
+            sb.append(capitalize(parts[i]));
+        }
+        return sb.toString();
     }
 
     private static void addFilterMethods(TypeSpec.Builder builder, JpaEntityModel model) {

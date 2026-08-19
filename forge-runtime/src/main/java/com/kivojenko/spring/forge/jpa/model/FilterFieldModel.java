@@ -259,10 +259,12 @@ public class FilterFieldModel {
       builder.beginControlFlow("if ($L != null && !$L.isEmpty())", getName(), getName());
       if (annotation.iterableMatchMode() == IterableMatchMode.ALL) {
         builder.beginControlFlow("for (var $L : $L)", "sub", getName());
-        addAnd(builder, "entity.$L.any().$L.eq($L)", getTargetFieldName(), relation.getJpaId().name(), "sub");
+        // Use the base field name for collection navigation and add any() here exactly once
+        addAnd(builder, "entity.$L.any().$L.eq($L)", getOriginalName(), relation.getJpaId().name(), "sub");
         builder.endControlFlow();
       } else {
-        addAnd(builder, "entity.$L.any().$L.in($L)", getTargetFieldName(), relation.getJpaId().name(), getName());
+        // Use the base field name for collection navigation and add any() here exactly once
+        addAnd(builder, "entity.$L.any().$L.in($L)", getOriginalName(), relation.getJpaId().name(), getName());
       }
       builder.endControlFlow();
     } else if (isEnum()) {

@@ -84,20 +84,24 @@ public final class ControllerGenerator {
       var cfg = model.getRequirements().getOrCreateAnnotation();
       var path = cfg.path().isEmpty() ? "/get-or-create" : cfg.path();
       var mapping = AnnotationSpec.builder(POST_MAPPING).addMember("value", "$S", path).build();
-      var field = cfg.field().isEmpty() ? "name" : cfg.field();
-      var fieldType = model.resolveFieldTypeName(field);
+      var fieldPath = cfg.field().isEmpty() ? "name" : cfg.field();
+      var fieldType = model.resolveFieldTypeName(fieldPath);
 
-      var param = ParameterSpec.builder(fieldType, field).addAnnotation(REQUEST_PARAM).build();
+      var paramName = toSafeParamName(fieldPath);
+      var requestParam = AnnotationSpec.builder(REQUEST_PARAM)
+          .addMember("name", "$S", fieldPath)
+          .build();
+      var param = ParameterSpec.builder(fieldType, paramName).addAnnotation(requestParam).build();
       var getOrCreate = MethodSpec
           .methodBuilder("getOrCreate")
-          .addJavadoc("Retrieves an existing {@link $T} by $L or creates it if it does not exist.\n", model.getEntityType(), field)
-          .addJavadoc("@param $L the $L of the entity\n", field, field)
+          .addJavadoc("Retrieves an existing {@link $T} by $L or creates it if it does not exist.\n", model.getEntityType(), fieldPath)
+          .addJavadoc("@param $L the $L of the entity\n", paramName, fieldPath)
           .addJavadoc("@return the retrieved or newly created entity\n")
           .addModifiers(Modifier.PUBLIC)
           .addAnnotation(mapping)
           .addParameter(param)
           .returns(model.getEntityType())
-          .addStatement("return service.getOrCreate($L)", field)
+          .addStatement("return service.getOrCreate($L)", paramName)
           .build();
       builder.addMethod(getOrCreate);
     }
@@ -210,5 +214,15 @@ public final class ControllerGenerator {
             .addStatement("service.deleteById($L)", idName)
             .build()
     );
+  }
+
+  private static String toSafeParamName(String path) {
+    if (path.indexOf('.') < 0) return path;
+    var parts = path.split("\\.");
+    var sb = new StringBuilder(parts[0]);
+    for (int i = 1; i < parts.length; i++) {
+      sb.append(com.kivojenko.spring.forge.jpa.utils.StringUtils.capitalize(parts[i]));
+    }
+    return sb.toString();
   }
 }
