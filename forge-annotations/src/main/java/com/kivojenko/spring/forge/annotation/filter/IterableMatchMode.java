@@ -7,5 +7,7 @@ public enum IterableMatchMode {
   /** At least one element must match. */
   ANY,
   /** All specified elements must be present/match. */
-  ALL
+  ALL,
+  /** Match based on collection size/amount. */
+  AMOUNT
 }

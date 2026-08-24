@@ -81,6 +81,9 @@ public class FilterFieldModel {
       return targetFieldName;
     }
     String fieldName = element.getSimpleName().toString();
+    if (annotation != null && annotation.iterableMatchMode() == IterableMatchMode.AMOUNT) {
+      return fieldName + ".size()";
+    }
     if (targetField == null || targetField.isEmpty()) {
       return fieldName;
     }

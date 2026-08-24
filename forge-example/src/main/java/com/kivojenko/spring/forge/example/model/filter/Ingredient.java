@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.kivojenko.spring.forge.annotation.WithRestController;
 import com.kivojenko.spring.forge.annotation.endpoint.WithEndpoints;
 import com.kivojenko.spring.forge.annotation.filter.FilterField;
+import com.kivojenko.spring.forge.annotation.filter.IterableMatchMode;
 import com.kivojenko.spring.forge.annotation.filter.StringMatchMode;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
@@ -41,8 +42,9 @@ public class Ingredient {
 
   @OneToMany(mappedBy = "ingredient", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
   @Builder.Default
-  @WithEndpoints // to allow POST /ingredients/{id}/alternativeNames
+  @WithEndpoints
   @FilterField(name = "name", targetField = "name")
+  @FilterField(name = "alternativeNamesAmount", iterableMatchMode = IterableMatchMode.AMOUNT)
   @JsonManagedReference
   private Set<IngredientAlternativeName> alternativeNames = new HashSet<>();
 }

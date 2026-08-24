@@ -74,6 +74,44 @@ public class IngredientFilterSameNameTest extends WithPostgres {
     // Current behavior: duplicate filter names are deduplicated -> only one remains
     org.junit.jupiter.api.Assertions.assertEquals(1, nameStringFields,
         "Expected only one 'name' field in the generated filter DTO");
+
+    long amountFields = Arrays.stream(fields)
+        .filter(f -> f.getName().equals("alternativeNamesAmount") && f.getType().equals(Integer.class))
+        .count();
+    org.junit.jupiter.api.Assertions.assertEquals(1, amountFields,
+        "Expected 'alternativeNamesAmount' field in the generated filter DTO");
+  }
+
+  @Test
+  void filter_by_alternative_names_amount() throws Exception {
+    long i3 = createIngredient("Salt");
+    long i4 = createIngredient("Pepper");
+    addAltName(i4, "Black Pepper");
+    addAltName(i4, "Piperine");
+
+    // Exact amount 0 -> Salt
+    mockMvc.perform(get("/ingredients").param("alternativeNamesAmount", "0"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(1)))
+        .andExpect(jsonPath("$.content[0].name", is("Salt")));
+
+    // Exact amount 1 -> Cumin, Caraway
+    mockMvc.perform(get("/ingredients").param("alternativeNamesAmount", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(2)))
+        .andExpect(jsonPath("$.content[*].name", org.hamcrest.Matchers.hasItems("Cumin", "Caraway")));
+
+    // Min amount 2 -> Pepper
+    mockMvc.perform(get("/ingredients").param("minAlternativeNamesAmount", "2"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(1)))
+        .andExpect(jsonPath("$.content[0].name", is("Pepper")));
+
+    // Max amount 1 -> Salt, Cumin, Caraway
+    mockMvc.perform(get("/ingredients").param("maxAlternativeNamesAmount", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(3)))
+        .andExpect(jsonPath("$.content[*].name", org.hamcrest.Matchers.hasItems("Salt", "Cumin", "Caraway")));
   }
 
   @Test
