@@ -8,6 +8,7 @@ import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.HTTP_STATUS;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.PAGE;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.PAGEABLE;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.PAGEABLE_DEFAULT;
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.PATCH_MAPPING;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.PATH_VARIABLE;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.POST_MAPPING;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.PUT_MAPPING;
@@ -148,12 +149,13 @@ public final class ControllerGenerator {
     var idName = model.getJpaId().name();
     var idType = model.getJpaId().type();
     var entityType = model.getEntityType();
+    var idPlaceholder = model.wantsAllowSlashes() ? "{*" + idName + "}" : "{" + idName + "}";
 
     // getById
     builder.addMethod(
         MethodSpec
             .methodBuilder("getById")
-            .addAnnotation(AnnotationSpec.builder(GET_MAPPING).addMember("value", "$S", "/{" + idName + "}").build())
+            .addAnnotation(AnnotationSpec.builder(GET_MAPPING).addMember("value", "$S", "/" + idPlaceholder).build())
             .addModifiers(Modifier.PUBLIC)
             .addAnnotation(Override.class)
             .returns(entityType)
@@ -170,7 +172,7 @@ public final class ControllerGenerator {
                 AnnotationSpec
                     .builder(REQUEST_MAPPING)
                     .addMember("method", "$T.HEAD", REQUEST_METHOD)
-                    .addMember("path", "$S", "/{" + idName + "}")
+                    .addMember("path", "$S", "/" + idPlaceholder)
                     .build()
             )
             .addModifiers(Modifier.PUBLIC)
@@ -185,7 +187,7 @@ public final class ControllerGenerator {
     builder.addMethod(
         MethodSpec
             .methodBuilder("update")
-            .addAnnotation(AnnotationSpec.builder(PUT_MAPPING).addMember("value", "$S", "/{" + idName + "}").build())
+            .addAnnotation(AnnotationSpec.builder(PUT_MAPPING).addMember("value", "$S", "/" + idPlaceholder).build())
             .addAnnotation(AnnotationSpec.builder(RESPONSE_STATUS).addMember("code", "$T.CREATED", HTTP_STATUS).build())
             .addModifiers(Modifier.PUBLIC)
             .addAnnotation(Override.class)
@@ -196,11 +198,25 @@ public final class ControllerGenerator {
             .build()
     );
 
+    // patch
+    builder.addMethod(
+        MethodSpec
+            .methodBuilder("patch")
+            .addAnnotation(AnnotationSpec.builder(PATCH_MAPPING).addMember("value", "$S", "/" + idPlaceholder).build())
+            .addModifiers(Modifier.PUBLIC)
+            .addAnnotation(Override.class)
+            .returns(entityType)
+            .addParameter(ParameterSpec.builder(idType, idName).addAnnotation(PATH_VARIABLE).build())
+            .addParameter(ParameterSpec.builder(ParameterizedTypeName.get(java.util.Map.class, String.class, Object.class), "fields").addAnnotation(REQUEST_BODY).build())
+            .addStatement("return service.patch($L, fields)", idName)
+            .build()
+    );
+
     // delete
     builder.addMethod(
         MethodSpec
             .methodBuilder("delete")
-            .addAnnotation(AnnotationSpec.builder(DELETE_MAPPING).addMember("value", "$S", "/{" + idName + "}").build())
+            .addAnnotation(AnnotationSpec.builder(DELETE_MAPPING).addMember("value", "$S", "/" + idPlaceholder).build())
             .addAnnotation(
                 AnnotationSpec
                     .builder(RESPONSE_STATUS)

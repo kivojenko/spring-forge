@@ -390,6 +390,10 @@ public final class JpaEntityModel {
         return getElement().getModifiers().contains(Modifier.ABSTRACT);
     }
 
+    public boolean wantsAllowSlashes() {
+        return getRequirements().wantsAllowSlashes();
+    }
+
     private ClassName resolveEntityPathType() {
         return ClassName.get(
                 env.getElementUtils().getPackageOf(element).getQualifiedName().toString(),

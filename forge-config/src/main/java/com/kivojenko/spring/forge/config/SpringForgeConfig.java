@@ -41,6 +41,8 @@ public final class SpringForgeConfig {
 
   public static int getAllPageSize = Integer.MAX_VALUE;
 
+  public static boolean allowSlashes = false;
+
   private static Map<String, Object> yaml = null;
 
   /**
@@ -72,6 +74,16 @@ public final class SpringForgeConfig {
     var newGetAllPageSize = stringFromYaml("getAll.page.size");
     if (newGetAllPageSize != null) {
       getAllPageSize = Integer.parseInt(newGetAllPageSize);
+    }
+    var newAllowSlashes = stringFromYaml("controller.allowSlashes");
+    if (newAllowSlashes == null) {
+      newAllowSlashes = stringFromYaml("controller.allow-slashes");
+    }
+    if (newAllowSlashes == null) {
+      newAllowSlashes = stringFromYaml("allowSlashes");
+    }
+    if (newAllowSlashes != null) {
+      allowSlashes = Boolean.parseBoolean(newAllowSlashes);
     }
   }
 

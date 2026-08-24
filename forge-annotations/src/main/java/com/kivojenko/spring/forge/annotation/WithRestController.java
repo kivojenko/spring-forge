@@ -34,4 +34,11 @@ public @interface WithRestController {
      * @return true if the controller should be abstract, false otherwise
      */
     boolean makeAbstract() default false;
+
+    /**
+     * Whether default endpoints by id should allow slashes (e.g. {@code /{*id}}).
+     *
+     * @return true if default endpoints by id should allow slashes, false otherwise
+     */
+    boolean allowSlashes() default false;
 }

@@ -25,6 +25,7 @@ public interface ClassNameUtils {
   ClassName GET_MAPPING = ClassName.get(BIND_ANNOTATION, "GetMapping");
   ClassName POST_MAPPING = ClassName.get(BIND_ANNOTATION, "PostMapping");
   ClassName PUT_MAPPING = ClassName.get(BIND_ANNOTATION, "PutMapping");
+  ClassName PATCH_MAPPING = ClassName.get(BIND_ANNOTATION, "PatchMapping");
   ClassName DELETE_MAPPING = ClassName.get(BIND_ANNOTATION, "DeleteMapping");
 
   ClassName REQUEST_MAPPING = ClassName.get(BIND_ANNOTATION, "RequestMapping");

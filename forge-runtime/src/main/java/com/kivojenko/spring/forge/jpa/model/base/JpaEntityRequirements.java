@@ -4,6 +4,7 @@ import com.kivojenko.spring.forge.annotation.GetOrCreate;
 import com.kivojenko.spring.forge.annotation.WithJpaRepository;
 import com.kivojenko.spring.forge.annotation.WithRestController;
 import com.kivojenko.spring.forge.annotation.WithService;
+import com.kivojenko.spring.forge.config.SpringForgeConfig;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
@@ -120,6 +121,13 @@ public record JpaEntityRequirements(
 
     public boolean wantsAbstractController() {
         return controllerAnnotation != null && controllerAnnotation.makeAbstract();
+    }
+
+    public boolean wantsAllowSlashes() {
+        if (controllerAnnotation != null && controllerAnnotation.allowSlashes()) {
+            return true;
+        }
+        return SpringForgeConfig.allowSlashes;
     }
 
 }
