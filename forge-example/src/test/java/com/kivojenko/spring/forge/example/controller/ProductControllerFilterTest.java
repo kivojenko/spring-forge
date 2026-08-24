@@ -156,12 +156,12 @@ public class ProductControllerFilterTest extends WithPostgres {
         .andExpect(jsonPath("$.content[?(@.name == 'Laptop')]").exists());
 
     // Partial match, case-insensitive (CONTAINS_IGNORE_CASE configured on targetField)
-    mockMvc.perform(get("/products").param("categories", "lectr"))
+    mockMvc.perform(get("/products").param("category", "lectr"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.content", hasSize(2)));
 
     // Non-existent category name
-    mockMvc.perform(get("/products").param("categories", "Furniture"))
+    mockMvc.perform(get("/products").param("category", "Furniture"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.content", hasSize(0)));
   }
