@@ -1,497 +1,795 @@
+<div align="center">
+
 # Spring Forge
 
-Spring Forge is a **compile-time code generation toolkit** for Spring Boot applications.
-It uses **annotation processing (APT)** to generate repositories, REST controllers and
-other boilerplate **before your application starts**.
+**Compile-time code generation for Spring Boot.**
+
+Annotate a JPA entity — get its repository, service, REST controller and QueryDSL filter
+generated *before* the application starts. No reflection, no runtime proxies, no magic at boot.
+
+[![Maven Central](https://img.shields.io/maven-central/v/com.kivojenko.spring.forge/spring-forge-bom?style=flat-square&logo=apachemaven&label=Maven%20Central)](https://central.sonatype.com/artifact/com.kivojenko.spring.forge/spring-forge-bom)
+[![Javadoc](https://img.shields.io/badge/Javadoc-docs.kivojenko.com-1f6feb?style=flat-square)](https://docs.kivojenko.com)
+[![Java](https://img.shields.io/badge/Java-21-orange?style=flat-square&logo=openjdk)](https://openjdk.org/projects/jdk/21/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0-6DB33F?style=flat-square&logo=springboot)](https://spring.io/projects/spring-boot)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue?style=flat-square)](LICENSE)
+
+</div>
 
 ---
 
-## What Spring Forge Does
+## Contents
 
-### @WithJpaRepository
-
-For
-
-```java
-
-@Entity
-@WithJpaRepository
-public class Person {
-    @Id
-    Long id;
-}
-```
-
-Spring Forge generates **at compile time**:
-
-```java
-public interface PersonForgeRepository extends JpaRepository<Person, Long> {
-}
-```
-
-#### Attributes
-
-- `packageName`: Custom package for the generated repository.
-- `makeAbstract` (default: `false`): If `true`, the generated repository interface will be marked as `abstract`.
-- `interfaces`: Array of interfaces that the generated repository should implement. If an interface has a single type parameter, it will be automatically parameterized with the entity type (e.g., `CustomRepository<T>` becomes `CustomRepository<Person>`).
+- [Why](#why)
+- [Install](#install)
+- [Quick start](#quick-start)
+- [Annotations](#annotations)
+- [The generated REST API](#the-generated-rest-api)
+- [Association endpoints](#association-endpoints)
+- [Filtering](#filtering)
+- [Extension points](#extension-points)
+- [Configuration](#configuration)
+- [How it works](#how-it-works)
+- [Project layout](#project-layout)
+- [Building from source](#building-from-source)
+- [License](#license)
 
 ---
 
-### @WithService
+## Why
 
-For
+A CRUD resource in Spring is three files of boilerplate that never change shape: a repository
+interface, a service that wraps it, a controller that wraps that. Spring Forge writes them for you
+during `javac`, as ordinary Java source you can read, debug, step through and override.
 
 ```java
-
 @Entity
-@WithService
-public class Person {
-    @Id
-    Long id;
-}
-```
-
-Spring Forge generates **at compile time**:
-
-```java
-public interface PersonForgeRepository extends JpaRepository<Person, Long> {
-}
-```
-
-```java
-
-@Service
-public class PersonForgeService extends ForgeService<Person, Long, PersonForgeRepository> {
-}
-```
-
-#### Attributes
-
-- `packageName`: Custom package for the generated service.
-- `makeAbstract` (default: `false`): If `true`, the generated service class will be marked as `abstract`.
-
-If `@WithService` is used along with `@WithRestController`, the generated controller will use the service instead of the
-repository:
-
-```java
-
-@RestController
-@RequestMapping("/person")
-public class PersonForgeController extends ForgeControllerWithService<Person, Long, PersonForgeRepository, PersonForgeService> {
-}
-```
-
----
-
-### @GetOrCreate
-
-If an entity implements `HasName`, you can use `@GetOrCreate` to generate a `getOrCreate(String name)` method in the
-service.
-
-```java
-
-@Entity
+@Table(name = "authors")
+@WithRestController
 @GetOrCreate
-public class Role implements HasName {
-    @Id
-    Long id;
-    String name;
+@Getter @Setter @Builder @AllArgsConstructor @RequiredArgsConstructor
+public class Author implements HasName {
+
+  @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
+
+  @Column(nullable = false, unique = true)
+  private String name;
+
+  @OneToMany(mappedBy = "author", cascade = CascadeType.ALL, orphanRemoval = true)
+  @WithEndpoints
+  @Builder.Default
+  private List<Book> books = new ArrayList<>();
 }
 ```
 
-This will automatically enable `@WithService` and generate:
+Compiling that entity produces three files in `build/generated/sources/annotationProcessor`:
 
-```java
+```
+AuthorForgeRepository.java   interface extends JpaRepository<Author, Long>, HasNameRepository<Author>
+AuthorForgeService.java      @Service extends ForgeService<Author, Long, AuthorForgeRepository>
+AuthorForgeController.java   @RestController @RequestMapping("authors") extends ForgeController<…>
+```
 
-@Service
-public class RoleForgeService extends HasNameForgeServiceWithGetOrCreate<Role, Long, RoleForgeRepository> {
-    @Override
-    protected Role create(String name) {
-        return Role.builder().name(name).build(); // Uses Lombok @Builder or empty constructor + setter
+…and a live REST resource:
+
+```
+GET|POST         /authors                    PATCH   /authors/{id}
+GET|HEAD         /authors/{id}               DELETE  /authors/{id}
+PUT              /authors/{id}               GET     /authors/count
+POST             /authors/get-or-create?name=Ursula
+GET|POST         /authors/{id}/books         DELETE  /authors/{id}/books/{bookId}
+```
+
+> [!NOTE]
+> Everything is generated at compile time. If it does not compile, you find out during the build —
+> not on the first request in production.
+
+---
+
+## Install
+
+### Requirements
+
+| | |
+|---|---|
+| Java | 21+ |
+| Spring Boot | 4.0.x |
+| Required | `spring-boot-starter-data-jpa`, `spring-boot-starter-webmvc` (for controllers) |
+| Required for `@FilterField` | QueryDSL (`querydsl-jpa` + `querydsl-apt`) and Lombok — generated filter DTOs use both |
+
+### Using the BOM
+
+`spring-forge-bom` is a bill of materials: a `pom`-only artifact that pins every Spring Forge module
+to one version. Import it once and declare the modules **without versions** — they can never drift
+apart, and upgrading is a one-line change.
+
+| Managed by the BOM | Not managed |
+|---|---|
+| `forge-annotations`, `forge-config`, `forge-processor`, `forge-runtime` | Spring Boot, QueryDSL, Lombok and everything else — those stay under your control |
+
+The three modules land on three *different* configurations, because they play three different roles:
+
+| Module | Configuration | Why |
+|---|---|---|
+| `forge-annotations` | `compileOnly` / `provided` | `SOURCE` retention — needed to compile, never at runtime |
+| `forge-runtime` | `implementation` | Generated classes extend `ForgeService` / `ForgeController` |
+| `forge-processor` | `annotationProcessor` | Runs during `javac`, not part of your app |
+
+#### Gradle (Kotlin DSL)
+
+```kotlin
+dependencies {
+    val forgeBom = platform("com.kivojenko.spring.forge:spring-forge-bom:0.1.24")
+    implementation(forgeBom)
+    compileOnly(forgeBom)
+    annotationProcessor(forgeBom)
+
+    compileOnly("com.kivojenko.spring.forge:forge-annotations")
+    implementation("com.kivojenko.spring.forge:forge-runtime")
+    annotationProcessor("com.kivojenko.spring.forge:forge-processor")
+}
+```
+
+> [!IMPORTANT]
+> A `platform()` only constrains the configuration it is added to, and `compileOnly` and
+> `annotationProcessor` do not extend `implementation`. Add the BOM to all three, or the versionless
+> `forge-annotations` and `forge-processor` declarations will fail to resolve.
+
+<details>
+<summary>Gradle with the <code>io.spring.dependency-management</code> plugin</summary>
+
+If your build already applies `io.spring.dependency-management` (Spring Initializr adds it to Gradle
+projects), an imported BOM applies to every configuration at once, so one import is enough:
+
+```kotlin
+plugins {
+    id("io.spring.dependency-management") version "1.1.7"
+}
+
+dependencyManagement {
+    imports {
+        mavenBom("com.kivojenko.spring.forge:spring-forge-bom:0.1.24")
     }
 }
+
+dependencies {
+    compileOnly("com.kivojenko.spring.forge:forge-annotations")
+    implementation("com.kivojenko.spring.forge:forge-runtime")
+    annotationProcessor("com.kivojenko.spring.forge:forge-processor")
+}
 ```
 
-### @WithRestController
+</details>
 
-For
+<details>
+<summary>Maven</summary>
+
+```xml
+<dependencyManagement>
+  <dependencies>
+    <dependency>
+      <groupId>com.kivojenko.spring.forge</groupId>
+      <artifactId>spring-forge-bom</artifactId>
+      <version>0.1.24</version>
+      <type>pom</type>
+      <scope>import</scope>
+    </dependency>
+  </dependencies>
+</dependencyManagement>
+
+<dependencies>
+  <dependency>
+    <groupId>com.kivojenko.spring.forge</groupId>
+    <artifactId>forge-annotations</artifactId>
+    <scope>provided</scope>
+  </dependency>
+  <dependency>
+    <groupId>com.kivojenko.spring.forge</groupId>
+    <artifactId>forge-runtime</artifactId>
+  </dependency>
+</dependencies>
+
+<build>
+  <plugins>
+    <plugin>
+      <groupId>org.apache.maven.plugins</groupId>
+      <artifactId>maven-compiler-plugin</artifactId>
+      <configuration>
+        <annotationProcessorPaths>
+          <path>
+            <groupId>com.kivojenko.spring.forge</groupId>
+            <artifactId>forge-processor</artifactId>
+            <version>0.1.24</version>
+          </path>
+        </annotationProcessorPaths>
+      </configuration>
+    </plugin>
+  </plugins>
+</build>
+```
+
+> [!NOTE]
+> `annotationProcessorPaths` is resolved by `maven-compiler-plugin`, separately from
+> `<dependencies>`. Keep the explicit `<version>` there, or use `maven-compiler-plugin` 3.12.0+,
+> which can take it from `<dependencyManagement>`.
+
+</details>
+
+### A complete build file
+
+<details>
+<summary>build.gradle.kts for a Spring Boot 4 application using Spring Forge</summary>
+
+```kotlin
+plugins {
+    java
+    id("org.springframework.boot") version "4.0.6"
+    id("io.spring.dependency-management") version "1.1.7"
+}
+
+group = "com.example"
+version = "0.0.1-SNAPSHOT"
+
+java {
+    toolchain.languageVersion.set(JavaLanguageVersion.of(21))
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // --- Spring Forge, versions from the BOM ---
+    val forgeBom = platform("com.kivojenko.spring.forge:spring-forge-bom:0.1.24")
+    implementation(forgeBom)
+    compileOnly(forgeBom)
+    annotationProcessor(forgeBom)
+
+    compileOnly("com.kivojenko.spring.forge:forge-annotations")
+    implementation("com.kivojenko.spring.forge:forge-runtime")
+    annotationProcessor("com.kivojenko.spring.forge:forge-processor")
+
+    // --- Spring ---
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    implementation("org.springframework.boot:spring-boot-starter-webmvc")
+    runtimeOnly("org.postgresql:postgresql")
+
+    // --- Required for @FilterField ---
+    implementation("io.github.openfeign.querydsl:querydsl-core:7.1")
+    implementation("io.github.openfeign.querydsl:querydsl-jpa:7.1")
+    annotationProcessor("io.github.openfeign.querydsl:querydsl-apt:7.1:jpa")
+
+    compileOnly("org.projectlombok:lombok")
+    annotationProcessor("org.projectlombok:lombok")
+
+    // --- Entity metadata for the processor ---
+    annotationProcessor("jakarta.persistence:jakarta.persistence-api")
+    annotationProcessor("jakarta.annotation:jakarta.annotation-api")
+}
+
+tasks.test {
+    useJUnitPlatform()
+}
+```
+
+</details>
+
+### Without the BOM
+
+Perfectly fine — just pin each module yourself and keep the versions identical:
+
+```kotlin
+dependencies {
+    compileOnly("com.kivojenko.spring.forge:forge-annotations:0.1.24")
+    implementation("com.kivojenko.spring.forge:forge-runtime:0.1.24")
+    annotationProcessor("com.kivojenko.spring.forge:forge-processor:0.1.24")
+}
+```
+
+A complete, runnable setup lives in [`forge-example`](forge-example).
+
+---
+
+## Quick start
+
+**1. Annotate an entity.**
 
 ```java
-
 @Entity
 @WithRestController
 public class Person {
-    @Id
-    Long id;
+  @Id @GeneratedValue
+  private Long id;
+  private String name;
 }
 ```
 
-Spring Forge generates **at compile time**:
+**2. Build.** `@WithRestController` implies a service, which implies a repository, so all three are
+generated next to the entity (or into the packages you configure):
 
 ```java
-public interface PersonRepository extends JpaRepository<Person, Long> {
-}
-```
+public interface PersonForgeRepository extends JpaRepository<Person, Long> {}
 
-```java
+@Service
+public class PersonForgeService extends ForgeService<Person, Long, PersonForgeRepository> {}
 
 @RestController
-@RequestMapping("/persons")
-public class PersonForgeController extends ForgeController<Person, Long, PersonForgeRepository> {
-}
+@RequestMapping("persons")
+public class PersonForgeController
+    extends ForgeController<Person, Long, PersonForgeRepository, PersonForgeService> {}
 ```
 
-#### Attributes
+**3. Call it.** `GET /persons?page=0&size=20`, `POST /persons`, `PATCH /persons/1`, …
 
-- `path`: Custom base path for the controller (defaults to decapitalized entity name + "s").
-- `packageName`: Custom package for the generated controller.
-- `makeAbstract` (default: `false`): If `true`, the generated controller class will be marked as `abstract`.
+> [!TIP]
+> The base path defaults to the pluralised, decapitalised entity name: `Person → persons`,
+> `Category → categories`. A name already ending in `s` is left alone (`Address → address`).
+> Override it with `@WithRestController(path = "people")`.
 
 ---
 
-### Generated Endpoints
+## Annotations
 
-path = decapitalized entity name + "s"
+### Trigger annotations
 
-| Method |              Path               |             Description              |
-|:------:|:-------------------------------:|:------------------------------------:|
-|  GET   | /{path}?page={page}&size={size} | Paged entities - params are optional |
-|  POST  |             /{path}             |         Create a new entity          |
-|  GET   |          /{path}/{id}           |           Get entity by ID           |
-|  HEAD  |          /{path}/{id}           |        Check if entity exists        |
-|  PUT   |          /{path}/{id}           |         Update entity by ID          |
-| DELETE |          /{path}/{id}           |         Delete entity by ID          |
-|  GET   |          /{path}/count          |        Get total entity count        |
+Each one implies the layers below it, so you only ever annotate for the topmost layer you want.
+
+| Annotation | Generates | Implies |
+|---|---|---|
+| `@WithJpaRepository` | repository | — |
+| `@WithService` | service | repository |
+| `@GetOrCreate` | `getOrCreate` method (+ endpoint if a controller exists) | service, repository |
+| `@WithRestController` | controller | service, repository |
+
+<details>
+<summary>Attributes</summary>
+
+**`@WithJpaRepository`**
+
+| Attribute | Default | Description |
+|---|---|---|
+| `packageName` | `""` | Sub-package appended to the base package for generated types |
+| `makeAbstract` | `false` | Mark the generated repository interface `abstract` |
+| `interfaces` | `{}` | Extra interfaces the repository should extend — see [generic repository interfaces](#generic-repository-interfaces) |
+
+**`@WithService`**
+
+| Attribute | Default | Description |
+|---|---|---|
+| `packageName` | `""` | Sub-package appended to the base package |
+| `makeAbstract` | `false` | Mark the service `abstract` and omit `@Service`, so a subclass becomes the bean |
+
+**`@WithRestController`**
+
+| Attribute | Default | Description |
+|---|---|---|
+| `path` | pluralised entity name | Base path of the resource |
+| `packageName` | `""` | Sub-package appended to the base package |
+| `makeAbstract` | `false` | Mark the controller `abstract` and omit `@RestController`/`@RequestMapping`, so a subclass can map it |
+| `allowSlashes` | `false` | Allow slashes in default endpoints by id (e.g. `/{*id}`) |
+
+**`@GetOrCreate`**
+
+| Attribute | Default | Description |
+|---|---|---|
+| `field` | `"name"` | Lookup/creation field. Supports nested paths such as `"country.code"` |
+| `path` | `"/get-or-create"` | Endpoint path, relative to the resource |
+| `ignoreCase` | `true` | Case-insensitive lookup for `String` fields; ignored for other types |
+
+> [!IMPORTANT]
+> `packageName` is a *sub-package*, appended to the configured (or entity's own) base package.
+> The first non-blank `packageName` among the three trigger annotations applies to all generated types.
+
+</details>
+
+### `@GetOrCreate` in detail
+
+```java
+@Entity
+@WithRestController
+@GetOrCreate                      // defaults to the "name" field; entity implements HasName
+public class Role implements HasName { … }
+```
+
+```java
+// generated in RoleForgeService
+@Transactional
+public Role getOrCreate(String name) {
+  return repository.findByNameIgnoreCase(name).orElseGet(() -> createSafely(name));
+}
+
+protected Role create(String name) {
+  return Role.builder().name(name).build();   // Lombok @Builder, or ctor + setter
+}
+```
+
+`createSafely` catches `DataIntegrityViolationException` and re-reads, so concurrent callers converge
+on a single row instead of blowing up. Any field works, including a nested one:
+
+```java
+@GetOrCreate(field = "sku")            // POST /products/get-or-create?sku=SKU-1
+@GetOrCreate(field = "country.code")   // POST /offices/get-or-create?country.code=EE
+```
+
+### `@WithEndpoints`
+
+Placed on an association field to expose that relation over REST. See
+[association endpoints](#association-endpoints) for the exact routes.
+
+| Attribute | Default | Description |
+|---|---|---|
+| `path` | field name | Path segment for the association |
+| `read` | `true` | `GET` the associated entity/collection |
+| `addNew` | `true` | `POST` a brand-new entity into the association |
+| `linkExisting` | `true` | `PUT` an existing entity into the association (`@ManyToOne`, `@ManyToMany`) |
+| `remove` | `true` | `DELETE` the link |
+
+### `@WithGetEndpoint`
+
+Placed on a **public entity method returning a generic collection**, it exposes that method per
+instance:
+
+```java
+@WithGetEndpoint
+@JsonIgnore
+public List<String> getBooksTitles() {
+  return books.stream().map(Book::getTitle).toList();
+}
+```
+
+```java
+// generated in AuthorForgeController
+@GetMapping("/{id}/booksTitles")
+public Iterable<String> getBooksTitles(@PathVariable Long id) {
+  return getById(id).getBooksTitles();
+}
+```
+
+The path is `path()` when set, otherwise the method name with a leading `get` stripped and
+decapitalised.
 
 ---
 
-### Endpoint Annotations
+## The generated REST API
 
-Spring Forge can generate additional endpoints for associations or custom service methods.
+For a resource mapped at `/{path}`:
 
-#### @WithEndpoints
+| Method | Path | Success | Description |
+|:---|:---|:---:|:---|
+| `GET` | `/{path}` | 200 | Paged list — accepts `page`, `size`, `sort` and every filter parameter |
+| `POST` | `/{path}` | 201 | Create |
+| `GET` | `/{path}/{id}` | 200 | Read one |
+| `HEAD` | `/{path}/{id}` | 200 | Existence check |
+| `PUT` | `/{path}/{id}` | 201 | Full update |
+| `PATCH` | `/{path}/{id}` | 200 | Partial update from a JSON object |
+| `DELETE` | `/{path}/{id}` | 204 | Delete |
+| `GET` | `/{path}/count` | 200 | Total row count |
+| `POST` | `/{path}/get-or-create` | 200 | Only with `@GetOrCreate` |
 
-Used on association fields in entities. It generates endpoints for reading and managing associations.
+`GET /{path}` returns a Spring `Page`, so the payload is `{ "content": [...], "totalElements": …, … }`.
+The default page size comes from [`getAll.page.size`](#configuration) and is unbounded unless you set it.
 
-It supports the following attributes:
+> [!WARNING]
+> Spring Forge does not register a `@ControllerAdvice`. `getById` on a missing row throws
+> `EntityNotFoundException`, which Spring renders as a 500 unless you map it yourself.
 
-- `read` (default: `true`): Generates a GET endpoint.
-- `remove` (default: `true`): Generates a DELETE endpoint (requires `mappedBy` for collections).
-- `path`: Custom path for the association (defaults to field name).
-- `getMethodName`: Custom name of the getter method in the service (defaults to `get` + CapitalizedFieldName).
+### PATCH semantics
 
-##### Examples by Relation Type
+`PATCH` takes a partial JSON object and merges it into the managed entity:
 
-###### One-to-One
+- values are deserialised with Jackson using each field's generic type, so nested objects and
+  generic collections work;
+- collections are merged **in place** (`clear()` + `addAll()`), keeping Hibernate's collection
+  management and `orphanRemoval` intact;
+- the [`fixPatch`](#service-hooks) hook runs on the merged entity just before saving.
 
-```java
-@Entity
-public class Category {
-    @Id Long id;
+---
 
-    @OneToOne
-    @WithEndpoints(read = true, remove = true)
-    Translation nameTranslation;
-}
-```
+## Association endpoints
 
-- `GET /categories/{id}/nameTranslation` - returns the associated translation.
-- `DELETE /categories/{id}/nameTranslation` - unlinks the translation from the category.
+`@WithEndpoints` generates a different route set per relation type. `{path}` is the resource base
+path, `{sub}` the association path, `{subId}` the related entity's id.
 
+| Relation | `read` | `addNew` | `linkExisting` | `remove` |
+|---|---|---|---|---|
+| `@OneToOne` | `GET /{path}/{id}/{sub}` | `POST /{path}/{id}/{sub}` | — | `DELETE /{path}/{id}/{sub}` |
+| `@Embedded` | `GET /{path}/{id}/{sub}` | `POST /{path}/{id}/{sub}` | — | `DELETE /{path}/{id}/{sub}` |
+| `@ManyToOne` | `GET /{path}/{id}/{sub}` | `POST /{path}/{id}/{sub}` | `PUT /{path}/{id}/{sub}/{subId}` | `DELETE /{path}/{id}/{sub}/{subId}` |
+| `@OneToMany(mappedBy)` | `GET /{path}/{id}/{sub}` | `POST /{path}/{id}/{sub}` | — | `DELETE /{path}/{id}/{sub}/{subId}` |
+| `@ManyToMany` | `GET /{path}/{id}/{sub}` | `POST /{path}/{id}/{sub}` | `PUT /{path}/{id}/{sub}/{subId}` | `DELETE /{path}/{id}/{sub}/{subId}` |
 
-###### One-to-Many
+`POST` creates and links a new entity from the request body; `PUT` links one that already exists;
+`DELETE` unlinks (it does not delete the target row unless JPA cascades say so).
 
-```java
-@Entity
-public class Company {
-    @Id Long id;
-
-    @OneToMany(mappedBy = "company")
-    @WithEndpoints
-    List<Employee> employees;
-}
-```
-
-- `GET /companies/{id}/employees` - returns a list of employees for the company.
-- `POST /companies/{id}/employees` - creates a new employee and associates it with the company.
-- `DELETE /companies/{id}/employees/{employeeId}` - removes an employee from the company (sets the association to `null`).
-
-###### Many-to-One
-
-```java
-@Entity
-public class Employee {
-    @Id Long id;
-
-    @ManyToOne
-    @WithEndpoints
-    Company company;
-}
-```
-
-- `GET /employees/{id}/company` - returns the associated company.
-- `POST /employees/{id}/company/{companyId}` - links an existing company to the employee.
-- `DELETE /employees/{id}/company/{companyId}` - unlinks the company from the employee.
-
-###### Many-to-Many
+<details>
+<summary>Examples</summary>
 
 ```java
 @Entity
 public class Book {
-    @Id Long id;
+  @Id Long id;
 
-    @ManyToMany
-    @WithEndpoints(read = true, remove = true)
-    List<Category> categories;
+  @ManyToOne
+  @WithEndpoints
+  Author author;
+
+  @ManyToMany
+  @WithEndpoints
+  List<Category> categories;
 }
 ```
 
-- `GET /books/{id}/categories` - returns the list of categories for the book.
-- `POST /books/{id}/categories/{categoryId}` - links an existing category to the book.
-- `DELETE /books/{id}/categories/{categoryId}` - removes the category from the book.
-
-#### @WithGetEndpoint
-
-Used on custom getter methods in service to expose them as GET endpoints.
-
-```java
-
-@RestController
-@RequestMapping("/persons")
-public class PersonForgeController extends ForgeController<Person, Long, PersonForgeRepository> {
-
-    @WithGetEndpoint
-    public List<Person> getRecent() {
-        // custom logic
-    }
-}
 ```
+GET    /books/{id}/author                    read the author
+POST   /books/{id}/author                    create an author and link it
+PUT    /books/{id}/author/{authorId}         link an existing author
+DELETE /books/{id}/author/{authorId}         unlink
 
-This generates:
-
-- `GET /people/recent` - returns the list of people from the custom service method.
-
-Attributes:
-
-- `path`: Custom path for the GET endpoint. If empty, it's derived from the method name (e.g., `getRecent` -> `recent`).
-
----
-
-## Optional Traits
-
-Spring Forge can extend generated repositories based on **marker interfaces** implemented by your entities.
-
-### @FilterField
-
-You can use `@FilterField` on entity fields to generate a filter class that can be used for searching.
-It supports the following attributes:
-
-- `name`: Custom name for the query parameter in the filter DTO and REST endpoints.
-- `targetField`: Map a filter field to a different (possibly nested) field in the entity (e.g., `category.name`).
-- `required` (default: `false`): If `true`, the generated filter field is marked with `@NotNull` or `@NotBlank` (for Strings), and the controller uses `@Valid` to enforce its presence.
-- `orNull` (default: `false`): If `true`, the generated filtering logic will include an OR condition to match records where the field is `null`.
-- `stringMatchMode` (default: `CONTAINS`): Defines how string values are matched (`EQUALS`, `CONTAINS`, `STARTS_WITH`, etc.).
-- `comparisonMatchMode` (default: `EXACT_OR_RANGE`): Defines how numbers or dates are matched (exact value or range).
-
-```java
-public class Brand implements HasName {
-
-    @FilterField(name = "manufacturer", required = true)
-    protected String name;
-
-    @FilterField(orNull = true)
-    private String description;
-
-    @FilterField
-    private boolean vegan;
-
-    <...>
-    @FilterField
-    private Country country;
-
-    <...>
-    @FilterField
-    private Set<Certification> certifications = new HashSet<>();
-}
+GET    /books/{id}/categories                list categories
+POST   /books/{id}/categories                create a category and link it
+PUT    /books/{id}/categories/{categoryId}   link an existing category
+DELETE /books/{id}/categories/{categoryId}   unlink
 ```
-
-This generates:
-
-```java
-@Getter
-@Setter
-@Builder
-@AllArgsConstructor
-@RequiredArgsConstructor
-public class BrandForgeFilter {
-  @NotBlank
-  private String manufacturer;
-
-  private String description;
-
-  private boolean vegan;
-
-  @Builder.Default
-  private Set<Long> countries = new HashSet<>();
-
-  @Builder.Default
-  private Set<Long> certifications = new HashSet<>();
-}
-```
-
-The filter class uses the ID type of the related entities for associations (unless `targetField` is used), making it easy to filter by foreign keys.
-
-#### Automatic Inheritance Filtering
-
-If an entity hierarchy uses JPA inheritance with `@DiscriminatorColumn`, Spring Forge automatically adds a discriminator filter field to the generated filter class.
-
-- Supports all `DiscriminatorType`s: `STRING`, `INTEGER`, and `CHAR`.
-- Uses `List<T>` to allow filtering by multiple types at once.
-- Leverages QueryDSL `instanceOf` for type-safe filtering based on the discriminator mapping.
-
-### HasName
-
-```java
-public interface HasName {
-    String getName();
-
-    void setName(String name);
-}
-```
-
-If an entity implements `HasName`:
 
 ```java
 @Entity
-@WithJpaRepository
-public class Person implements HasName {
-    @Id
-    Long id;
-    String name;
+public class Author {
+  @Id Long id;
+
+  @OneToMany(mappedBy = "author")
+  @WithEndpoints
+  List<Book> books;
 }
 ```
 
-The generated repository will also extend:
-
-```java
-public interface HasNameRepository<E> {
-    boolean existsByName(String name);
-
-    boolean existsByNameIgnoreCase(String name);
-
-    Optional<E> findByName(String name);
-
-    Optional<E> findByNameIgnoreCase(String name);
-
-    Iterable<E> findAllByNameContaining(String name);
-
-    Iterable<E> findAllByNameContainingIgnoreCase(String name, Pageable pageable);
-}
+```
+GET    /authors/{id}/books                   list this author's books
+POST   /authors/{id}/books                   create a book owned by this author
+DELETE /authors/{id}/books/{bookId}          unlink the book (sets its author to null)
 ```
 
-Resulting in:
-
-```java
-public interface PersonForgeRepository extends JpaRepository<Person, Long>, HasNameRepository<Person> {
-}
-```
-
-Generated controller will accept optional `name` query parameters: `GET /entity?page={page}&size={size}&name={name}`.
-Spring Data will generate the query implementations automatically.
+</details>
 
 ---
 
-### Generic Repository Interfaces
+## Filtering
 
-Spring Forge supports automatic parameterization of generic repository interfaces. If you provide an interface with exactly one type parameter to `@WithJpaRepository(interfaces = ...)`, it will be automatically parameterized with the entity type.
+`@FilterField` on entity fields generates a filter DTO plus a QueryDSL predicate, and binds it to
+`GET /{path}` as query parameters.
 
-This is useful for creating reusable repository patterns that are not built into Spring Forge (unlike `HasName`).
+```java
+@Entity
+@WithRestController
+public class Product {
+  @Id @GeneratedValue Long id;
 
-#### 1. Define your generic interface
+  @FilterField(stringMatchMode = StringMatchMode.CONTAINS)
+  private String name;
+
+  @FilterField(name = "manufacturer")
+  private String brand;
+
+  @FilterField(orNull = true)
+  private String description;
+
+  @FilterField                                   // EXACT_OR_RANGE by default
+  private BigDecimal price;
+
+  @FilterField
+  private ProductType type;                      // enum
+
+  @ManyToOne
+  @FilterField(targetField = "name", stringMatchMode = StringMatchMode.CONTAINS_IGNORE_CASE)
+  private ProductCategory category;
+
+  @ManyToMany
+  @FilterField(iterableMatchMode = IterableMatchMode.ANY)
+  private Set<Tag> tags = new HashSet<>();
+}
+```
+
+```java
+public class ProductForgeFilter implements HasToPredicate {
+  private String name;
+  private String manufacturer;
+  private String description;
+  private BigDecimal price;
+  private BigDecimal minPrice;
+  private BigDecimal maxPrice;
+  private Set<ProductType> types = new HashSet<>();
+  private String category;
+  private Set<Long> tags = new HashSet<>();
+
+  public BooleanBuilder toPredicate() { … }
+}
+```
+
+```
+GET /products?name=phone&minPrice=100&maxPrice=900&types=ELECTRONICS&category=lectr&tags=1&tags=2
+```
+
+The repository also gains matching `findBy…` derived queries, and extends
+`QuerydslPredicateExecutor<E>` so the predicate can be paged.
+
+### Parameter naming
+
+The DTO field name *is* the query parameter name, and it is not always the entity field name:
+
+| Entity field | Generated parameter(s) |
+|---|---|
+| `String`, `Boolean`, `UUID`, … | same name — `description` |
+| number/date, `EXACT` | `price` |
+| number/date, `RANGE` | `minPrice`, `maxPrice` |
+| number/date, `EXACT_OR_RANGE` *(default)* | all three |
+| enum | pluralised set — `type` → `types` |
+| single association, no `targetField` | pluralised set of **ids** — `country` → `countries` |
+| collection association, no `targetField` | set of **ids**, name unchanged — `tags` |
+| any association **with** `targetField` | scalar of the target's type, **name unchanged** — `category` |
+| `@DiscriminatorColumn` | `List` named after the column — `vehicle_type` → `vehicleType` |
+
+> [!CAUTION]
+> Unknown query parameters are silently ignored by Spring's data binding, so a mistyped filter name
+> returns *unfiltered* results rather than an error. `category` and `categories` are not
+> interchangeable — check the generated DTO when a filter looks like it is doing nothing.
+
+`name` overrides the parameter name explicitly:
+
+```java
+@FilterField(name = "manufacturer")
+private String brand;              // ?manufacturer=Acme
+```
+
+### Match modes
+
+| Attribute | Values | Default |
+|---|---|---|
+| `stringMatchMode` | `EQUALS`, `EQUALS_IGNORE_CASE`, `CONTAINS`, `CONTAINS_IGNORE_CASE`, `STARTS_WITH`, `ENDS_WITH` | `CONTAINS` |
+| `comparisonMatchMode` | `EXACT`, `RANGE`, `EXACT_OR_RANGE` | `EXACT_OR_RANGE` |
+| `iterableMatchMode` | `ANY`, `ALL` | `ANY` |
+| `minBoundMode` / `maxBoundMode` | `INCLUDES`, `EXCLUDES` | `INCLUDES` |
+
+Other attributes:
+
+| Attribute | Default | Description |
+|---|---|---|
+| `name` | field name | Query-parameter / DTO field name |
+| `targetField` | `""` | Filter on a field *of* the association (`category.name`), or an absolute path from the root entity when placed on a transient field |
+| `required` | `false` | Adds `@NotNull` (`@NotBlank` for `String`) to the DTO; the controller validates with `@Valid` |
+| `orNull` | `false` | Also match rows where the column is `NULL` |
+
+### Nested and collection paths
+
+`targetField` resolves relative to the annotated association, using QueryDSL `.any()` for
+collections:
+
+```java
+@ManyToOne
+@FilterField(targetField = "name")        // → entity.category.name
+private ProductCategory category;
+
+@OneToMany(mappedBy = "ingredient")
+@FilterField(targetField = "name")        // → entity.alternativeNames.any().name
+private Set<IngredientAlternativeName> alternativeNames;
+```
+
+### Inheritance
+
+For a `@DiscriminatorColumn` hierarchy, a discriminator filter is added automatically — all three
+`DiscriminatorType`s are supported, and matching uses QueryDSL `instanceOf` against the mapping:
+
+```java
+// VehicleForgeFilter
+private List<String> vehicleType;   // ?vehicleType=CAR&vehicleType=TRUCK
+```
+
+---
+
+## Extension points
+
+### Reuse over generation
+
+If a repository, service or controller with the expected name already exists in the target package,
+Spring Forge **skips generation and uses yours**. That is the escape hatch: write the class by hand,
+extend `ForgeService`/`ForgeController` yourself, and the rest of the pipeline still wires up.
+
+### `HasName`
+
+Implementing `HasName` opts an entity into name-based queries:
+
+```java
+public interface HasName {
+  String getName();
+  void setName(String name);
+}
+```
+
+The generated repository extends `HasNameRepository<E>`:
+
+```java
+boolean       existsByName(String name);
+boolean       existsByNameIgnoreCase(String name);
+Optional<E>   findByName(String name);
+Optional<E>   findByNameIgnoreCase(String name);
+List<E>       findAllByNameContaining(String name);
+List<E>       findAllByNameContainingIgnoreCase(String name, Pageable pageable);
+```
+
+The generated service also rejects duplicate names on `create`, and `@GetOrCreate` defaults to this
+field.
+
+### Generic repository interfaces
+
+An interface passed to `interfaces` is automatically parameterised with the entity type when it
+declares exactly one type parameter:
+
 ```java
 public interface WithNameTranslation<T> {
   Optional<T> findByNameEnUS(String name);
 }
-```
 
-#### 2. Apply it to your Entity
-```java
 @Entity
-@WithJpaRepository(interfaces = {WithNameTranslation.class})
-public class Organism {
-    @Id
-    @GeneratedValue
-    private Long id;
-    private String name;
-}
+@WithJpaRepository(interfaces = WithNameTranslation.class)
+public class Organism { … }
 ```
-
-#### 3. Resulting Generated Repository
-Spring Forge will detect that `WithNameTranslation<T>` has one type parameter and will use `Organism` as the argument.
 
 ```java
-public interface OrganismForgeRepository 
-    extends JpaRepository<Organism, Long>, WithNameTranslation<Organism> {
-}
+public interface OrganismForgeRepository
+    extends JpaRepository<Organism, Long>, WithNameTranslation<Organism> {}
 ```
 
----
+### Service hooks
 
-### ForgePersistenceAspect
+Override these on a hand-written service that extends the generated one:
 
-You can extend `ForgePersistenceAspect<E>` to intercept persistence operations in the generated service using AOP.
-Subclasses must implement `entityType()` and be marked as `@Component`.
+| Hook | When |
+|---|---|
+| `E fixParameters(E entity)` | before `create` and `PUT` update |
+| `E fixPatch(E entity)` | after `PATCH` fields are merged into the managed entity, before save |
 
-Example for logging entity creation:
+`fixPatch` receives the *managed* instance with changes already applied — adjust it in place
+(back-references, de-duplicated values); returning a different instance would discard the merged
+collections.
+
+### `ForgePersistenceAspect`
+
+AOP hooks around the generated persistence calls. Extend it, implement `entityType()`, mark it
+`@Component`:
 
 ```java
 @Component
 @Slf4j
 public class AuditLogger extends ForgePersistenceAspect<Product> {
 
-    @Override
-    protected Class<Product> entityType() {
-        return Product.class;
-    }
+  @Override
+  protected Class<Product> entityType() {
+    return Product.class;
+  }
 
-    @Override
-    public void afterCreate(Product product) {
-        log.info("Created {}", product);
-    }
+  @Override
+  public void afterCreate(Product product) {
+    log.info("Created {}", product);
+  }
 }
 ```
 
-Available methods in `ForgePersistenceAspect`:
-- `beforeCreate(E entity)` / `afterCreate(E entity)`
-- `beforeUpdate(E entity)` / `afterUpdate(E entity)`
-- `beforeDelete(E entity)` / `afterDelete(E entity)`
-- `beforeAdd(Object mainEntity, Object subEntity)` / `afterAdd(Object mainEntity, Object subEntity)`
-- `beforeDelete(Object mainEntity, Object subEntity)` / `afterDelete(Object mainEntity, Object subEntity)`
+| Hook | Fires on |
+|---|---|
+| `beforeCreate(E)` / `afterCreate(E)` | create |
+| `beforeUpdate(E)` / `afterUpdate(E)` | `PUT` update — `afterUpdate` also fires after `PATCH` |
+| `beforeDelete(E)` / `afterDelete(E)` | delete |
+| `beforeAdd(Object main, Object sub)` / `afterAdd(…)` | association add/link |
+| `beforeDelete(Object main, Object sub)` / `afterDelete(…)` | association unlink |
+
+> [!NOTE]
+> `PATCH` has no "before" hook: `ForgeService.patch(ID, Map)` never receives the entity, only its id
+> and a field map, so there is nothing for AOP to hand you.
 
 ---
 
-### Repository reuse (no collisions)
+## Configuration
 
-If a repository or service already exists **in the configured package**, Spring Forge will **reuse it instead of generating a new one**.
-
----
-
-## Installation
-
-### Dependencies
-```kotlin
-mavenBom("com.kivojenko.spring.forge:spring-forge-bom:0.1.17")
-```
-
-```kotlin
-compileOnly("com.kivojenko.spring.forge:forge-annotations")
-implementation("com.kivojenko.spring.forge:forge-runtime")
-annotationProcessor("com.kivojenko.spring.forge:forge-processor")
-```
-
-## Optional configuration (recommended)
-
-Spring Forge is configured **at compile time** via `resources/springforge.yml`
+Compile-time configuration lives in `src/main/resources/springforge.yml` of the **consuming**
+project. It is read by the annotation processor, not by Spring at runtime.
 
 ```yml
 repository:
@@ -500,18 +798,92 @@ service:
   package: com.example.service
 controller:
   package: com.example.controller
-
+filter:
+  package: com.example.filter
+getAll:
+  page:
+    size: 100
 ```
 
-## Design philosophy
+| Key | Default | Effect |
+|---|---|---|
+| `repository.package` | entity's package | Base package for generated repositories |
+| `service.package` | entity's package | Base package for generated services |
+| `controller.package` | entity's package | Base package for generated controllers |
+| `filter.package` | entity's package | Base package for generated filters |
+| `getAll.page.size` | `Integer.MAX_VALUE` | `@PageableDefault` size on `GET /{path}` |
 
-> If code can be generated deterministically at compile time,
-> it should be generated.
+Per-entity `packageName` attributes are appended to these as a sub-package.
 
-Spring Forge trades flexibility for **clarity, safety, and maintainability**.
+---
 
-## Publishing
+## How it works
 
-After publishing via gradle, make a POST request
-to `https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/com.kivojenko` with
-Sonatype auth.
+1. **Discovery** — `ForgeProcessor` collects every type annotated with a Spring Forge annotation.
+2. **Graph expansion** — relations reachable through `@WithEndpoints` are followed, so related
+   entities get modelled too.
+3. **Modelling** — `JpaEntityModelFactory` builds a `JpaEntityModel` per entity: id, packages,
+   requirements, relations, filter fields.
+4. **Generation** — `Filter`, `Repository`, `Service` and `Controller` generators emit source with
+   [JavaPoet](https://github.com/square/javapoet).
+5. **Skip what exists** — anything already present in the target package is left alone.
+
+Generated classes extend the runtime base classes (`ForgeService`, `ForgeController`,
+`ForgeAbstractController`), so the behaviour lives in a versioned library while the generated code
+stays thin and readable.
+
+> **Design philosophy**
+> If code can be generated deterministically at compile time, it should be generated.
+> Spring Forge trades flexibility for clarity, safety and maintainability.
+
+---
+
+## Project layout
+
+| Module | What it is |
+|---|---|
+| [`forge-annotations`](forge-annotations) | The public annotation API — `compileOnly` for consumers |
+| [`forge-config`](forge-config) | Compile-time `springforge.yml` loading |
+| [`forge-processor`](forge-processor) | The `javax.annotation.processing.Processor` entry point |
+| [`forge-runtime`](forge-runtime) | Base classes for generated code, plus the generators and models |
+| [`forge-bom`](forge-bom) | Bill of materials |
+| [`forge-example`](forge-example) | Runnable sample app and the integration test suite |
+
+---
+
+## Building from source
+
+```bash
+./gradlew build
+```
+
+Tests in `forge-example` are integration tests against a real PostgreSQL instance via
+[Testcontainers](https://testcontainers.com/), so a running Docker daemon is required:
+
+```bash
+./gradlew test
+```
+
+Aggregate Javadoc for every module (published to [docs.kivojenko.com](https://docs.kivojenko.com)):
+
+```bash
+./gradlew aggregateJavadoc
+```
+
+<details>
+<summary>Publishing</summary>
+
+Publish with Gradle, then promote the staged repository:
+
+```bash
+curl -X POST -u "$OSSRH_USER:$OSSRH_PASS" \
+  https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/com.kivojenko
+```
+
+</details>
+
+---
+
+## License
+
+[Apache License 2.0](LICENSE)
