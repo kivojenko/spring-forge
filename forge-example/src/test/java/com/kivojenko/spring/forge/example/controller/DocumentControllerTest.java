@@ -3,14 +3,25 @@ package com.kivojenko.spring.forge.example.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.kivojenko.spring.forge.example.WithPostgres;
 import com.kivojenko.spring.forge.example.model.slashes.Document;
+import com.kivojenko.spring.forge.example.model.slashes.DocumentDefault;
+import com.kivojenko.spring.forge.example.model.slashes.DocumentDefaultForgeController;
+import com.kivojenko.spring.forge.example.model.slashes.DocumentForgeController;
+import com.kivojenko.spring.forge.example.model.slashes.DocumentNoSlashes;
+import com.kivojenko.spring.forge.example.model.slashes.DocumentNoSlashesForgeController;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 import java.util.Map;
 
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.head;
@@ -100,5 +111,26 @@ public class DocumentControllerTest extends WithPostgres {
     mockMvc.perform(head("/documents" + docId))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$", is(false)));
+  }
+
+  @Test
+  void testMappingPlaceholders() throws Exception {
+    // Document has @WithRestController(allowSlashes = true) -> "{*id}"
+    assertEquals("/{*id}", DocumentForgeController.class.getMethod("getById", String.class).getAnnotation(GetMapping.class).value()[0]);
+    assertEquals("/{*id}", DocumentForgeController.class.getMethod("update", String.class, Document.class).getAnnotation(PutMapping.class).value()[0]);
+    assertEquals("/{*id}", DocumentForgeController.class.getMethod("patch", String.class, Map.class).getAnnotation(PatchMapping.class).value()[0]);
+    assertEquals("/{*id}", DocumentForgeController.class.getMethod("delete", String.class).getAnnotation(DeleteMapping.class).value()[0]);
+
+    // DocumentNoSlashes has @WithRestController(allowSlashes = false) -> "{id}"
+    assertEquals("/{id}", DocumentNoSlashesForgeController.class.getMethod("getById", String.class).getAnnotation(GetMapping.class).value()[0]);
+    assertEquals("/{id}", DocumentNoSlashesForgeController.class.getMethod("update", String.class, DocumentNoSlashes.class).getAnnotation(PutMapping.class).value()[0]);
+    assertEquals("/{id}", DocumentNoSlashesForgeController.class.getMethod("patch", String.class, Map.class).getAnnotation(PatchMapping.class).value()[0]);
+    assertEquals("/{id}", DocumentNoSlashesForgeController.class.getMethod("delete", String.class).getAnnotation(DeleteMapping.class).value()[0]);
+
+    // DocumentDefault has @WithRestController without explicit allowSlashes -> "{id}" (from default config)
+    assertEquals("/{id}", DocumentDefaultForgeController.class.getMethod("getById", String.class).getAnnotation(GetMapping.class).value()[0]);
+    assertEquals("/{id}", DocumentDefaultForgeController.class.getMethod("update", String.class, DocumentDefault.class).getAnnotation(PutMapping.class).value()[0]);
+    assertEquals("/{id}", DocumentDefaultForgeController.class.getMethod("patch", String.class, Map.class).getAnnotation(PatchMapping.class).value()[0]);
+    assertEquals("/{id}", DocumentDefaultForgeController.class.getMethod("delete", String.class).getAnnotation(DeleteMapping.class).value()[0]);
   }
 }

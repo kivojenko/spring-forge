@@ -91,6 +91,9 @@ public abstract class WithPostgres {
       mockMvc.perform(delete("/authors/{id}", authorId)).andExpect(status().isNoContent());
     }
 
+    jdbcTemplate.execute("DELETE FROM category_parents");
+    jdbcTemplate.execute("DELETE FROM category_children");
+
     String categoriesJson = mockMvc
         .perform(get("/categories"))
         .andExpect(status().isOk())

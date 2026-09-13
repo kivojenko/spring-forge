@@ -9,7 +9,9 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -50,4 +52,28 @@ public class Category implements HasName {
     @ToString.Exclude
     @JsonIgnore
     private List<Book> books = new ArrayList<>();
+
+    @ManyToMany
+    @JoinTable(
+        name = "category_parents",
+        joinColumns = @JoinColumn(name = "category_id"),
+        inverseJoinColumns = @JoinColumn(name = "parent_id")
+    )
+    @WithEndpoints
+    @Builder.Default
+    @ToString.Exclude
+    @JsonIgnore
+    private Set<Category> parents = new HashSet<>();
+
+    @ManyToMany
+    @JoinTable(
+        name = "category_children",
+        joinColumns = @JoinColumn(name = "category_id"),
+        inverseJoinColumns = @JoinColumn(name = "child_id")
+    )
+    @WithEndpoints
+    @Builder.Default
+    @ToString.Exclude
+    @JsonIgnore
+    private Set<Category> children = new HashSet<>();
 }

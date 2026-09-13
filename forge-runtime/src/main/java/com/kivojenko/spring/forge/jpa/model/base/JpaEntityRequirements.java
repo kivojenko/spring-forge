@@ -32,9 +32,21 @@ public record JpaEntityRequirements(
         List<TypeName> repositoryInterfaces,
         WithService serviceAnnotation,
         WithRestController controllerAnnotation,
-        GetOrCreate getOrCreateAnnotation
+        GetOrCreate getOrCreateAnnotation,
+        Boolean explicitAllowSlashes
 )
 {
+    public JpaEntityRequirements(
+            boolean hasName,
+            WithJpaRepository repositoryAnnotation,
+            List<TypeName> repositoryInterfaces,
+            WithService serviceAnnotation,
+            WithRestController controllerAnnotation,
+            GetOrCreate getOrCreateAnnotation
+    ) {
+        this(hasName, repositoryAnnotation, repositoryInterfaces, serviceAnnotation, controllerAnnotation, getOrCreateAnnotation, null);
+    }
+
     /**
      * Resolves requirements for the given entity by checking its annotations and implemented interfaces.
      *
@@ -56,13 +68,30 @@ public record JpaEntityRequirements(
 
         var getOrCreateAnnotation = entity.getAnnotation(GetOrCreate.class);
 
+        Boolean explicitAllowSlashes = null;
+        var withRestControllerType = elements.getTypeElement(WithRestController.class.getCanonicalName());
+        if (withRestControllerType != null) {
+            for (var mirror : entity.getAnnotationMirrors()) {
+                if (types.isSameType(mirror.getAnnotationType(), withRestControllerType.asType())) {
+                    for (var entry : mirror.getElementValues().entrySet()) {
+                        if (entry.getKey().getSimpleName().contentEquals("allowSlashes")) {
+                            explicitAllowSlashes = (Boolean) entry.getValue().getValue();
+                            break;
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+
         return new JpaEntityRequirements(
                 hasName,
                 repositoryAnnotation,
                 repositoryInterfaces,
                 serviceAnnotation,
                 controllerAnnotation,
-                getOrCreateAnnotation
+                getOrCreateAnnotation,
+                explicitAllowSlashes
         );
     }
 
@@ -124,8 +153,8 @@ public record JpaEntityRequirements(
     }
 
     public boolean wantsAllowSlashes() {
-        if (controllerAnnotation != null && controllerAnnotation.allowSlashes()) {
-            return true;
+        if (explicitAllowSlashes != null) {
+            return explicitAllowSlashes;
         }
         return SpringForgeConfig.allowSlashes;
     }
