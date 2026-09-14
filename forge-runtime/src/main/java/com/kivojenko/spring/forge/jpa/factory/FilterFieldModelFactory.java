@@ -51,7 +51,7 @@ public class FilterFieldModelFactory {
 
         for (var annotation : annotations) {
           // Skip if a field with the same exposed name was already added — we keep the first one for DTO uniqueness
-          var fieldName = annotation.name().isEmpty() ? field.getSimpleName().toString() : annotation.name();
+          var fieldName = FilterFieldModel.exposedName(field.getSimpleName().toString(), annotation);
           if (filterFields.stream().anyMatch(f -> fieldName.equals(f.getName()))) {
             continue;
           }
@@ -77,6 +77,9 @@ public class FilterFieldModelFactory {
           var singleEntity = !isIterable && typeElement != null && typeElement.getAnnotationMirrors()
               .stream()
               .anyMatch(a -> typeUtils.isSameType(a.getAnnotationType(), entityAnnotation.asType()));
+          // @Embedded value objects: targetField is relative to the embedded field (dye.colorIndex)
+          var embedded = !isIterable && (field.getAnnotation(jakarta.persistence.Embedded.class) != null
+              || typeElement != null && typeElement.getAnnotation(jakarta.persistence.Embeddable.class) != null);
 
           var targetField = annotation.targetField();
           var filterType = type;
@@ -94,7 +97,7 @@ public class FilterFieldModelFactory {
             filterType = elementUtils.getTypeElement("java.lang.Integer").asType();
             isIterable = false;
             singleEntity = false;
-          } else if (!targetField.isEmpty() && (singleEntity || isIterable)) {
+          } else if (!targetField.isEmpty() && (singleEntity || isIterable || embedded)) {
             filterType = resolveTargetFieldType(entityCandidate, targetField, env);
             filterTypeName = TypeName.get(filterType);
             isIterable = false;
@@ -111,6 +114,7 @@ public class FilterFieldModelFactory {
                                .singleEntity(singleEntity)
                                .originalIterable(originalIterable)
                                .originalSingleEntity(originalSingleEntity)
+                               .originalEmbedded(embedded)
                                .entityCandidate(entityCandidate)
                                .env(env)
                                .targetField(targetField)
@@ -183,6 +187,9 @@ public class FilterFieldModelFactory {
           var singleEntity = !isIterable && typeElement != null && typeElement.getAnnotationMirrors()
               .stream()
               .anyMatch(a -> typeUtils.isSameType(a.getAnnotationType(), entityAnnotation.asType()));
+          // @Embedded value objects: targetField is relative to the embedded field (dye.colorIndex)
+          var embedded = !isIterable && (field.getAnnotation(jakarta.persistence.Embedded.class) != null
+              || typeElement != null && typeElement.getAnnotation(jakarta.persistence.Embeddable.class) != null);
 
           var targetField = annotation.targetField();
           var filterType = type;
@@ -200,7 +207,7 @@ public class FilterFieldModelFactory {
             filterType = elementUtils.getTypeElement("java.lang.Integer").asType();
             isIterable = false;
             singleEntity = false;
-          } else if (!targetField.isEmpty() && (singleEntity || isIterable)) {
+          } else if (!targetField.isEmpty() && (singleEntity || isIterable || embedded)) {
             filterType = resolveTargetFieldType(entityCandidate, targetField, env);
             filterTypeName = TypeName.get(filterType);
             isIterable = false;
@@ -217,6 +224,7 @@ public class FilterFieldModelFactory {
                                .singleEntity(singleEntity)
                                .originalIterable(originalIterable)
                                .originalSingleEntity(originalSingleEntity)
+                               .originalEmbedded(embedded)
                                .entityCandidate(entityCandidate)
                                .env(env)
                                .targetField(targetField)

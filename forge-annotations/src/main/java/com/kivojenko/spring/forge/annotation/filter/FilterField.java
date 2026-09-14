@@ -50,7 +50,7 @@ public @interface FilterField {
 
   /**
    * The name of the parameter in the filter DTO.
-   * If empty, the name of the annotated field is used.
+   * If empty, the name of the annotated field is used ({@code has<Field>} when {@link #isPresent()} is set).
    *
    * @return the filter parameter name
    */
@@ -91,8 +91,10 @@ public @interface FilterField {
    * {@code true} matches rows where the target is not null (or, for collections, not empty),
    * {@code false} matches rows where it is null (or empty). All match modes are ignored.
    *
-   * <p>Combine with {@link #name()} to add a presence filter next to a regular one on the same field
-   * (e.g., {@code @FilterField(name = "hasDescription", isPresent = true)}).
+   * <p>When {@link #name()} is empty the parameter is named {@code has<Field>} (e.g., {@code hasDescription}),
+   * so a presence filter can sit next to a regular one on the same field. Combined with {@link #targetField()},
+   * the check applies to that target (e.g., {@code @FilterField(targetField = "colorIndex", isPresent = true)}
+   * on an embedded {@code dye} field exposes {@code hasDye} checking {@code dye.colorIndex}).
    *
    * @return {@code true} if this filter checks for presence of a value
    */

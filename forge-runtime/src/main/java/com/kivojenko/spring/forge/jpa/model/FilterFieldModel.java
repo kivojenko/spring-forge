@@ -51,6 +51,7 @@ public class FilterFieldModel {
   boolean singleEntity;
   boolean originalIterable;
   boolean originalSingleEntity;
+  boolean originalEmbedded;
   ProcessingEnvironment env;
   String targetField;
   boolean required;
@@ -70,7 +71,20 @@ public class FilterFieldModel {
     if (annotation == null) {
       return fieldName;
     }
-    return annotation.name().isEmpty() ? fieldName : annotation.name();
+    return exposedName(fieldName, annotation);
+  }
+
+  /**
+   * Resolves the filter DTO parameter name: the explicit {@code name}, otherwise {@code has<Field>} for
+   * presence filters, otherwise the field name.
+   */
+  public static String exposedName(String fieldName, FilterField annotation) {
+    if (!annotation.name().isEmpty()) {
+      return annotation.name();
+    }
+    return annotation.isPresent()
+           ? "has" + com.kivojenko.spring.forge.jpa.utils.StringUtils.capitalize(fieldName)
+           : fieldName;
   }
 
   public String getOriginalName() {
@@ -91,7 +105,7 @@ public class FilterFieldModel {
     if (originalIterable) {
       return fieldName + ".any()." + targetField;
     }
-    if (originalSingleEntity) {
+    if (originalSingleEntity || originalEmbedded) {
       return fieldName + "." + targetField;
     }
     return targetField;

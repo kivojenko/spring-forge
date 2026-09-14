@@ -7,6 +7,7 @@ import com.kivojenko.spring.forge.annotation.filter.FilterField;
 import com.kivojenko.spring.forge.annotation.filter.IterableMatchMode;
 import com.kivojenko.spring.forge.annotation.filter.StringMatchMode;
 import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -75,6 +76,11 @@ public class Product {
   @ManyToOne
   @FilterField(targetField = "name", stringMatchMode = StringMatchMode.CONTAINS_IGNORE_CASE)
   private ProductCategory category;
+
+  @Embedded
+  @FilterField(targetField = "colorIndex", comparisonMatchMode = ComparisonMatchMode.EXACT_OR_RANGE)
+  @FilterField(targetField = "colorIndex", isPresent = true)
+  private ProductColor color;
 
   @ManyToMany
   @FilterField(iterableMatchMode = IterableMatchMode.ANY)

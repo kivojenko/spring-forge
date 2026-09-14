@@ -215,4 +215,33 @@ public class ProductControllerFilterTest extends WithPostgres {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.content", hasSize(3)));
   }
+
+  @Test
+  void shouldFilterProductsByEmbeddedTargetField_valueAndDefaultNamedPresence() throws Exception {
+    mockMvc.perform(post("/products")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"name\":\"Paint\",\"sku\":\"SKU-5\",\"inStock\":true,\"color\":{\"colorIndex\":77000},"
+                + "\"category\":{\"id\":" + booksId + "},\"tags\":[]}"))
+        .andExpect(status().isCreated());
+
+    // unnamed isPresent filter defaults to has<Field> and targets color.colorIndex
+    mockMvc.perform(get("/products").param("hasColor", "true"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(1)))
+        .andExpect(jsonPath("$.content[0].name").value("Paint"));
+
+    mockMvc.perform(get("/products").param("hasColor", "false"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(3)));
+
+    // value filter on the same embedded field keeps the field name and the target's type
+    mockMvc.perform(get("/products").param("color", "77000"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(1)))
+        .andExpect(jsonPath("$.content[0].name").value("Paint"));
+
+    mockMvc.perform(get("/products").param("minColor", "80000"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(0)));
+  }
 }
