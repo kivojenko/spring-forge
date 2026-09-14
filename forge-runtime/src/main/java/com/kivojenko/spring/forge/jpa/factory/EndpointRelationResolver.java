@@ -9,6 +9,7 @@ import com.kivojenko.spring.forge.jpa.model.relation.toCollection.ManyToManyEndp
 import com.kivojenko.spring.forge.jpa.model.relation.toCollection.OneToManyEndpointRelationFactory;
 import com.kivojenko.spring.forge.jpa.model.relation.toCollection.oneToMany.ReadOneToManyEndpointRelation;
 import com.kivojenko.spring.forge.jpa.model.relation.toSingle.ManyToOneEndpointRelationFactory;
+import com.kivojenko.spring.forge.jpa.model.relation.toSingle.ReadSingleMethodEndpointRelation;
 import com.kivojenko.spring.forge.jpa.model.relation.toSingle.OneToOneEndpointRelationFactory;
 import com.kivojenko.spring.forge.jpa.utils.LoggingUtils;
 import jakarta.persistence.*;
@@ -184,7 +185,17 @@ public class EndpointRelationResolver {
       }
     }
 
-    var targetModel = getEntityModelFromList(getter.getReturnType(), getter, env);
+    var returnType = getter.getReturnType();
+    if (returnType instanceof DeclaredType declaredReturnType && declaredReturnType.getTypeArguments().isEmpty()) {
+      return ReadSingleMethodEndpointRelation
+          .builder()
+          .path(path)
+          .methodName(getter.getSimpleName().toString())
+          .targetEntityModel(JpaEntityModelFactory.get((TypeElement) declaredReturnType.asElement()))
+          .build();
+    }
+
+    var targetModel = getEntityModelFromList(returnType, getter, env);
     if (targetModel == null) return null;
 
     return ReadOneToManyEndpointRelation

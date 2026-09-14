@@ -445,6 +445,18 @@ public Iterable<String> getBooksTitles(@PathVariable Long id) {
 }
 ```
 
+Methods returning a single, non-generic value are supported too; the endpoint then returns that
+type directly:
+
+```java
+@WithGetEndpoint
+@JsonIgnore
+public Integer getBooksCount() {
+  return books.size();
+}
+// → @GetMapping("/{id}/booksCount") public Integer getBooksCount(@PathVariable Long id)
+```
+
 The path is `path()` when set, otherwise the method name with a leading `get` stripped and
 decapitalised.
 
@@ -625,6 +637,7 @@ The DTO field name *is* the query parameter name, and it is not always the entit
 | single association, no `targetField` | pluralised set of **ids** — `country` → `countries` |
 | collection association, no `targetField` | set of **ids**, name unchanged — `tags` |
 | any association **with** `targetField` | scalar of the target's type, **name unchanged** — `category` |
+| any field with `isPresent = true` | `Boolean`, **name unchanged** — set `name` to use it next to a value filter |
 | `@DiscriminatorColumn` | `List` named after the column — `vehicle_type` → `vehicleType` |
 
 > [!CAUTION]
@@ -656,6 +669,13 @@ Other attributes:
 | `targetField` | `""` | Filter on a field *of* the association (`category.name`), or an absolute path from the root entity when placed on a transient field |
 | `required` | `false` | Adds `@NotNull` (`@NotBlank` for `String`) to the DTO; the controller validates with `@Valid` |
 | `orNull` | `false` | Also match rows where the column is `NULL` |
+| `isPresent` | `false` | Presence filter: `true` → `isNotNull()` (`isNotEmpty()` for collections), `false` → `isNull()` / `isEmpty()` |
+
+```java
+@FilterField(orNull = true)
+@FilterField(name = "hasDescription", isPresent = true)
+private String description;        // ?hasDescription=true
+```
 
 ### Nested and collection paths
 

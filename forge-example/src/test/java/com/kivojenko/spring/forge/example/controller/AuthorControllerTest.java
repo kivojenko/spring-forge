@@ -142,6 +142,41 @@ public class AuthorControllerTest extends WithPostgres {
   }
 
   @Test
+  void testGetBooksCount() throws Exception {
+    Long categoryId = getOrCreateCategory("Cat");
+    String authorJson = mockMvc
+        .perform(post("/authors")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(Author.builder().name("Author with books count").build())))
+        .andExpect(status().isCreated())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+
+    Long authorId = objectMapper.readTree(authorJson).get("id").asLong();
+
+    mockMvc
+        .perform(get("/authors/{id}/booksCount", authorId))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$", is(0)));
+
+    mockMvc
+        .perform(post("/authors/{id}/books", authorId)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(Book
+                .builder()
+                .title("Counted Book")
+                .categories(List.of(Category.builder().id(categoryId).build()))
+                .build())))
+        .andExpect(status().isCreated());
+
+    mockMvc
+        .perform(get("/authors/{id}/booksCount", authorId))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$", is(1)));
+  }
+
+  @Test
   void testAddNewBook() throws Exception {
     Long categoryId = getOrCreateCategory("New Cat");
     String authorJson = mockMvc

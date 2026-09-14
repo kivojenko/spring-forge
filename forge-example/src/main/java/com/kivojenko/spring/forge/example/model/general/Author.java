@@ -67,4 +67,10 @@ public class Author implements HasName {
   public List<String> getBooksTitles() {
     return books.stream().map(Book::getTitle).toList();
   }
+
+  @WithGetEndpoint
+  @JsonIgnore
+  public Integer getBooksCount() {
+    return books.size();
+  }
 }
