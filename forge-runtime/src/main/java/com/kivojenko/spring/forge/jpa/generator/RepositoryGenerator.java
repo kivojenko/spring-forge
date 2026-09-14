@@ -103,7 +103,7 @@ public final class RepositoryGenerator {
 
     private static void addFilterMethods(TypeSpec.Builder builder, JpaEntityModel model) {
         for (FilterFieldModel field : model.getFilterableFields()) {
-            if (field.isIterable() || field.isSingleEntity() || field.isDiscriminator()) {
+            if (field.isIterable() || field.isSingleEntity() || field.isDiscriminator() || field.isPresent()) {
                 continue;
             }
             if (model.getRequirements().hasName() && field.getOriginalName().equals("name")) {

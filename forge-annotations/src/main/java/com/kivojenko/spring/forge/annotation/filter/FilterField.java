@@ -86,4 +86,16 @@ public @interface FilterField {
    */
   boolean orNull() default false;
 
+  /**
+   * Turns this filter into a presence check. The generated filter DTO gets a {@code Boolean} field:
+   * {@code true} matches rows where the target is not null (or, for collections, not empty),
+   * {@code false} matches rows where it is null (or empty). All match modes are ignored.
+   *
+   * <p>Combine with {@link #name()} to add a presence filter next to a regular one on the same field
+   * (e.g., {@code @FilterField(name = "hasDescription", isPresent = true)}).
+   *
+   * @return {@code true} if this filter checks for presence of a value
+   */
+  boolean isPresent() default false;
+
 }

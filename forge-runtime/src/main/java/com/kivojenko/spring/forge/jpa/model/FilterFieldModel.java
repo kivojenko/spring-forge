@@ -55,6 +55,7 @@ public class FilterFieldModel {
   String targetField;
   boolean required;
   boolean orNull;
+  boolean present;
   String name;
   String targetFieldName;
   boolean discriminator;
@@ -81,7 +82,7 @@ public class FilterFieldModel {
       return targetFieldName;
     }
     String fieldName = element.getSimpleName().toString();
-    if (annotation != null && annotation.iterableMatchMode() == IterableMatchMode.AMOUNT) {
+    if (!present && annotation != null && annotation.iterableMatchMode() == IterableMatchMode.AMOUNT) {
       return fieldName + ".size()";
     }
     if (targetField == null || targetField.isEmpty()) {
@@ -193,6 +194,17 @@ public class FilterFieldModel {
       }
       builder.endControlFlow();
       addAnd(builder, "subBuilder");
+      builder.endControlFlow();
+      return;
+    }
+    if (present) {
+      var collection = originalIterable && (targetField == null || targetField.isEmpty());
+      builder.beginControlFlow("if ($L != null)", getName());
+      builder.beginControlFlow("if ($L)", getName());
+      builder.addStatement("builder.and(entity.$L.$L())", getTargetFieldName(), collection ? "isNotEmpty" : "isNotNull");
+      builder.nextControlFlow("else");
+      builder.addStatement("builder.and(entity.$L.$L())", getTargetFieldName(), collection ? "isEmpty" : "isNull");
+      builder.endControlFlow();
       builder.endControlFlow();
       return;
     }

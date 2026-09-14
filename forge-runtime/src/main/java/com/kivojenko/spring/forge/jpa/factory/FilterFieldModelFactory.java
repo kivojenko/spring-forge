@@ -84,7 +84,12 @@ public class FilterFieldModelFactory {
           var originalIterable = isIterable;
           var originalSingleEntity = singleEntity;
 
-          if (annotation.iterableMatchMode() == IterableMatchMode.AMOUNT && isIterable) {
+          if (annotation.isPresent()) {
+            filterTypeName = ClassName.get(Boolean.class);
+            filterType = elementUtils.getTypeElement("java.lang.Boolean").asType();
+            isIterable = false;
+            singleEntity = false;
+          } else if (annotation.iterableMatchMode() == IterableMatchMode.AMOUNT && isIterable) {
             filterTypeName = ClassName.get(Integer.class);
             filterType = elementUtils.getTypeElement("java.lang.Integer").asType();
             isIterable = false;
@@ -111,6 +116,7 @@ public class FilterFieldModelFactory {
                                .targetField(targetField)
                                .required(annotation.required())
                                .orNull(annotation.orNull())
+                               .present(annotation.isPresent())
                                .build());
         }
       }
@@ -184,7 +190,12 @@ public class FilterFieldModelFactory {
           var originalIterable = isIterable;
           var originalSingleEntity = singleEntity;
 
-          if (annotation.iterableMatchMode() == IterableMatchMode.AMOUNT && isIterable) {
+          if (annotation.isPresent()) {
+            filterTypeName = ClassName.get(Boolean.class);
+            filterType = elementUtils.getTypeElement("java.lang.Boolean").asType();
+            isIterable = false;
+            singleEntity = false;
+          } else if (annotation.iterableMatchMode() == IterableMatchMode.AMOUNT && isIterable) {
             filterTypeName = ClassName.get(Integer.class);
             filterType = elementUtils.getTypeElement("java.lang.Integer").asType();
             isIterable = false;
@@ -211,6 +222,7 @@ public class FilterFieldModelFactory {
                                .targetField(targetField)
                                .required(annotation.required())
                                .orNull(annotation.orNull())
+                               .present(annotation.isPresent())
                                .build());
         }
       }

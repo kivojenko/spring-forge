@@ -188,4 +188,31 @@ public class ProductControllerFilterTest extends WithPostgres {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.content", hasSize(3)));
   }
+
+  @Test
+  void shouldFilterProductsByPresence_viaIsPresent() throws Exception {
+    mockMvc.perform(post("/products")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"name\":\"Tablet\",\"sku\":\"SKU-4\",\"description\":\"Big screen\",\"inStock\":true,"
+                + "\"category\":{\"id\":" + electronicsId + "},\"tags\":[]}"))
+        .andExpect(status().isCreated());
+
+    mockMvc.perform(get("/products").param("hasDescription", "true"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(1)))
+        .andExpect(jsonPath("$.content[0].name").value("Tablet"));
+
+    mockMvc.perform(get("/products").param("hasDescription", "false"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(3)));
+
+    mockMvc.perform(get("/products").param("hasTags", "false"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(1)))
+        .andExpect(jsonPath("$.content[0].name").value("Tablet"));
+
+    mockMvc.perform(get("/products").param("hasTags", "true"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(3)));
+  }
 }

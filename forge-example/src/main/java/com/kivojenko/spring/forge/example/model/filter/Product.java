@@ -60,6 +60,7 @@ public class Product {
   private String brand;
 
   @FilterField(orNull = true)
+  @FilterField(name = "hasDescription", isPresent = true)
   private String description;
 
   @FilterField
@@ -77,6 +78,7 @@ public class Product {
 
   @ManyToMany
   @FilterField(iterableMatchMode = IterableMatchMode.ANY)
+  @FilterField(name = "hasTags", isPresent = true)
   @Builder.Default
   private Set<Tag> tags = new HashSet<>();
 }
