@@ -10,6 +10,8 @@ import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeName;
 import jakarta.persistence.MappedSuperclass;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import lombok.Builder;
 import lombok.Getter;
@@ -419,58 +421,109 @@ public final class JpaEntityModel {
         // Group all filterable mappings by exposed name to allow OR-combining duplicates
         var groups = new LinkedHashMap<String, List<FilterFieldModel>>();
         for (var f : getAllFilterableFields()) {
-            groups.computeIfAbsent(f.getName(), k -> new java.util.ArrayList<>()).add(f);
+            groups.computeIfAbsent(f.getName(), k -> new ArrayList<>()).add(f);
         }
 
+        // Group by family — members of one family are OR-ed together, the family as a whole AND-ed in
+        var families = new LinkedHashMap<String, List<FilterFieldModel>>();
+        for (var f : getFilterableFields()) {
+            if (!f.getFamily().isEmpty()) {
+                families.computeIfAbsent(f.getFamily(), k -> new ArrayList<>()).add(f);
+            }
+        }
+
+        var emittedFamilies = new HashSet<String>();
         for (var field : getFilterableFields()) {
-            var group = groups.get(field.getName());
-            if (group == null || group.size() <= 1) {
-                // No duplicates — generate default filtering for the primary mapping
-                field.addFiltering(builder);
+            var family = field.getFamily();
+            var members = families.get(family);
+
+            // Ungrouped, or the only member of its family — nothing to OR it with
+            if (members == null || members.size() <= 1) {
+                addFieldFiltering(builder, field, groups, BUILDER_VAR_NAME, FilterFieldModel.AND);
+                continue;
+            }
+            // The whole family is emitted at the position of its first member
+            if (!emittedFamilies.add(family)) {
                 continue;
             }
 
-            // Duplicates present: for String-typed filters, OR all mapped targets using the primary's match mode.
-            // Collection targets need an exists-subquery rather than a plain path, so they keep their own filtering.
-            if (field.getTypeName().equals(com.squareup.javapoet.ClassName.get(String.class))
-                    && group.stream().noneMatch(FilterFieldModel::isScalarCollection)) {
-                var primary = group.getFirst();
-                String op;
-                switch (primary.getAnnotation().stringMatchMode()) {
-                    case STARTS_WITH -> op = "startsWith";
-                    case ENDS_WITH -> op = "endsWith";
-                    case CONTAINS -> op = "contains";
-                    case CONTAINS_IGNORE_CASE -> op = "containsIgnoreCase";
-                    case EQUALS -> op = "eq";
-                    case EQUALS_IGNORE_CASE -> op = "equalsIgnoreCase";
-                    default -> op = "containsIgnoreCase"; // sensible default
-                }
-
-                builder.beginControlFlow("if ($L != null && !$L.isBlank())", field.getName(), field.getName());
-                // Initialize OR expression with the first mapping
-                var first = group.getFirst();
-                builder.addStatement(
-                        "var __expr = entity.$L." + op + "($L)",
-                        first.getTargetFieldName(),
-                        field.getName()
-                );
-                // Chain remaining mappings with .or(...)
-                for (int i = 1; i < group.size(); i++) {
-                    var alt = group.get(i);
-                    builder.addStatement(
-                            "__expr = __expr.or(entity.$L." + op + "($L))",
-                            alt.getTargetFieldName(),
-                            field.getName()
-                    );
-                }
-                builder.addStatement("builder.and(__expr)");
-                builder.endControlFlow();
-            } else {
-                // Non-string or unsupported types — fall back to primary mapping only
-                field.addFiltering(builder);
+            var sink = familyBuilderName(family);
+            builder.addStatement("var $L = new $T()", sink, BooleanBuilder.class);
+            for (var member : members) {
+                addFieldFiltering(builder, member, groups, sink, FilterFieldModel.OR);
             }
+            builder.beginControlFlow("if ($L.hasValue())", sink);
+            builder.addStatement("$L.and($L)", BUILDER_VAR_NAME, sink);
+            builder.endControlFlow();
         }
         return builder.addStatement("return $L", BUILDER_VAR_NAME).build();
+    }
+
+    /**
+     * Emits one filter's predicate into {@code sink}, combining it with {@code combinator}
+     * ({@code and} for a plain filter, {@code or} for a member of a family).
+     *
+     * <p>When several mappings share the same exposed name, a String filter matches any of their targets;
+     * every other type falls back to the primary mapping.
+     */
+    private void addFieldFiltering(
+            MethodSpec.Builder builder,
+            FilterFieldModel field,
+            LinkedHashMap<String, List<FilterFieldModel>> groups,
+            String sink,
+            String combinator
+    ) {
+        var group = groups.get(field.getName());
+        if (group == null || group.size() <= 1) {
+            // No duplicates — generate default filtering for the primary mapping
+            field.addFiltering(builder, sink, combinator);
+            return;
+        }
+
+        // Duplicates present: for String-typed filters, OR all mapped targets using the primary's match mode.
+        // Collection targets need an exists-subquery rather than a plain path, so they keep their own filtering.
+        if (!field.getTypeName().equals(ClassName.get(String.class))
+                || group.stream().anyMatch(FilterFieldModel::isScalarCollection)) {
+            // Non-string or unsupported types — fall back to primary mapping only
+            field.addFiltering(builder, sink, combinator);
+            return;
+        }
+
+        var op = switch (group.getFirst().getAnnotation().stringMatchMode()) {
+            case STARTS_WITH -> "startsWith";
+            case ENDS_WITH -> "endsWith";
+            case CONTAINS -> "contains";
+            case EQUALS -> "eq";
+            case EQUALS_IGNORE_CASE -> "equalsIgnoreCase";
+            default -> "containsIgnoreCase";
+        };
+        var expr = "__" + field.getName() + "Expr";
+
+        builder.beginControlFlow("if ($L != null && !$L.isBlank())", field.getName(), field.getName());
+        // Initialize OR expression with the first mapping
+        builder.addStatement(
+                "var $L = entity.$L." + op + "($L)",
+                expr,
+                group.getFirst().getTargetFieldName(),
+                field.getName()
+        );
+        // Chain remaining mappings with .or(...)
+        for (int i = 1; i < group.size(); i++) {
+            builder.addStatement(
+                    "$L = $L.or(entity.$L." + op + "($L))",
+                    expr,
+                    expr,
+                    group.get(i).getTargetFieldName(),
+                    field.getName()
+            );
+        }
+        builder.addStatement("$L.$L($L)", sink, combinator, expr);
+        builder.endControlFlow();
+    }
+
+    /** The local {@code BooleanBuilder} a family's members are OR-ed into. */
+    private static String familyBuilderName(String family) {
+        return "__family" + StringUtils.capitalize(family.replaceAll("[^A-Za-z0-9]", "_"));
     }
 
 }

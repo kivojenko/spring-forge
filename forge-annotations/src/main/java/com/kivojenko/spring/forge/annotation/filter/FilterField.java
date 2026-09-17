@@ -76,6 +76,23 @@ public @interface FilterField {
   String targetField() default "";
 
   /**
+   * Groups this filter with every other filter that declares the same family.
+   * Filters inside one family are combined with {@code OR} instead of {@code AND}, and the family as a
+   * whole is {@code AND}-ed with the remaining filters.
+   *
+   * <p>Each member keeps its own parameter, type and match modes — only the way their predicates are
+   * combined changes. Parameters that are not sent contribute nothing to the family, and a family with a
+   * single member behaves exactly like an ungrouped filter.
+   *
+   * <p>For example, {@code family = "search"} on both a {@code title} and a {@code summary} field makes
+   * {@code ?title=phone&summary=phone} match rows whose title <em>or</em> summary matches — while a filter
+   * outside the family still narrows the result.
+   *
+   * @return the family this filter belongs to, or an empty string when it is not grouped
+   */
+  String family() default "";
+
+  /**
    * Indicates whether this filter field is required.
    * If {@code true}, the generated filter DTO will include validation annotations
    * (like {@code @NotNull}), and the controller will enforce its presence.

@@ -46,6 +46,13 @@ import static javax.lang.model.element.Modifier.PRIVATE;
 @Data
 @Builder
 public class FilterFieldModel {
+  /** The {@code BooleanBuilder} local of a generated {@code toPredicate} method. */
+  public static final String DEFAULT_SINK = "builder";
+  /** The {@code BooleanBuilder} method used to combine an ungrouped filter into the predicate. */
+  public static final String AND = "and";
+  /** The {@code BooleanBuilder} method used to combine the members of a filter family. */
+  public static final String OR = "or";
+
   VariableElement element;
   TypeName typeName;
   TypeMirror type;
@@ -66,6 +73,7 @@ public class FilterFieldModel {
   boolean required;
   boolean orNull;
   boolean present;
+  String family;
   String name;
   String targetFieldName;
   boolean discriminator;
@@ -94,6 +102,18 @@ public class FilterFieldModel {
     return annotation.isPresent()
            ? "has" + com.kivojenko.spring.forge.jpa.utils.StringUtils.capitalize(fieldName)
            : fieldName;
+  }
+
+  /**
+   * The family this filter belongs to: filters sharing one are OR-combined with each other.
+   *
+   * @return the family name, or an empty string when this filter is not grouped
+   */
+  public String getFamily() {
+    if (family != null) {
+      return family;
+    }
+    return annotation == null ? "" : annotation.family();
   }
 
   public String getOriginalName() {
@@ -223,6 +243,18 @@ public class FilterFieldModel {
   }
 
   public void addFiltering(MethodSpec.Builder builder) {
+    addFiltering(builder, DEFAULT_SINK, AND);
+  }
+
+  /**
+   * Appends this field's predicate to {@code sink} — the name of a {@code BooleanBuilder} local — combining
+   * it with {@code combinator} ({@code "and"} for a plain filter, {@code "or"} for a member of a family).
+   *
+   * @param builder    the {@code toPredicate} method being generated
+   * @param sink       the name of the {@code BooleanBuilder} the predicate is added to
+   * @param combinator the {@code BooleanBuilder} method used to combine it — {@code and} or {@code or}
+   */
+  public void addFiltering(MethodSpec.Builder builder, String sink, String combinator) {
     if (discriminator) {
       builder.beginControlFlow("if ($L != null && !$L.isEmpty())", getName(), getName());
       builder.addStatement("var subBuilder = new com.querydsl.core.BooleanBuilder()");
@@ -245,7 +277,7 @@ public class FilterFieldModel {
         builder.addStatement("subBuilder.or(entity.as(Object.class).get($S).stringValue().eq(String.valueOf(val)))", "class");
       }
       builder.endControlFlow();
-      addAnd(builder, "subBuilder");
+      addAnd(builder, sink, combinator, "subBuilder");
       builder.endControlFlow();
       return;
     }
@@ -253,9 +285,11 @@ public class FilterFieldModel {
       var collection = scalarCollection || originalIterable && (targetField == null || targetField.isEmpty());
       builder.beginControlFlow("if ($L != null)", getName());
       builder.beginControlFlow("if ($L)", getName());
-      builder.addStatement("builder.and(entity.$L.$L())", getTargetFieldName(), collection ? "isNotEmpty" : "isNotNull");
+      builder.addStatement("$L.$L(entity.$L.$L())", sink, combinator, getTargetFieldName(),
+                           collection ? "isNotEmpty" : "isNotNull");
       builder.nextControlFlow("else");
-      builder.addStatement("builder.and(entity.$L.$L())", getTargetFieldName(), collection ? "isEmpty" : "isNull");
+      builder.addStatement("$L.$L(entity.$L.$L())", sink, combinator, getTargetFieldName(),
+                           collection ? "isEmpty" : "isNull");
       builder.endControlFlow();
       builder.endControlFlow();
       return;
@@ -266,22 +300,22 @@ public class FilterFieldModel {
       builder.beginControlFlow("if ($L != null && !$L.isBlank())", getName(), getName());
       switch (annotation.stringMatchMode()) {
       case STARTS_WITH:
-        addAnd(builder, "$L.startsWith($L)", subject(), getName());
+        addAnd(builder, sink, combinator, "$L.startsWith($L)", subject(), getName());
         break;
       case ENDS_WITH:
-        addAnd(builder, "$L.endsWith($L)", subject(), getName());
+        addAnd(builder, sink, combinator, "$L.endsWith($L)", subject(), getName());
         break;
       case CONTAINS:
-        addAnd(builder, "$L.contains($L)", subject(), getName());
+        addAnd(builder, sink, combinator, "$L.contains($L)", subject(), getName());
         break;
       case CONTAINS_IGNORE_CASE:
-        addAnd(builder, "$L.containsIgnoreCase($L)", subject(), getName());
+        addAnd(builder, sink, combinator, "$L.containsIgnoreCase($L)", subject(), getName());
         break;
       case EQUALS:
-        addAnd(builder, "$L.eq($L)", subject(), getName());
+        addAnd(builder, sink, combinator, "$L.eq($L)", subject(), getName());
         break;
       case EQUALS_IGNORE_CASE:
-        addAnd(builder, "$L.equalsIgnoreCase($L)", subject(), getName());
+        addAnd(builder, sink, combinator, "$L.equalsIgnoreCase($L)", subject(), getName());
         break;
       default:
         break;
@@ -291,7 +325,7 @@ public class FilterFieldModel {
       if (annotation.comparisonMatchMode() == ComparisonMatchMode.EXACT
           || annotation.comparisonMatchMode() == ComparisonMatchMode.EXACT_OR_RANGE) {
         builder.beginControlFlow("if ($L != null)", getName());
-        addAnd(builder, "$L.eq($L)", subject(), getName());
+        addAnd(builder, sink, combinator, "$L.eq($L)", subject(), getName());
         builder.endControlFlow();
       }
       if (annotation.comparisonMatchMode() == ComparisonMatchMode.RANGE
@@ -299,27 +333,27 @@ public class FilterFieldModel {
         builder.beginControlFlow("if ($L != null)", minName(getName()));
 
         if (annotation.minBoundMode() == RangeBoundMode.INCLUDES) {
-          addAnd(builder, "$L.goe($L)", subject(), minName(getName()));
+          addAnd(builder, sink, combinator, "$L.goe($L)", subject(), minName(getName()));
         } else {
-          addAnd(builder, "$L.gt($L)", subject(), minName(getName()));
+          addAnd(builder, sink, combinator, "$L.gt($L)", subject(), minName(getName()));
         }
         builder.endControlFlow();
         builder.beginControlFlow("if ($L != null)", maxName(getName()));
         if (annotation.maxBoundMode() == RangeBoundMode.INCLUDES) {
-          addAnd(builder, "$L.loe($L)", subject(), maxName(getName()));
+          addAnd(builder, sink, combinator, "$L.loe($L)", subject(), maxName(getName()));
         } else {
-          addAnd(builder, "$L.lt($L)", subject(), maxName(getName()));
+          addAnd(builder, sink, combinator, "$L.lt($L)", subject(), maxName(getName()));
         }
         builder.endControlFlow();
       }
     } else if (BOOLEAN_TYPES.contains(typeName)) {
       builder.beginControlFlow("if ($L != null)", getName());
-      addAnd(builder, "$L.eq($L)", subject(), getName());
+      addAnd(builder, sink, combinator, "$L.eq($L)", subject(), getName());
       builder.endControlFlow();
     } else if (isSingleEntity()) {
       var relation = JpaEntityModelFactory.get(typeElement);
       builder.beginControlFlow("if ($L != null && !$L.isEmpty())", fieldName, fieldName);
-      addAnd(builder, "entity.$L.$L.in($L)", getTargetFieldName(), relation.getJpaId().name(), fieldName);
+      addAnd(builder, sink, combinator, "entity.$L.$L.in($L)", getTargetFieldName(), relation.getJpaId().name(), fieldName);
       builder.endControlFlow();
     } else if (isIterable()) {
       var relation = JpaEntityModelFactory.get(typeElement);
@@ -327,32 +361,33 @@ public class FilterFieldModel {
       if (annotation.iterableMatchMode() == IterableMatchMode.ALL) {
         builder.beginControlFlow("for (var $L : $L)", "sub", getName());
         // Use the base field name for collection navigation and add any() here exactly once
-        addAnd(builder, "entity.$L.any().$L.eq($L)", getOriginalName(), relation.getJpaId().name(), "sub");
+        addAnd(builder, sink, combinator, "entity.$L.any().$L.eq($L)", getOriginalName(), relation.getJpaId().name(), "sub");
         builder.endControlFlow();
       } else {
         // Use the base field name for collection navigation and add any() here exactly once
-        addAnd(builder, "entity.$L.any().$L.in($L)", getOriginalName(), relation.getJpaId().name(), getName());
+        addAnd(builder, sink, combinator, "entity.$L.any().$L.in($L)", getOriginalName(), relation.getJpaId().name(), getName());
       }
       builder.endControlFlow();
     } else if (isEnum()) {
       builder.beginControlFlow("if ($L != null && !$L.isEmpty())", fieldName, fieldName);
-      addAnd(builder, "$L.in($L)", subject(), fieldName);
+      addAnd(builder, sink, combinator, "$L.in($L)", subject(), fieldName);
       builder.endControlFlow();
     }
   }
 
-  private void addAnd(MethodSpec.Builder builder, String predicate, Object... args) {
+  private void addAnd(
+      MethodSpec.Builder builder, String sink, String combinator, String predicate, Object... args) {
     if (isElementWise()) {
-      addElementWiseAnd(builder, predicate, args);
+      addElementWiseAnd(builder, sink, combinator, predicate, args);
       return;
     }
     if (orNull) {
       Object[] newArgs = new Object[args.length + 1];
       System.arraycopy(args, 0, newArgs, 0, args.length);
       newArgs[args.length] = getTargetFieldName();
-      builder.addStatement("builder.and(" + predicate + ".or(entity.$L.isNull()))", newArgs);
+      builder.addStatement(sink + "." + combinator + "(" + predicate + ".or(entity.$L.isNull()))", newArgs);
     } else {
-      builder.addStatement("builder.and(" + predicate + ")", args);
+      builder.addStatement(sink + "." + combinator + "(" + predicate + ")", args);
     }
   }
 
@@ -361,10 +396,11 @@ public class FilterFieldModel {
    * QueryDSL's {@code any()} cannot be serialized for a collection nested inside an {@code @Embedded} value,
    * so the subquery form is used for every collection of scalars.
    */
-  private void addElementWiseAnd(MethodSpec.Builder builder, String predicate, Object... args) {
+  private void addElementWiseAnd(
+      MethodSpec.Builder builder, String sink, String combinator, String predicate, Object... args) {
     builder.addStatement("var $L = $L", subject(), elementAliasPath());
 
-    var exists = new StringBuilder("builder.and($T.selectOne().from(entity.$L, $L).where(")
+    var exists = new StringBuilder(sink + "." + combinator + "($T.selectOne().from(entity.$L, $L).where(")
         .append(predicate)
         .append(").exists()");
 

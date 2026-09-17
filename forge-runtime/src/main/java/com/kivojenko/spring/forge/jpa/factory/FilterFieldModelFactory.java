@@ -180,6 +180,7 @@ public class FilterFieldModelFactory {
                                .required(annotation.required())
                                .orNull(annotation.orNull())
                                .present(annotation.isPresent())
+                               .family(annotation.family())
                                .build());
         }
       }
