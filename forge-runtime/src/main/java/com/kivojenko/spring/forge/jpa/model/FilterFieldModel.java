@@ -6,6 +6,7 @@ import com.kivojenko.spring.forge.annotation.filter.IterableMatchMode;
 import com.kivojenko.spring.forge.annotation.filter.RangeBoundMode;
 import com.kivojenko.spring.forge.jpa.factory.JpaEntityModelFactory;
 import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
@@ -21,11 +22,15 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Map;
 
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.BOOLEAN_TYPES;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.BUILDER_DEFAULT;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.DATE_TYPES;
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.EXPRESSIONS;
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.JPA_EXPRESSIONS;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.HASH_SET;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.NOT_BLANK;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.NOT_NULL;
@@ -54,6 +59,10 @@ public class FilterFieldModel {
   boolean originalEmbedded;
   ProcessingEnvironment env;
   String targetField;
+  /** {@link #targetField} resolved to a QueryDSL path, with {@code .any()} inserted for intermediate collections. */
+  String targetPath;
+  /** Whether the filtered target is itself a collection, so it is matched element-wise. */
+  boolean scalarCollection;
   boolean required;
   boolean orNull;
   boolean present;
@@ -99,16 +108,45 @@ public class FilterFieldModel {
     if (!present && annotation != null && annotation.iterableMatchMode() == IterableMatchMode.AMOUNT) {
       return fieldName + ".size()";
     }
+    return resolvedPath(fieldName);
+  }
+
+  private String resolvedPath(String fieldName) {
     if (targetField == null || targetField.isEmpty()) {
       return fieldName;
     }
+    var target = targetPath == null || targetPath.isEmpty() ? targetField : targetPath;
     if (originalIterable) {
-      return fieldName + ".any()." + targetField;
+      return fieldName + ".any()." + target;
     }
     if (originalSingleEntity || originalEmbedded) {
-      return fieldName + "." + targetField;
+      return fieldName + "." + target;
     }
-    return targetField;
+    return target;
+  }
+
+  /**
+   * The Spring Data property path for a derived {@code findBy…} query, or {@code null} when this filter
+   * cannot be expressed as one — a path through a collection, a {@code size()} comparison, or a
+   * collection-typed argument all need the QueryDSL predicate instead.
+   */
+  public String getDerivedQueryPath() {
+    var path = getTargetFieldName();
+    if (scalarCollection || path.contains("(") || isCollectionTyped()) {
+      return null;
+    }
+    return java.util.Arrays.stream(path.split("\\."))
+        .map(com.kivojenko.spring.forge.jpa.utils.StringUtils::capitalize)
+        .collect(java.util.stream.Collectors.joining("_"));
+  }
+
+  private boolean isCollectionTyped() {
+    if (type == null || env == null) {
+      return false;
+    }
+    var iterable = env.getElementUtils().getTypeElement("java.lang.Iterable");
+    return iterable != null
+        && env.getTypeUtils().isAssignable(env.getTypeUtils().erasure(type), iterable.asType());
   }
 
   public boolean isEnum() {
@@ -212,7 +250,7 @@ public class FilterFieldModel {
       return;
     }
     if (present) {
-      var collection = originalIterable && (targetField == null || targetField.isEmpty());
+      var collection = scalarCollection || originalIterable && (targetField == null || targetField.isEmpty());
       builder.beginControlFlow("if ($L != null)", getName());
       builder.beginControlFlow("if ($L)", getName());
       builder.addStatement("builder.and(entity.$L.$L())", getTargetFieldName(), collection ? "isNotEmpty" : "isNotNull");
@@ -228,22 +266,22 @@ public class FilterFieldModel {
       builder.beginControlFlow("if ($L != null && !$L.isBlank())", getName(), getName());
       switch (annotation.stringMatchMode()) {
       case STARTS_WITH:
-        addAnd(builder, "entity.$L.startsWith($L)", getTargetFieldName(), getName());
+        addAnd(builder, "$L.startsWith($L)", subject(), getName());
         break;
       case ENDS_WITH:
-        addAnd(builder, "entity.$L.endsWith($L)", getTargetFieldName(), getName());
+        addAnd(builder, "$L.endsWith($L)", subject(), getName());
         break;
       case CONTAINS:
-        addAnd(builder, "entity.$L.contains($L)", getTargetFieldName(), getName());
+        addAnd(builder, "$L.contains($L)", subject(), getName());
         break;
       case CONTAINS_IGNORE_CASE:
-        addAnd(builder, "entity.$L.containsIgnoreCase($L)", getTargetFieldName(), getName());
+        addAnd(builder, "$L.containsIgnoreCase($L)", subject(), getName());
         break;
       case EQUALS:
-        addAnd(builder, "entity.$L.eq($L)", getTargetFieldName(), getName());
+        addAnd(builder, "$L.eq($L)", subject(), getName());
         break;
       case EQUALS_IGNORE_CASE:
-        addAnd(builder, "entity.$L.equalsIgnoreCase($L)", getTargetFieldName(), getName());
+        addAnd(builder, "$L.equalsIgnoreCase($L)", subject(), getName());
         break;
       default:
         break;
@@ -253,7 +291,7 @@ public class FilterFieldModel {
       if (annotation.comparisonMatchMode() == ComparisonMatchMode.EXACT
           || annotation.comparisonMatchMode() == ComparisonMatchMode.EXACT_OR_RANGE) {
         builder.beginControlFlow("if ($L != null)", getName());
-        addAnd(builder, "entity.$L.eq($L)", getTargetFieldName(), getName());
+        addAnd(builder, "$L.eq($L)", subject(), getName());
         builder.endControlFlow();
       }
       if (annotation.comparisonMatchMode() == ComparisonMatchMode.RANGE
@@ -261,22 +299,22 @@ public class FilterFieldModel {
         builder.beginControlFlow("if ($L != null)", minName(getName()));
 
         if (annotation.minBoundMode() == RangeBoundMode.INCLUDES) {
-          addAnd(builder, "entity.$L.goe($L)", getTargetFieldName(), minName(getName()));
+          addAnd(builder, "$L.goe($L)", subject(), minName(getName()));
         } else {
-          addAnd(builder, "entity.$L.gt($L)", getTargetFieldName(), minName(getName()));
+          addAnd(builder, "$L.gt($L)", subject(), minName(getName()));
         }
         builder.endControlFlow();
         builder.beginControlFlow("if ($L != null)", maxName(getName()));
         if (annotation.maxBoundMode() == RangeBoundMode.INCLUDES) {
-          addAnd(builder, "entity.$L.loe($L)", getTargetFieldName(), maxName(getName()));
+          addAnd(builder, "$L.loe($L)", subject(), maxName(getName()));
         } else {
-          addAnd(builder, "entity.$L.lt($L)", getTargetFieldName(), maxName(getName()));
+          addAnd(builder, "$L.lt($L)", subject(), maxName(getName()));
         }
         builder.endControlFlow();
       }
     } else if (BOOLEAN_TYPES.contains(typeName)) {
       builder.beginControlFlow("if ($L != null)", getName());
-      addAnd(builder, "entity.$L.eq($L)", getTargetFieldName(), getName());
+      addAnd(builder, "$L.eq($L)", subject(), getName());
       builder.endControlFlow();
     } else if (isSingleEntity()) {
       var relation = JpaEntityModelFactory.get(typeElement);
@@ -298,12 +336,16 @@ public class FilterFieldModel {
       builder.endControlFlow();
     } else if (isEnum()) {
       builder.beginControlFlow("if ($L != null && !$L.isEmpty())", fieldName, fieldName);
-      addAnd(builder, "entity.$L.in($L)", getTargetFieldName(), fieldName);
+      addAnd(builder, "$L.in($L)", subject(), fieldName);
       builder.endControlFlow();
     }
   }
 
   private void addAnd(MethodSpec.Builder builder, String predicate, Object... args) {
+    if (isElementWise()) {
+      addElementWiseAnd(builder, predicate, args);
+      return;
+    }
     if (orNull) {
       Object[] newArgs = new Object[args.length + 1];
       System.arraycopy(args, 0, newArgs, 0, args.length);
@@ -312,5 +354,58 @@ public class FilterFieldModel {
     } else {
       builder.addStatement("builder.and(" + predicate + ")", args);
     }
+  }
+
+  /**
+   * Matches a collection target element-wise with {@code exists (select 1 from <collection> alias where …)}.
+   * QueryDSL's {@code any()} cannot be serialized for a collection nested inside an {@code @Embedded} value,
+   * so the subquery form is used for every collection of scalars.
+   */
+  private void addElementWiseAnd(MethodSpec.Builder builder, String predicate, Object... args) {
+    builder.addStatement("var $L = $L", subject(), elementAliasPath());
+
+    var exists = new StringBuilder("builder.and($T.selectOne().from(entity.$L, $L).where(")
+        .append(predicate)
+        .append(").exists()");
+
+    var newArgs = new ArrayList<>();
+    newArgs.add(JPA_EXPRESSIONS);
+    newArgs.add(getTargetFieldName());
+    newArgs.add(subject());
+    newArgs.addAll(Arrays.asList(args));
+
+    if (orNull) {
+      exists.append(".or(entity.$L.isEmpty())");
+      newArgs.add(getTargetFieldName());
+    }
+
+    builder.addStatement(exists.append(")").toString(), newArgs.toArray());
+  }
+
+  /** Whether the target is a collection, so the predicate applies to its elements rather than to the path. */
+  private boolean isElementWise() {
+    return scalarCollection && !present;
+  }
+
+  /** The expression a predicate is applied to: the collection element alias, or the path from the entity root. */
+  private String subject() {
+    return isElementWise() ? "__" + getName() + "Element" : "entity." + getTargetFieldName();
+  }
+
+  private CodeBlock elementAliasPath() {
+    var alias = getName() + "Element";
+    if (isEnum()) {
+      return CodeBlock.of("$T.enumPath($T.class, $S)", EXPRESSIONS, typeName, alias);
+    }
+    if (STRING.equals(typeName)) {
+      return CodeBlock.of("$T.stringPath($S)", EXPRESSIONS, alias);
+    }
+    if (BOOLEAN_TYPES.contains(typeName)) {
+      return CodeBlock.of("$T.booleanPath($S)", EXPRESSIONS, alias);
+    }
+    if (NUMERIC_TYPES.contains(typeName)) {
+      return CodeBlock.of("$T.numberPath($T.class, $S)", EXPRESSIONS, typeName.box(), alias);
+    }
+    return CodeBlock.of("$T.comparablePath($T.class, $S)", EXPRESSIONS, typeName.box(), alias);
   }
 }

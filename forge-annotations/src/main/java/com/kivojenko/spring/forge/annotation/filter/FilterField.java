@@ -66,6 +66,11 @@ public @interface FilterField {
    * <p>If the annotated field is not an association, the target field is treated as an absolute path from the root entity
    * (e.g., {@code @FilterField(targetField = "category.name")} on a transient {@code String} field).
    *
+   * <p>Collections along the path are traversed element-wise: an intermediate one with QueryDSL's {@code any()},
+   * and a collection at the end of the path with an {@code exists} subquery, so the filter takes a single value of
+   * the element type (e.g., {@code @FilterField(targetField = "hexColors")} on an embedded {@code dye} field whose
+   * {@code hexColors} is an {@code @ElementCollection List<String>} exposes a {@code String dye} parameter).
+   *
    * @return the target field name
    */
   String targetField() default "";

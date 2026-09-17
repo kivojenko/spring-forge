@@ -76,6 +76,9 @@ public interface ClassNameUtils {
       "QuerydslPredicateExecutor"
   );
 
+  ClassName JPA_EXPRESSIONS = ClassName.get("com.querydsl.jpa", "JPAExpressions");
+  ClassName EXPRESSIONS = ClassName.get("com.querydsl.core.types.dsl", "Expressions");
+
   ClassName ITERABLE = ClassName.get(Iterable.class);
   ClassName SET = ClassName.get(Set.class);
   ClassName HASH_SET = ClassName.get(HashSet.class);

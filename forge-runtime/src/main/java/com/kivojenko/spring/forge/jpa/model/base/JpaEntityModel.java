@@ -430,8 +430,10 @@ public final class JpaEntityModel {
                 continue;
             }
 
-            // Duplicates present: for String-typed filters, OR all mapped targets using the primary's match mode
-            if (field.getTypeName().equals(com.squareup.javapoet.ClassName.get(String.class))) {
+            // Duplicates present: for String-typed filters, OR all mapped targets using the primary's match mode.
+            // Collection targets need an exists-subquery rather than a plain path, so they keep their own filtering.
+            if (field.getTypeName().equals(com.squareup.javapoet.ClassName.get(String.class))
+                    && group.stream().noneMatch(FilterFieldModel::isScalarCollection)) {
                 var primary = group.getFirst();
                 String op;
                 switch (primary.getAnnotation().stringMatchMode()) {

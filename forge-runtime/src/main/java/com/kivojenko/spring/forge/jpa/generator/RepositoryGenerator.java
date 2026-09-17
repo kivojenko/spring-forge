@@ -110,8 +110,14 @@ public final class RepositoryGenerator {
                 continue;
             }
 
-            var methodName = "findBy" + capitalize(field.getOriginalName());
-            var method = MethodSpec.methodBuilder(methodName)
+            // Name the query after the property it actually reads (category.name → findByCategory_Name);
+            // paths Spring Data cannot derive (collections, size()) are left to the QueryDSL predicate.
+            var propertyPath = field.getDerivedQueryPath();
+            if (propertyPath == null) {
+                continue;
+            }
+
+            var method = MethodSpec.methodBuilder("findBy" + propertyPath)
                     .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
                     .returns(ParameterizedTypeName.get(LIST, model.getEntityType()))
                     .addParameter(field.getTypeName(), field.getName())

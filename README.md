@@ -621,7 +621,10 @@ GET /products?name=phone&minPrice=100&maxPrice=900&types=ELECTRONICS&category=le
 ```
 
 The repository also gains matching `findBy…` derived queries, and extends
-`QuerydslPredicateExecutor<E>` so the predicate can be paged.
+`QuerydslPredicateExecutor<E>` so the predicate can be paged. A derived query is named after the
+property it actually reads, so `targetField` shows up in the method name — `findByCategory_Name(String)`.
+Filters that cannot be a derived query at all (collection targets, `IterableMatchMode.AMOUNT`) are
+served only by `toPredicate()`.
 
 ### Parameter naming
 
@@ -637,6 +640,7 @@ The DTO field name *is* the query parameter name, and it is not always the entit
 | single association, no `targetField` | pluralised set of **ids** — `country` → `countries` |
 | collection association, no `targetField` | set of **ids**, name unchanged — `tags` |
 | any association **with** `targetField` | scalar of the target's type, **name unchanged** — `category` |
+| collection of scalars / `@ElementCollection` | scalar of the element type, **name unchanged** — `keywords` |
 | any field with `isPresent = true` | `Boolean` named `has<Field>` — `description` → `hasDescription` |
 | `@DiscriminatorColumn` | `List` named after the column — `vehicle_type` → `vehicleType` |
 
@@ -695,6 +699,24 @@ private ProductCategory category;
 @FilterField(targetField = "name")        // → entity.alternativeNames.any().name
 private Set<IngredientAlternativeName> alternativeNames;
 ```
+
+When the **target itself** is a collection of scalars — an `@ElementCollection`, whether reached through
+`targetField` or annotated directly — the filter takes a single value of the *element* type and matches it
+against every element. `any()` cannot be serialised for a collection nested inside an `@Embedded` value, so
+these compile to an `exists` subquery instead:
+
+```java
+@Embedded
+@FilterField(targetField = "hexColors")   // ?dye=#FF — exists(… from dye.hexColors h where h like '#FF%')
+private Dye dye;                          // Dye holds @ElementCollection List<String> hexColors
+
+@ElementCollection
+@FilterField                              // ?keywords=warm
+private List<String> keywords;
+```
+
+`stringMatchMode` / `comparisonMatchMode` apply to each element; `isPresent` still asks about the
+collection itself (`isNotEmpty()` / `isEmpty()`), and `orNull` also matches rows whose collection is empty.
 
 ### Inheritance
 
