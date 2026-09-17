@@ -31,11 +31,11 @@ public class ArticleFilterFamilyTest extends WithPostgres {
   void setUp() throws Exception {
     articleRepository.deleteAll();
 
-    createArticle("Quantum computing", "A short primer", true, "physics", "hardware");
-    createArticle("Gardening basics", "Quantum leaps in tomatoes", true, "plants");
-    createArticle("Weekly roundup", "Nothing special", true, "quantum", "news");
-    createArticle("Draft notes", "Quantum draft", false, "physics");
-    createArticle("Unrelated", "Nothing special", true, "cooking");
+    createArticle("Quantum computing", "A short primer", "Ada", "Science", true, "physics", "hardware");
+    createArticle("Gardening basics", "Quantum leaps in tomatoes", "Bob", "Home", true, "plants");
+    createArticle("Weekly roundup", "Nothing special", "Ada", "Home", true, "quantum", "news");
+    createArticle("Draft notes", "Quantum draft", "Ada", "Science", false, "physics");
+    createArticle("Unrelated", "Nothing special", "Bob", "Science", true, "cooking");
   }
 
   @AfterEach
@@ -43,11 +43,14 @@ public class ArticleFilterFamilyTest extends WithPostgres {
     articleRepository.deleteAll();
   }
 
-  private void createArticle(String title, String summary, boolean published, String... keywords)
+  private void createArticle(
+      String title, String summary, String author, String section, boolean published, String... keywords)
       throws Exception {
     var body = "{"
         + "\"title\":\"" + title + "\","
         + "\"summary\":\"" + summary + "\","
+        + "\"author\":\"" + author + "\","
+        + "\"section\":\"" + section + "\","
         + "\"published\":" + published + ","
         + "\"keywords\":" + jsonArray(keywords)
         + "}";
@@ -113,6 +116,44 @@ public class ArticleFilterFamilyTest extends WithPostgres {
             .param("published", "false"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.content", hasSize(0)));
+  }
+
+  @Test
+  void aFamilyDeclaredAsAndRequiresEveryMemberItIsGiven() throws Exception {
+    // @FilterFamily(name = "attribution", matchMode = AND): both members have to match, so this is the
+    // intersection (2) rather than the union an OR family would give (4)
+    mockMvc.perform(get("/articles")
+            .param("author", "ada")
+            .param("section", "science"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(2)))
+        .andExpect(jsonPath("$.content[?(@.title == 'Quantum computing')]").exists())
+        .andExpect(jsonPath("$.content[?(@.title == 'Draft notes')]").exists());
+
+    // One member on its own still filters by that member alone
+    mockMvc.perform(get("/articles").param("author", "ada"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(3)));
+
+    mockMvc.perform(get("/articles")
+            .param("author", "ada")
+            .param("section", "home"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(1)))
+        .andExpect(jsonPath("$.content[0].title").value("Weekly roundup"));
+  }
+
+  @Test
+  void familiesAreAndEdWithEachOther() throws Exception {
+    // (title OR keywords) AND (author AND section)
+    mockMvc.perform(get("/articles")
+            .param("title", "quantum")
+            .param("keywords", "quantum")
+            .param("author", "ada")
+            .param("section", "home"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(1)))
+        .andExpect(jsonPath("$.content[0].title").value("Weekly roundup"));
   }
 
   @Test

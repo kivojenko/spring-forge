@@ -674,7 +674,7 @@ Other attributes:
 | `required` | `false` | Adds `@NotNull` (`@NotBlank` for `String`) to the DTO; the controller validates with `@Valid` |
 | `orNull` | `false` | Also match rows where the column is `NULL` |
 | `isPresent` | `false` | Presence filter named `has<Field>` unless `name` is set: `true` → `isNotNull()` (`isNotEmpty()` for collections), `false` → `isNull()` / `isEmpty()` |
-| `family` | `""` | Groups this filter with others of the same family; members are OR-ed with each other, the family AND-ed with the rest |
+| `family` | `""` | Groups this filter with others of the same family; members are OR-ed with each other (`@FilterFamily` on the entity can make it `AND` or `EXISTS`), the family AND-ed with the rest |
 
 ```java
 @FilterField(orNull = true)
@@ -734,6 +734,81 @@ changes. Parameters that are not sent contribute nothing, so sending a single me
 member alone, and a family whose members are all absent leaves the query untouched. Any filter kind can
 join a family, including `targetField` paths, collection targets, presence filters and the discriminator
 filter; a family with one member behaves exactly like an ungrouped filter.
+
+`@FilterFamily` on the entity switches a family to `AND`, so every member that *is* sent has to match.
+It is optional — an undeclared family is `OR`:
+
+```java
+@Entity
+@WithRestController
+@FilterFamily(name = "attribution", matchMode = FamilyMatchMode.AND)
+public class Article {
+
+  @FilterField(family = "attribution", stringMatchMode = StringMatchMode.CONTAINS_IGNORE_CASE)
+  private String author;
+
+  @FilterField(family = "attribution", stringMatchMode = StringMatchMode.CONTAINS_IGNORE_CASE)
+  private String section;
+  …
+}
+```
+
+```
+GET /articles?author=ada&section=science      # author AND section, not either
+```
+
+| Attribute | Default | Description |
+|---|---|---|
+| `name` | — | The family name, as used by `@FilterField(family = …)` |
+| `matchMode` | `OR` | `OR` — any member may match; `AND` — every member that is sent must match; `EXISTS` — see below |
+
+`FamilyMatchMode.EXISTS` goes one step further: at least one of the family's target fields has to *hold a
+value*, whether or not any of its parameters is sent. Each member contributes an `isNotNull()` check
+(`isNotEmpty()` for a collection), those are OR-ed and required, and every supplied member's own predicate
+is AND-ed on top:
+
+```java
+@Entity
+@WithRestController
+// only contacts that can actually be reached are ever listed
+@FilterFamily(name = "reachability", matchMode = FamilyMatchMode.EXISTS)
+public class Contact {
+
+  @FilterField(family = "reachability", stringMatchMode = StringMatchMode.CONTAINS_IGNORE_CASE)
+  private String email;
+
+  @FilterField(family = "reachability", stringMatchMode = StringMatchMode.CONTAINS_IGNORE_CASE)
+  private String phone;
+
+  @ElementCollection
+  @FilterField(family = "reachability", stringMatchMode = StringMatchMode.CONTAINS_IGNORE_CASE)
+  private List<String> handles = new ArrayList<>();
+}
+```
+
+```java
+var __familyReachability = new BooleanBuilder();
+__familyReachability.and(entity.email.isNotNull()
+    .or(entity.phone.isNotNull())
+    .or(entity.handles.isNotEmpty()));
+if (email != null && !email.isBlank()) {
+  __familyReachability.and(entity.email.containsIgnoreCase(email));
+}
+…
+```
+
+```
+GET /contacts                       # every contact with an email, a phone or a handle
+GET /contacts?email=example.com     # …of those, the ones whose email matches
+```
+
+> [!IMPORTANT]
+> `EXISTS` is the one mode that constrains the query even when no member parameter is sent, so it
+> permanently narrows the resource's list endpoint. `OR` and `AND` families leave an untouched query alone.
+
+The annotation is repeatable, so one entity can configure several families, and it is inherited from a
+`@MappedSuperclass` or entity superclass unless the subclass declares the same name again. Naming a
+family no field belongs to has no effect.
 
 > [!NOTE]
 > A family only affects `toPredicate()`. The derived `findBy…` queries are per-field and keep AND

@@ -242,6 +242,26 @@ public class FilterFieldModel {
     return builder.addField(field.build());
   }
 
+  /**
+   * The QueryDSL expression asserting this filter's target holds a value — {@code isNotEmpty()} when the
+   * target is a collection, {@code isNotNull()} otherwise. Used by an {@code EXISTS} family, which requires
+   * at least one of its members to be present regardless of the member's own match modes.
+   *
+   * @return the presence expression, rooted at the generated {@code entity} variable
+   */
+  public String presenceExpression() {
+    var collection = scalarCollection || originalIterable && (targetField == null || targetField.isEmpty());
+    return "entity." + presencePath() + (collection ? ".isNotEmpty()" : ".isNotNull()");
+  }
+
+  /** The path a presence check applies to — the target path, never the {@code size()} of a collection. */
+  private String presencePath() {
+    if (targetFieldName != null) {
+      return targetFieldName;
+    }
+    return element == null ? getName() : resolvedPath(element.getSimpleName().toString());
+  }
+
   public void addFiltering(MethodSpec.Builder builder) {
     addFiltering(builder, DEFAULT_SINK, AND);
   }

@@ -1,7 +1,9 @@
 package com.kivojenko.spring.forge.example.model.filter;
 
 import com.kivojenko.spring.forge.annotation.WithRestController;
+import com.kivojenko.spring.forge.annotation.filter.FamilyMatchMode;
 import com.kivojenko.spring.forge.annotation.filter.FilterField;
+import com.kivojenko.spring.forge.annotation.filter.FilterFamily;
 import com.kivojenko.spring.forge.annotation.filter.StringMatchMode;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
@@ -28,6 +30,8 @@ import lombok.Setter;
 @Entity
 @Table(name = "articles")
 @WithRestController
+// "search" is left undeclared — an undeclared family combines its members with OR
+@FilterFamily(name = "attribution", matchMode = FamilyMatchMode.AND)
 public class Article {
 
   @Id
@@ -48,7 +52,14 @@ public class Article {
   @FilterField(family = "search", stringMatchMode = StringMatchMode.CONTAINS_IGNORE_CASE)
   private List<String> keywords = new ArrayList<>();
 
-  // … and the family as a whole is AND-ed with this one
+  // The "attribution" family: declared as AND, so every member that is sent has to match
+  @FilterField(family = "attribution", stringMatchMode = StringMatchMode.CONTAINS_IGNORE_CASE)
+  private String author;
+
+  @FilterField(family = "attribution", stringMatchMode = StringMatchMode.CONTAINS_IGNORE_CASE)
+  private String section;
+
+  // … and each family as a whole is AND-ed with this one
   @FilterField
   private Boolean published;
 }

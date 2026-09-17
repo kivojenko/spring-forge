@@ -5,7 +5,9 @@ import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.DATE_TYPES;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.NUMERIC_TYPES;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.STRING;
 
+import com.kivojenko.spring.forge.annotation.filter.FamilyMatchMode;
 import com.kivojenko.spring.forge.annotation.filter.FilterField;
+import com.kivojenko.spring.forge.annotation.filter.FilterFamily;
 import com.kivojenko.spring.forge.annotation.filter.IterableMatchMode;
 import com.kivojenko.spring.forge.jpa.model.FilterFieldModel;
 import com.squareup.javapoet.ClassName;
@@ -197,6 +199,30 @@ public class FilterFieldModelFactory {
     }
 
     return filterFields;
+  }
+
+  /**
+   * Resolves the {@link FilterFamily} declarations of an entity, walking up its superclasses so a family
+   * configured on a {@code @MappedSuperclass} applies to the entities below it. The closest declaration
+   * wins, and families that are never declared are left out — they default to {@link FamilyMatchMode#OR}.
+   *
+   * @param entity the entity to read the declarations from
+   * @return the configured match mode per family name
+   */
+  public static Map<String, FamilyMatchMode> resolveFamilyModes(TypeElement entity) {
+    var modes = new HashMap<String, FamilyMatchMode>();
+    TypeElement current = entity;
+    while (current != null) {
+      for (var family : current.getAnnotationsByType(FilterFamily.class)) {
+        // The subclass declaration wins over the one it inherits
+        modes.putIfAbsent(family.name(), family.matchMode());
+      }
+      var superclass = current.getSuperclass();
+      current = superclass.getKind() == TypeKind.DECLARED
+                ? (TypeElement) ((DeclaredType) superclass).asElement()
+                : null;
+    }
+    return modes;
   }
 
   private static void addDiscriminatorField(TypeElement entity, List<FilterFieldModel> filterFields, ProcessingEnvironment env) {

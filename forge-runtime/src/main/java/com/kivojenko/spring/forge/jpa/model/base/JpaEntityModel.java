@@ -1,5 +1,6 @@
 package com.kivojenko.spring.forge.jpa.model.base;
 
+import com.kivojenko.spring.forge.annotation.filter.FamilyMatchMode;
 import com.kivojenko.spring.forge.jpa.factory.EndpointRelationResolver;
 import com.kivojenko.spring.forge.jpa.factory.FilterFieldModelFactory;
 import com.kivojenko.spring.forge.jpa.model.FilterFieldModel;
@@ -13,6 +14,8 @@ import jakarta.persistence.MappedSuperclass;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.Map;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -93,6 +96,10 @@ public final class JpaEntityModel {
 
     @Getter(lazy = true)
     private final List<FilterFieldModel> allFilterableFields = FilterFieldModelFactory.resolveAll(getElement(), env);
+
+    @Getter(lazy = true)
+    private final Map<String, FamilyMatchMode> filterFamilyModes =
+            FilterFieldModelFactory.resolveFamilyModes(getElement());
 
     @Getter(lazy = true)
     private final List<EndpointRelation> endpointRelations = EndpointRelationResolver.resolve(getElement(), env);
@@ -436,9 +443,11 @@ public final class JpaEntityModel {
         for (var field : getFilterableFields()) {
             var family = field.getFamily();
             var members = families.get(family);
+            var mode = members == null ? null : familyMode(family);
 
-            // Ungrouped, or the only member of its family — nothing to OR it with
-            if (members == null || members.size() <= 1) {
+            // Ungrouped, or a lone member of a family that adds nothing to it — an EXISTS family still
+            // contributes its presence check, so it is emitted even with a single member
+            if (members == null || members.size() <= 1 && mode != FamilyMatchMode.EXISTS) {
                 addFieldFiltering(builder, field, groups, BUILDER_VAR_NAME, FilterFieldModel.AND);
                 continue;
             }
@@ -449,8 +458,12 @@ public final class JpaEntityModel {
 
             var sink = familyBuilderName(family);
             builder.addStatement("var $L = new $T()", sink, BooleanBuilder.class);
+            if (mode == FamilyMatchMode.EXISTS) {
+                addFamilyPresence(builder, sink, members);
+            }
+            var combinator = mode == FamilyMatchMode.OR ? FilterFieldModel.OR : FilterFieldModel.AND;
             for (var member : members) {
-                addFieldFiltering(builder, member, groups, sink, FilterFieldModel.OR);
+                addFieldFiltering(builder, member, groups, sink, combinator);
             }
             builder.beginControlFlow("if ($L.hasValue())", sink);
             builder.addStatement("$L.and($L)", BUILDER_VAR_NAME, sink);
@@ -521,7 +534,32 @@ public final class JpaEntityModel {
         builder.endControlFlow();
     }
 
-    /** The local {@code BooleanBuilder} a family's members are OR-ed into. */
+    /**
+     * Requires at least one of an {@code EXISTS} family's targets to hold a value, whether or not any of
+     * its parameters was sent. Members mapping to the same target contribute the check only once.
+     */
+    private void addFamilyPresence(MethodSpec.Builder builder, String sink, List<FilterFieldModel> members) {
+        var checks = new LinkedHashSet<String>();
+        for (var member : members) {
+            checks.add(member.presenceExpression());
+        }
+        var iterator = checks.iterator();
+        var expression = new StringBuilder(iterator.next());
+        while (iterator.hasNext()) {
+            expression.append(".or(").append(iterator.next()).append(")");
+        }
+        builder.addStatement("$L.and($L)", sink, expression.toString());
+    }
+
+    /**
+     * How a family combines its members: {@code OR} unless a {@code @FilterFamily} on the entity — or on
+     * one of its superclasses — declares otherwise.
+     */
+    private FamilyMatchMode familyMode(String family) {
+        return getFilterFamilyModes().getOrDefault(family, FamilyMatchMode.OR);
+    }
+
+    /** The local {@code BooleanBuilder} a family's members are combined into. */
     private static String familyBuilderName(String family) {
         return "__family" + StringUtils.capitalize(family.replaceAll("[^A-Za-z0-9]", "_"));
     }
