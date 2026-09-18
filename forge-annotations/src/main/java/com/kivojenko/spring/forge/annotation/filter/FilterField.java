@@ -16,6 +16,10 @@ public @interface FilterField {
   /**
    * Defines how string values are matched when filtering (e.g., contains, starts with).
    *
+   * <p>A {@code *_ANY} mode matches several values instead of one: the filter parameter becomes a
+   * {@code Set<String>} bound from a repeated query parameter ({@code ?name=alfa&name=beta}) and a row
+   * matches when any of the values does, using the match of the corresponding single-value mode.
+   *
    * @return the string match mode to apply
    */
   StringMatchMode stringMatchMode() default StringMatchMode.CONTAINS;

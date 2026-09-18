@@ -163,6 +163,11 @@ public class FilterFieldModelFactory {
             scalarCollection = true;
           }
 
+          // A *_ANY string match mode turns the parameter into a collection of values, OR-ed with each other
+          var multiString = !annotation.isPresent()
+              && STRING.equals(filterTypeName)
+              && annotation.stringMatchMode().isMultiValue();
+
           filterFields.add(FilterFieldModel.builder()
                                .element(field)
                                .type(filterType)
@@ -179,6 +184,7 @@ public class FilterFieldModelFactory {
                                .targetField(targetField)
                                .targetPath(targetPath)
                                .scalarCollection(scalarCollection)
+                               .multiString(multiString)
                                .required(annotation.required())
                                .orNull(annotation.orNull())
                                .present(annotation.isPresent())

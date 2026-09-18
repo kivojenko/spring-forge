@@ -502,14 +502,14 @@ public final class JpaEntityModel {
             return;
         }
 
-        var op = switch (group.getFirst().getAnnotation().stringMatchMode()) {
-            case STARTS_WITH -> "startsWith";
-            case ENDS_WITH -> "endsWith";
-            case CONTAINS -> "contains";
-            case EQUALS -> "eq";
-            case EQUALS_IGNORE_CASE -> "equalsIgnoreCase";
-            default -> "containsIgnoreCase";
-        };
+        var op = FilterFieldModel.stringOperator(group.getFirst().getAnnotation().stringMatchMode());
+
+        // A *_ANY mode carries several values: each of them is matched against each target, all OR-ed
+        if (field.isMultiString()) {
+            addMultiStringFieldFiltering(builder, field, group, sink, combinator, op);
+            return;
+        }
+
         var expr = "__" + field.getName() + "Expr";
 
         builder.beginControlFlow("if ($L != null && !$L.isBlank())", field.getName(), field.getName());
@@ -531,6 +531,40 @@ public final class JpaEntityModel {
             );
         }
         builder.addStatement("$L.$L($L)", sink, combinator, expr);
+        builder.endControlFlow();
+    }
+
+    /**
+     * Emits a multi-value string filter whose exposed name maps to several targets: every supplied value
+     * is matched against every target and the results are OR-ed, so a row matches when any value matches
+     * any of them.
+     */
+    private void addMultiStringFieldFiltering(
+            MethodSpec.Builder builder,
+            FilterFieldModel field,
+            List<FilterFieldModel> group,
+            String sink,
+            String combinator,
+            String op
+    ) {
+        var values = field.getName();
+        var valueSink = field.multiValueSink();
+        var value = field.multiValueVar();
+
+        builder.beginControlFlow("if ($L != null && !$L.isEmpty())", values, values);
+        builder.addStatement("var $L = new $T()", valueSink, BooleanBuilder.class);
+        builder.beginControlFlow("for (var $L : $L)", value, values);
+        builder.beginControlFlow("if ($L == null || $L.isBlank())", value, value);
+        builder.addStatement("continue");
+        builder.endControlFlow();
+        for (var member : group) {
+            builder.addStatement(
+                    "$L.or(entity.$L." + op + "($L))", valueSink, member.getTargetFieldName(), value);
+        }
+        builder.endControlFlow();
+        builder.beginControlFlow("if ($L.hasValue())", valueSink);
+        builder.addStatement("$L.$L($L)", sink, combinator, valueSink);
+        builder.endControlFlow();
         builder.endControlFlow();
     }
 

@@ -633,6 +633,7 @@ The DTO field name *is* the query parameter name, and it is not always the entit
 | Entity field | Generated parameter(s) |
 |---|---|
 | `String`, `Boolean`, `UUID`, … | same name — `description` |
+| `String` with a `*_ANY` string match mode | set of values, **name unchanged** — `name` |
 | number/date, `EXACT` | `price` |
 | number/date, `RANGE` | `minPrice`, `maxPrice` |
 | number/date, `EXACT_OR_RANGE` *(default)* | all three |
@@ -661,6 +662,7 @@ private String brand;              // ?manufacturer=Acme
 | Attribute | Values | Default |
 |---|---|---|
 | `stringMatchMode` | `EQUALS`, `EQUALS_IGNORE_CASE`, `CONTAINS`, `CONTAINS_IGNORE_CASE`, `STARTS_WITH`, `ENDS_WITH` | `CONTAINS` |
+| `stringMatchMode`, several values | `EQUALS_ANY`, `EQUALS_ANY_IGNORE_CASE`, `CONTAINS_ANY`, `CONTAINS_ANY_IGNORE_CASE`, `STARTS_WITH_ANY`, `ENDS_WITH_ANY` | — |
 | `comparisonMatchMode` | `EXACT`, `RANGE`, `EXACT_OR_RANGE` | `EXACT_OR_RANGE` |
 | `iterableMatchMode` | `ANY`, `ALL` | `ANY` |
 | `minBoundMode` / `maxBoundMode` | `INCLUDES`, `EXCLUDES` | `INCLUDES` |
@@ -671,7 +673,7 @@ Other attributes:
 |---|---|---|
 | `name` | field name | Query-parameter / DTO field name |
 | `targetField` | `""` | Filter on a field *of* the association or `@Embedded` value (`category.name`, `dye.colorIndex`), or an absolute path from the root entity when placed on a transient field |
-| `required` | `false` | Adds `@NotNull` (`@NotBlank` for `String`) to the DTO; the controller validates with `@Valid` |
+| `required` | `false` | Adds `@NotNull` (`@NotBlank` for `String`, `@NotEmpty` for a set of values) to the DTO; the controller validates with `@Valid` |
 | `orNull` | `false` | Also match rows where the column is `NULL` |
 | `isPresent` | `false` | Presence filter named `has<Field>` unless `name` is set: `true` → `isNotNull()` (`isNotEmpty()` for collections), `false` → `isNull()` / `isEmpty()` |
 | `family` | `""` | Groups this filter with others of the same family; members are OR-ed with each other (`@FilterFamily` on the entity can make it `AND` or `EXISTS`), the family AND-ed with the rest |
@@ -685,6 +687,61 @@ private String description;        // ?description=… and ?hasDescription=true
 @FilterField(targetField = "colorIndex", isPresent = true)
 private Dye dye;                   // ?hasDye=true → dye.colorIndex is not null
 ```
+
+#### Several values at once
+
+Every string match mode has an `*_ANY` twin that takes a *set* of values instead of one. The parameter
+keeps its name, and a row matches when **any** of the values matches — using the match of the plain
+mode:
+
+```java
+@FilterField(stringMatchMode = StringMatchMode.EQUALS_ANY_IGNORE_CASE)
+private String name;
+```
+
+```java
+public class TrackForgeFilter implements HasToPredicate {
+  @Builder.Default
+  private Set<String> name = new HashSet<>();   // no longer a String
+  …
+}
+```
+
+```
+GET /tracks?name=alfa&name=BETA      # name equals either of them, ignoring case
+GET /tracks?name=alfa,BETA           # the same set — Spring splits a comma-separated value
+```
+
+```java
+if (name != null && !name.isEmpty()) {
+  var __nameBuilder = new BooleanBuilder();
+  for (var __nameValue : name) {
+    if (__nameValue == null || __nameValue.isBlank()) {
+      continue;
+    }
+    __nameBuilder.or(entity.name.equalsIgnoreCase(__nameValue));
+  }
+  if (__nameBuilder.hasValue()) {
+    builder.and(__nameBuilder);
+  }
+}
+```
+
+Blank values contribute nothing, so sending one value filters exactly like the plain mode does and a
+parameter sent empty leaves the query untouched. Everything else keeps working the way it does for a
+single value:
+
+| Combined with | Effect |
+|---|---|
+| `orNull` | rows where the column is `NULL` match as well |
+| `family` | the parameter joins the family as a single member, OR-ed (or AND-ed) with the others |
+| a collection target (`@ElementCollection`) | matched element-wise inside one `exists` — any value against any element |
+| `name` shared by several fields | every value is matched against every target |
+| `required` | the DTO field gets `@NotEmpty` instead of `@NotBlank` |
+
+> [!NOTE]
+> Only `toPredicate()` takes several values. The derived query stays single-valued — `findByName(String)` —
+> so the repository is unchanged by the mode.
 
 ### Families
 
@@ -844,8 +901,9 @@ private Dye dye;                          // Dye holds @ElementCollection List<S
 private List<String> keywords;
 ```
 
-`stringMatchMode` / `comparisonMatchMode` apply to each element; `isPresent` still asks about the
-collection itself (`isNotEmpty()` / `isEmpty()`), and `orNull` also matches rows whose collection is empty.
+`stringMatchMode` / `comparisonMatchMode` apply to each element — a `*_ANY` mode matches any of its
+values against any element, inside the same subquery; `isPresent` still asks about the collection itself
+(`isNotEmpty()` / `isEmpty()`), and `orNull` also matches rows whose collection is empty.
 
 ### Inheritance
 

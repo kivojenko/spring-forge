@@ -40,6 +40,7 @@ public interface ClassNameUtils {
   ClassName VALID = ClassName.get("jakarta.validation", "Valid");
   ClassName NOT_NULL = ClassName.get("jakarta.validation.constraints", "NotNull");
   ClassName NOT_BLANK = ClassName.get("jakarta.validation.constraints", "NotBlank");
+  ClassName NOT_EMPTY = ClassName.get("jakarta.validation.constraints", "NotEmpty");
 
   ClassName HTTP_STATUS = ClassName.get("org.springframework.http", "HttpStatus");
 
@@ -76,6 +77,7 @@ public interface ClassNameUtils {
       "QuerydslPredicateExecutor"
   );
 
+  ClassName BOOLEAN_BUILDER = ClassName.get("com.querydsl.core", "BooleanBuilder");
   ClassName JPA_EXPRESSIONS = ClassName.get("com.querydsl.jpa", "JPAExpressions");
   ClassName EXPRESSIONS = ClassName.get("com.querydsl.core.types.dsl", "Expressions");
 
