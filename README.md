@@ -367,6 +367,7 @@ Each one implies the layers below it, so you only ever annotate for the topmost 
 | `packageName` | `""` | Sub-package appended to the base package |
 | `makeAbstract` | `false` | Mark the controller `abstract` and omit `@RestController`/`@RequestMapping`, so a subclass can map it |
 | `allowSlashes` | `false` | Allow slashes in default endpoints by id (e.g. `/{*id}`) |
+| `view` | `Void.class` | Jackson JSON view (`@JsonView`) applied to controller and standard CRUD endpoints |
 
 **`@GetOrCreate`**
 
@@ -423,6 +424,7 @@ Placed on an association field to expose that relation over REST. See
 | `addNew` | `true` | `POST` a brand-new entity into the association |
 | `linkExisting` | `true` | `PUT` an existing entity into the association (`@ManyToOne`, `@ManyToMany`) |
 | `remove` | `true` | `DELETE` the link |
+| `view` | `Void.class` | Jackson JSON view (`@JsonView`) applied to association endpoints |
 
 ### `@WithGetEndpoint`
 
@@ -456,6 +458,11 @@ public Integer getBooksCount() {
 }
 // → @GetMapping("/{id}/booksCount") public Integer getBooksCount(@PathVariable Long id)
 ```
+
+| Attribute | Default | Description |
+|---|---|---|
+| `path` | derived from method name | Path segment for the endpoint |
+| `view` | `Void.class` | Jackson JSON view (`@JsonView`) applied to the endpoint |
 
 The path is `path()` when set, otherwise the method name with a leading `get` stripped and
 decapitalised.
