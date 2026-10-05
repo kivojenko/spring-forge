@@ -5,6 +5,7 @@ import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.FORGE_ABSTRACT
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.FORGE_CONTROLLER;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.GET_MAPPING;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.HTTP_STATUS;
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.JSON_VIEW;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.PAGE;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.PAGEABLE;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.PAGEABLE_DEFAULT;
@@ -81,6 +82,14 @@ public final class ControllerGenerator {
       builder.addAnnotation(REST_CONTROLLER).addAnnotation(mappingAnnotation);
     }
 
+    if (model.getRequirements().controllerView() != null) {
+      builder.addAnnotation(
+          AnnotationSpec.builder(JSON_VIEW)
+              .addMember("value", "$T.class", model.getRequirements().controllerView())
+              .build()
+      );
+    }
+
     if (model.getRequirements().getOrCreateAnnotation() != null && !model.isAbstract()) {
       var cfg = model.getRequirements().getOrCreateAnnotation();
       var path = cfg.path().isEmpty() ? "/get-or-create" : cfg.path();
@@ -93,7 +102,7 @@ public final class ControllerGenerator {
           .addMember("name", "$S", fieldPath)
           .build();
       var param = ParameterSpec.builder(fieldType, paramName).addAnnotation(requestParam).build();
-      var getOrCreate = MethodSpec
+      var getOrCreateBuilder = MethodSpec
           .methodBuilder("getOrCreate")
           .addJavadoc("Retrieves an existing {@link $T} by $L or creates it if it does not exist.\n", model.getEntityType(), fieldPath)
           .addJavadoc("@param $L the $L of the entity\n", paramName, fieldPath)
@@ -102,9 +111,15 @@ public final class ControllerGenerator {
           .addAnnotation(mapping)
           .addParameter(param)
           .returns(model.getEntityType())
-          .addStatement("return service.getOrCreate($L)", paramName)
-          .build();
-      builder.addMethod(getOrCreate);
+          .addStatement("return service.getOrCreate($L)", paramName);
+      if (model.getRequirements().controllerView() != null) {
+        getOrCreateBuilder.addAnnotation(
+            AnnotationSpec.builder(JSON_VIEW)
+                .addMember("value", "$T.class", model.getRequirements().controllerView())
+                .build()
+        );
+      }
+      builder.addMethod(getOrCreateBuilder.build());
     }
 
     var pageableAnnotation = AnnotationSpec
@@ -120,6 +135,14 @@ public final class ControllerGenerator {
         .addAnnotation(GET_MAPPING)
         .returns(ParameterizedTypeName.get(PAGE, model.getEntityType()))
         .addParameter(pageableParam);
+
+    if (model.getRequirements().controllerView() != null) {
+      findAllBuilder.addAnnotation(
+          AnnotationSpec.builder(JSON_VIEW)
+              .addMember("value", "$T.class", model.getRequirements().controllerView())
+              .build()
+      );
+    }
 
     if (model.wantsFilter()) {
       var filterParam = ParameterSpec.builder(model.getFilterType(), "filter")
@@ -152,17 +175,22 @@ public final class ControllerGenerator {
     var idPlaceholder = model.wantsAllowSlashes() ? "{*" + idName + "}" : "{" + idName + "}";
 
     // getById
-    builder.addMethod(
-        MethodSpec
-            .methodBuilder("getById")
-            .addAnnotation(AnnotationSpec.builder(GET_MAPPING).addMember("value", "$S", "/" + idPlaceholder).build())
-            .addModifiers(Modifier.PUBLIC)
-            .addAnnotation(Override.class)
-            .returns(entityType)
-            .addParameter(ParameterSpec.builder(idType, idName).addAnnotation(PATH_VARIABLE).build())
-            .addStatement("return service.getById($L)", idName)
-            .build()
-    );
+    var getByIdBuilder = MethodSpec
+        .methodBuilder("getById")
+        .addAnnotation(AnnotationSpec.builder(GET_MAPPING).addMember("value", "$S", "/" + idPlaceholder).build())
+        .addModifiers(Modifier.PUBLIC)
+        .addAnnotation(Override.class)
+        .returns(entityType)
+        .addParameter(ParameterSpec.builder(idType, idName).addAnnotation(PATH_VARIABLE).build())
+        .addStatement("return service.getById($L)", idName);
+    if (model.getRequirements().controllerView() != null) {
+      getByIdBuilder.addAnnotation(
+          AnnotationSpec.builder(JSON_VIEW)
+              .addMember("value", "$T.class", model.getRequirements().controllerView())
+              .build()
+      );
+    }
+    builder.addMethod(getByIdBuilder.build());
 
     // exists
     builder.addMethod(
@@ -184,33 +212,43 @@ public final class ControllerGenerator {
     );
 
     // update
-    builder.addMethod(
-        MethodSpec
-            .methodBuilder("update")
-            .addAnnotation(AnnotationSpec.builder(PUT_MAPPING).addMember("value", "$S", "/" + idPlaceholder).build())
-            .addAnnotation(AnnotationSpec.builder(RESPONSE_STATUS).addMember("code", "$T.CREATED", HTTP_STATUS).build())
-            .addModifiers(Modifier.PUBLIC)
-            .addAnnotation(Override.class)
-            .returns(entityType)
-            .addParameter(ParameterSpec.builder(idType, idName).addAnnotation(PATH_VARIABLE).build())
-            .addParameter(ParameterSpec.builder(entityType, "entity").addAnnotation(VALID).addAnnotation(REQUEST_BODY).build())
-            .addStatement("return service.update($L, entity)", idName)
-            .build()
-    );
+    var updateBuilder = MethodSpec
+        .methodBuilder("update")
+        .addAnnotation(AnnotationSpec.builder(PUT_MAPPING).addMember("value", "$S", "/" + idPlaceholder).build())
+        .addAnnotation(AnnotationSpec.builder(RESPONSE_STATUS).addMember("code", "$T.CREATED", HTTP_STATUS).build())
+        .addModifiers(Modifier.PUBLIC)
+        .addAnnotation(Override.class)
+        .returns(entityType)
+        .addParameter(ParameterSpec.builder(idType, idName).addAnnotation(PATH_VARIABLE).build())
+        .addParameter(ParameterSpec.builder(entityType, "entity").addAnnotation(VALID).addAnnotation(REQUEST_BODY).build())
+        .addStatement("return service.update($L, entity)", idName);
+    if (model.getRequirements().controllerView() != null) {
+      updateBuilder.addAnnotation(
+          AnnotationSpec.builder(JSON_VIEW)
+              .addMember("value", "$T.class", model.getRequirements().controllerView())
+              .build()
+      );
+    }
+    builder.addMethod(updateBuilder.build());
 
     // patch
-    builder.addMethod(
-        MethodSpec
-            .methodBuilder("patch")
-            .addAnnotation(AnnotationSpec.builder(PATCH_MAPPING).addMember("value", "$S", "/" + idPlaceholder).build())
-            .addModifiers(Modifier.PUBLIC)
-            .addAnnotation(Override.class)
-            .returns(entityType)
-            .addParameter(ParameterSpec.builder(idType, idName).addAnnotation(PATH_VARIABLE).build())
-            .addParameter(ParameterSpec.builder(ParameterizedTypeName.get(java.util.Map.class, String.class, Object.class), "fields").addAnnotation(REQUEST_BODY).build())
-            .addStatement("return service.patch($L, fields)", idName)
-            .build()
-    );
+    var patchBuilder = MethodSpec
+        .methodBuilder("patch")
+        .addAnnotation(AnnotationSpec.builder(PATCH_MAPPING).addMember("value", "$S", "/" + idPlaceholder).build())
+        .addModifiers(Modifier.PUBLIC)
+        .addAnnotation(Override.class)
+        .returns(entityType)
+        .addParameter(ParameterSpec.builder(idType, idName).addAnnotation(PATH_VARIABLE).build())
+        .addParameter(ParameterSpec.builder(ParameterizedTypeName.get(java.util.Map.class, String.class, Object.class), "fields").addAnnotation(REQUEST_BODY).build())
+        .addStatement("return service.patch($L, fields)", idName);
+    if (model.getRequirements().controllerView() != null) {
+      patchBuilder.addAnnotation(
+          AnnotationSpec.builder(JSON_VIEW)
+              .addMember("value", "$T.class", model.getRequirements().controllerView())
+              .build()
+      );
+    }
+    builder.addMethod(patchBuilder.build());
 
     // delete
     builder.addMethod(

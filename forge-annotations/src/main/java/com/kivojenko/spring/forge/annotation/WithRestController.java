@@ -41,4 +41,12 @@ public @interface WithRestController {
      * @return true if default endpoints by id should allow slashes, false otherwise
      */
     boolean allowSlashes() default false;
+
+    /**
+     * The Jackson JSON view to apply to the generated REST controller.
+     * If {@link Void}, no view is applied.
+     *
+     * @return the JSON view class
+     */
+    Class<?> view() default Void.class;
 }

@@ -43,6 +43,21 @@ public class ViewEndpointsTest extends WithPostgres {
                 .build())))
         .andExpect(status().isCreated());
 
+    // Test @WithRestController(view = Views.Summary.class) on GET /viewTestEntities/{id}
+    // It should include fields marked with Views.Summary (id, name) and exclude fields not marked with Views.Summary (secretNote)
+    mockMvc
+        .perform(get("/viewTestEntities/{id}", parentId))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.name", is("Parent Entity")))
+        .andExpect(jsonPath("$.secretNote").doesNotExist());
+
+    // Test @WithRestController(view = Views.Summary.class) on GET /viewTestEntities (findAll)
+    mockMvc
+        .perform(get("/viewTestEntities"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content[0].name", is("Parent Entity")))
+        .andExpect(jsonPath("$.content[0].secretNote").doesNotExist());
+
     // Test @WithEndpoints(view = Views.Summary.class) on GET /viewTestEntities/{id}/children
     // It should include fields marked with Views.Summary (id, title) and exclude fields not marked with Views.Summary (hiddenDetail)
     mockMvc

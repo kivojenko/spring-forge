@@ -219,7 +219,7 @@ public class EndpointRelationResolver {
         .build();
   }
 
-  private static TypeName resolveView(Supplier<Class<?>> viewSupplier) {
+  public static TypeName resolveView(Supplier<Class<?>> viewSupplier) {
     try {
       Class<?> viewClass = viewSupplier.get();
       if (viewClass == Void.class) {

@@ -5,6 +5,7 @@ import com.kivojenko.spring.forge.annotation.WithJpaRepository;
 import com.kivojenko.spring.forge.annotation.WithRestController;
 import com.kivojenko.spring.forge.annotation.WithService;
 import com.kivojenko.spring.forge.config.SpringForgeConfig;
+import com.kivojenko.spring.forge.jpa.factory.EndpointRelationResolver;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
@@ -25,6 +26,7 @@ import javax.lang.model.type.TypeMirror;
  * @param serviceAnnotation     annotation for service configuration
  * @param controllerAnnotation  annotation for controller configuration
  * @param getOrCreateAnnotation annotation for "get or create" operation configuration
+ * @param controllerView        Jackson JSON view for controller serialization
  */
 public record JpaEntityRequirements(
         boolean hasName,
@@ -33,7 +35,8 @@ public record JpaEntityRequirements(
         WithService serviceAnnotation,
         WithRestController controllerAnnotation,
         GetOrCreate getOrCreateAnnotation,
-        Boolean explicitAllowSlashes
+        Boolean explicitAllowSlashes,
+        TypeName controllerView
 )
 {
     public JpaEntityRequirements(
@@ -44,7 +47,19 @@ public record JpaEntityRequirements(
             WithRestController controllerAnnotation,
             GetOrCreate getOrCreateAnnotation
     ) {
-        this(hasName, repositoryAnnotation, repositoryInterfaces, serviceAnnotation, controllerAnnotation, getOrCreateAnnotation, null);
+        this(hasName, repositoryAnnotation, repositoryInterfaces, serviceAnnotation, controllerAnnotation, getOrCreateAnnotation, null, null);
+    }
+
+    public JpaEntityRequirements(
+            boolean hasName,
+            WithJpaRepository repositoryAnnotation,
+            List<TypeName> repositoryInterfaces,
+            WithService serviceAnnotation,
+            WithRestController controllerAnnotation,
+            GetOrCreate getOrCreateAnnotation,
+            Boolean explicitAllowSlashes
+    ) {
+        this(hasName, repositoryAnnotation, repositoryInterfaces, serviceAnnotation, controllerAnnotation, getOrCreateAnnotation, explicitAllowSlashes, null);
     }
 
     /**
@@ -84,6 +99,8 @@ public record JpaEntityRequirements(
             }
         }
 
+        var controllerView = controllerAnnotation != null ? EndpointRelationResolver.resolveView(controllerAnnotation::view) : null;
+
         return new JpaEntityRequirements(
                 hasName,
                 repositoryAnnotation,
@@ -91,7 +108,8 @@ public record JpaEntityRequirements(
                 serviceAnnotation,
                 controllerAnnotation,
                 getOrCreateAnnotation,
-                explicitAllowSlashes
+                explicitAllowSlashes,
+                controllerView
         );
     }
 

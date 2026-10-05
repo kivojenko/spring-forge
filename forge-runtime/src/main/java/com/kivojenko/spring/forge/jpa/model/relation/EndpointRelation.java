@@ -172,6 +172,12 @@ public abstract class EndpointRelation {
     if (method != null) {
       if (view != null) {
         method = method.toBuilder().addAnnotation(jsonViewAnnotation()).build();
+      } else if (entityModel != null && entityModel.getRequirements().controllerView() != null) {
+        method = method.toBuilder().addAnnotation(
+            AnnotationSpec.builder(JSON_VIEW)
+                .addMember("value", "$T.class", entityModel.getRequirements().controllerView())
+                .build()
+        ).build();
       }
       spec.addMethod(method);
     }

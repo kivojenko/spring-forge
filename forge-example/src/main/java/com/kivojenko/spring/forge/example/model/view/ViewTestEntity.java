@@ -27,7 +27,7 @@ import lombok.Setter;
 @Builder
 @Entity
 @Table(name = "view_test_entities")
-@WithRestController
+@WithRestController(view = Views.Summary.class)
 public class ViewTestEntity {
 
   @Id
