@@ -880,6 +880,35 @@ family no field belongs to has no effect.
 > A family only affects `toPredicate()`. The derived `findBy…` queries are per-field and keep AND
 > semantics, so an OR search has to go through the filter DTO.
 
+### Multi-field text search (`@FilterSearchField`)
+
+`@FilterSearchField` on entity fields exposes a unified `String search` (or custom named) parameter on the generated filter DTO that matches against any of the annotated fields using `OR` logic:
+
+```java
+@Entity
+@WithRestController
+public class Post {
+  @Id @GeneratedValue Long id;
+
+  @FilterSearchField(stringMatchMode = StringMatchMode.CONTAINS_IGNORE_CASE)
+  private String title;
+
+  @FilterSearchField(stringMatchMode = StringMatchMode.CONTAINS_IGNORE_CASE)
+  private String content;
+
+  @FilterSearchField(targetField = "name", stringMatchMode = StringMatchMode.CONTAINS_IGNORE_CASE)
+  private Category category;
+}
+```
+
+A request like `GET /posts?search=spring` will match posts where `title`, `content`, or `category.name` contains `"spring"` (case-insensitively).
+
+| Attribute | Default | Description |
+|---|---|---|
+| `stringMatchMode` | `CONTAINS` | String matching mode (`CONTAINS`, `CONTAINS_IGNORE_CASE`, `STARTS_WITH`, `ENDS_WITH`, `EQUALS`, `EQUALS_IGNORE_CASE`, etc.) |
+| `targetField` | `""` | Target path relative to association/embedded field or absolute path |
+| `name` | `""` (resolves to `"search"`) | Search parameter name in the filter DTO |
+
 ### Nested and collection paths
 
 `targetField` resolves relative to the annotated association, using QueryDSL `.any()` for

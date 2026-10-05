@@ -3,10 +3,12 @@ package com.kivojenko.spring.forge.jpa.generator;
 
 import com.kivojenko.spring.forge.jpa.contract.HasToPredicate;
 import com.kivojenko.spring.forge.jpa.model.base.JpaEntityModel;
+import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.TypeSpec;
 
 import javax.lang.model.element.Modifier;
+import java.util.HashSet;
 
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.*;
 
@@ -45,8 +47,16 @@ public class FilterGenerator {
                 .addAnnotation(ALL_ARGS)
                 .addAnnotation(REQUIRED_ARGS);
 
+        var addedFieldNames = new HashSet<String>();
         for (var field : model.getFilterableFields()) {
             field.addFieldSpec(builder);
+            addedFieldNames.add(field.getName());
+        }
+
+        for (var searchFieldName : model.getSearchFieldNames()) {
+            if (addedFieldNames.add(searchFieldName)) {
+                builder.addField(FieldSpec.builder(STRING, searchFieldName, Modifier.PRIVATE).build());
+            }
         }
 
         builder.addMethod(model.toPredicateMethod());

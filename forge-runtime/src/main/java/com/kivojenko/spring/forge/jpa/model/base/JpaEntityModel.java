@@ -4,6 +4,7 @@ import com.kivojenko.spring.forge.annotation.filter.FamilyMatchMode;
 import com.kivojenko.spring.forge.jpa.factory.EndpointRelationResolver;
 import com.kivojenko.spring.forge.jpa.factory.FilterFieldModelFactory;
 import com.kivojenko.spring.forge.jpa.model.FilterFieldModel;
+import com.kivojenko.spring.forge.jpa.model.FilterSearchFieldModel;
 import com.kivojenko.spring.forge.jpa.model.relation.EndpointRelation;
 import com.kivojenko.spring.forge.jpa.utils.StringUtils;
 import com.querydsl.core.BooleanBuilder;
@@ -96,6 +97,12 @@ public final class JpaEntityModel {
 
     @Getter(lazy = true)
     private final List<FilterFieldModel> allFilterableFields = FilterFieldModelFactory.resolveAll(getElement(), env);
+
+    @Getter(lazy = true)
+    private final List<FilterSearchFieldModel> searchFields = FilterFieldModelFactory.resolveSearchFields(getElement(), env);
+
+    @Getter(lazy = true)
+    private final List<String> searchFieldNames = getSearchFields().stream().map(FilterSearchFieldModel::getName).distinct().toList();
 
     @Getter(lazy = true)
     private final Map<String, FamilyMatchMode> filterFamilyModes =
@@ -392,7 +399,7 @@ public final class JpaEntityModel {
     }
 
     public boolean wantsFilter() {
-        return !getFilterableFields().isEmpty();
+        return !getFilterableFields().isEmpty() || !getSearchFields().isEmpty();
     }
 
     public boolean isAbstract() {
@@ -469,6 +476,30 @@ public final class JpaEntityModel {
             builder.addStatement("$L.and($L)", BUILDER_VAR_NAME, sink);
             builder.endControlFlow();
         }
+
+        // Search fields: for each search parameter, OR all target field expressions
+        var searchGroups = new LinkedHashMap<String, List<FilterSearchFieldModel>>();
+        for (var sf : getSearchFields()) {
+            searchGroups.computeIfAbsent(sf.getName(), k -> new ArrayList<>()).add(sf);
+        }
+
+        for (var entry : searchGroups.entrySet()) {
+            var searchParamName = entry.getKey();
+            var searchFieldList = entry.getValue();
+
+            builder.beginControlFlow("if ($L != null && !$L.isBlank())", searchParamName, searchParamName);
+            var searchSink = "__" + searchParamName + "Builder";
+            builder.addStatement("var $L = new $T()", searchSink, BooleanBuilder.class);
+            for (var sf : searchFieldList) {
+                var op = FilterFieldModel.stringOperator(sf.getStringMatchMode());
+                builder.addStatement("$L.or(entity.$L." + op + "($L))", searchSink, sf.getTargetFieldName(), searchParamName);
+            }
+            builder.beginControlFlow("if ($L.hasValue())", searchSink);
+            builder.addStatement("$L.and($L)", BUILDER_VAR_NAME, searchSink);
+            builder.endControlFlow();
+            builder.endControlFlow();
+        }
+
         return builder.addStatement("return $L", BUILDER_VAR_NAME).build();
     }
 

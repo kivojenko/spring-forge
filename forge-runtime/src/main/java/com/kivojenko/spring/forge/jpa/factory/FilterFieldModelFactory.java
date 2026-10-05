@@ -8,8 +8,10 @@ import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.STRING;
 import com.kivojenko.spring.forge.annotation.filter.FamilyMatchMode;
 import com.kivojenko.spring.forge.annotation.filter.FilterField;
 import com.kivojenko.spring.forge.annotation.filter.FilterFamily;
+import com.kivojenko.spring.forge.annotation.filter.FilterSearchField;
 import com.kivojenko.spring.forge.annotation.filter.IterableMatchMode;
 import com.kivojenko.spring.forge.jpa.model.FilterFieldModel;
+import com.kivojenko.spring.forge.jpa.model.FilterSearchFieldModel;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
@@ -63,6 +65,101 @@ public class FilterFieldModelFactory {
    */
   public static List<FilterFieldModel> resolveAll(TypeElement entity, ProcessingEnvironment env) {
     return collect(entity, env, false);
+  }
+
+  public static List<FilterSearchFieldModel> resolveSearchFields(TypeElement entity, ProcessingEnvironment env) {
+    var searchFields = new ArrayList<FilterSearchFieldModel>();
+    if (entity == null) {
+      return searchFields;
+    }
+
+    var typeUtils = env.getTypeUtils();
+    var elementUtils = env.getElementUtils();
+    var iterableElement = elementUtils.getTypeElement("java.lang.Iterable");
+    var entityAnnotation = elementUtils.getTypeElement("jakarta.persistence.Entity");
+
+    TypeElement current = entity;
+    while (current != null) {
+      var fields = ElementFilter.fieldsIn(current.getEnclosedElements());
+
+      for (var field : fields) {
+        var annotations = field.getAnnotationsByType(FilterSearchField.class);
+        if (annotations.length == 0) {
+          continue;
+        }
+
+        for (var annotation : annotations) {
+          var type = field.asType();
+          boolean isIterable = typeUtils.isAssignable(typeUtils.erasure(field.asType()), iterableElement.asType());
+
+          var isJavaTransient = field.getModifiers().contains(Modifier.TRANSIENT);
+          var isJpaTransient = field.getAnnotation(Transient.class) != null;
+          var isBeansTransient = field.getAnnotation(java.beans.Transient.class) != null;
+          if ((isJavaTransient || isJpaTransient || isBeansTransient) && annotation.targetField().isEmpty()) {
+            throw new IllegalStateException(
+                "@FilterSearchField is not allowed on transient field: " + field.getSimpleName() + " in "
+                    + current.getQualifiedName());
+          }
+
+          var entityCandidate =
+              isIterable && type instanceof DeclaredType declared && !declared.getTypeArguments().isEmpty() ?
+              declared.getTypeArguments().getFirst() :
+              type;
+
+          var typeElement = typeUtils.asElement(entityCandidate);
+          var elementIsEntity = typeElement != null && typeElement.getAnnotationMirrors()
+              .stream()
+              .anyMatch(a -> typeUtils.isSameType(a.getAnnotationType(), entityAnnotation.asType()));
+          var singleEntity = !isIterable && elementIsEntity;
+          var embedded = !isIterable && (field.getAnnotation(jakarta.persistence.Embedded.class) != null
+              || typeElement != null && typeElement.getAnnotation(jakarta.persistence.Embeddable.class) != null);
+          var scalarElements = isIterable && !elementIsEntity && !typeUtils.isSameType(entityCandidate, type)
+              && isFilterableScalar(entityCandidate, env);
+
+          var targetField = annotation.targetField();
+          var originalIterable = isIterable;
+          var originalSingleEntity = singleEntity;
+          var targetPath = targetField;
+          var scalarCollection = false;
+
+          if (!targetField.isEmpty()) {
+            var base = singleEntity || isIterable || embedded ? entityCandidate : entity.asType();
+            var resolvedTarget = resolveTargetPath(base, targetField, env);
+            targetPath = resolvedTarget.queryPath();
+            scalarCollection = resolvedTarget.collectionLeaf();
+          } else if (scalarElements) {
+            scalarCollection = true;
+          }
+
+          var searchName = annotation.name().isEmpty() ? "search" : annotation.name();
+
+          var model = FilterSearchFieldModel.builder()
+              .element(field)
+              .typeElement(typeElement instanceof TypeElement te ? te : null)
+              .annotation(annotation)
+              .name(searchName)
+              .stringMatchMode(annotation.stringMatchMode())
+              .targetField(targetField)
+              .targetPath(targetPath)
+              .originalIterable(originalIterable)
+              .originalSingleEntity(originalSingleEntity)
+              .originalEmbedded(embedded)
+              .scalarCollection(scalarCollection)
+              .build();
+
+          searchFields.add(model);
+        }
+      }
+
+      var superType = current.getSuperclass();
+      if (superType.getKind() == TypeKind.DECLARED) {
+        current = (TypeElement) ((DeclaredType) superType).asElement();
+      } else {
+        current = null;
+      }
+    }
+
+    return searchFields;
   }
 
   private static List<FilterFieldModel> collect(TypeElement entity, ProcessingEnvironment env, boolean uniqueByName) {
