@@ -1,6 +1,7 @@
 package com.kivojenko.spring.forge.example.controller;
 
 import com.kivojenko.spring.forge.example.WithPostgres;
+import com.kivojenko.spring.forge.example.model.view.SplitViewTestEntity;
 import com.kivojenko.spring.forge.example.model.view.ViewTestChild;
 import com.kivojenko.spring.forge.example.model.view.ViewTestEntity;
 import org.junit.jupiter.api.Test;
@@ -74,5 +75,38 @@ public class ViewEndpointsTest extends WithPostgres {
         .andExpect(jsonPath("$", hasSize(1)))
         .andExpect(jsonPath("$[0].title", is("Child Title")))
         .andExpect(jsonPath("$[0].hiddenDetail").doesNotExist());
+  }
+
+  @Test
+  void testSplitListViewAndDetailView() throws Exception {
+    String entityJson = mockMvc
+        .perform(post("/splitViewTestEntities")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(SplitViewTestEntity.builder()
+                .name("Split Entity")
+                .secretNote("Super secret detail")
+                .build())))
+        .andExpect(status().isCreated())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+
+    Long entityId = objectMapper.readTree(entityJson).get("id").asLong();
+
+    // GET /splitViewTestEntities (findAll - listView = Views.Summary.class)
+    // should include 'name' and exclude 'secretNote'
+    mockMvc
+        .perform(get("/splitViewTestEntities"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content[0].name", is("Split Entity")))
+        .andExpect(jsonPath("$.content[0].secretNote").doesNotExist());
+
+    // GET /splitViewTestEntities/{id} (getById - detailView = Views.Detail.class)
+    // should include both 'name' and 'secretNote'
+    mockMvc
+        .perform(get("/splitViewTestEntities/{id}", entityId))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.name", is("Split Entity")))
+        .andExpect(jsonPath("$.secretNote", is("Super secret detail")));
   }
 }

@@ -367,7 +367,9 @@ Each one implies the layers below it, so you only ever annotate for the topmost 
 | `packageName` | `""` | Sub-package appended to the base package |
 | `makeAbstract` | `false` | Mark the controller `abstract` and omit `@RestController`/`@RequestMapping`, so a subclass can map it |
 | `allowSlashes` | `false` | Allow slashes in default endpoints by id (e.g. `/{*id}`) |
-| `view` | `Void.class` | Jackson JSON view (`@JsonView`) applied to controller and standard CRUD endpoints |
+| `view` | `Void.class` | Jackson JSON view (`@JsonView`) applied to controller and standard CRUD endpoints as default |
+| `listView` | `Void.class` | Jackson JSON view (`@JsonView`) applied to list endpoints (e.g. `/entities` / `findAll`) |
+| `detailView` | `Void.class` | Jackson JSON view (`@JsonView`) applied to detail endpoints (e.g. `/entities/{id}` / `getById`) |
 
 **`@GetOrCreate`**
 

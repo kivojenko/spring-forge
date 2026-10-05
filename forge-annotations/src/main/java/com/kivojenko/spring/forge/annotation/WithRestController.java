@@ -43,10 +43,26 @@ public @interface WithRestController {
     boolean allowSlashes() default false;
 
     /**
-     * The Jackson JSON view to apply to the generated REST controller.
-     * If {@link Void}, no view is applied.
+     * The Jackson JSON view to apply to the generated REST controller as a default.
+     * If {@link Void}, no default view is applied.
      *
-     * @return the JSON view class
+     * @return the default JSON view class
      */
     Class<?> view() default Void.class;
+
+    /**
+     * The Jackson JSON view to apply to list endpoints (e.g. {@code /entities} / {@code findAll}).
+     * If {@link Void}, falls back to {@link #view()}.
+     *
+     * @return the JSON view class for list endpoints
+     */
+    Class<?> listView() default Void.class;
+
+    /**
+     * The Jackson JSON view to apply to detail endpoints (e.g. {@code /entities/{id}} / {@code getById}).
+     * If {@link Void}, falls back to {@link #view()}.
+     *
+     * @return the JSON view class for detail endpoints
+     */
+    Class<?> detailView() default Void.class;
 }

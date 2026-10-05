@@ -112,10 +112,10 @@ public final class ControllerGenerator {
           .addParameter(param)
           .returns(model.getEntityType())
           .addStatement("return service.getOrCreate($L)", paramName);
-      if (model.getRequirements().controllerView() != null) {
+      if (model.getRequirements().effectiveDetailView() != null) {
         getOrCreateBuilder.addAnnotation(
             AnnotationSpec.builder(JSON_VIEW)
-                .addMember("value", "$T.class", model.getRequirements().controllerView())
+                .addMember("value", "$T.class", model.getRequirements().effectiveDetailView())
                 .build()
         );
       }
@@ -136,10 +136,10 @@ public final class ControllerGenerator {
         .returns(ParameterizedTypeName.get(PAGE, model.getEntityType()))
         .addParameter(pageableParam);
 
-    if (model.getRequirements().controllerView() != null) {
+    if (model.getRequirements().effectiveListView() != null) {
       findAllBuilder.addAnnotation(
           AnnotationSpec.builder(JSON_VIEW)
-              .addMember("value", "$T.class", model.getRequirements().controllerView())
+              .addMember("value", "$T.class", model.getRequirements().effectiveListView())
               .build()
       );
     }
@@ -183,10 +183,10 @@ public final class ControllerGenerator {
         .returns(entityType)
         .addParameter(ParameterSpec.builder(idType, idName).addAnnotation(PATH_VARIABLE).build())
         .addStatement("return service.getById($L)", idName);
-    if (model.getRequirements().controllerView() != null) {
+    if (model.getRequirements().effectiveDetailView() != null) {
       getByIdBuilder.addAnnotation(
           AnnotationSpec.builder(JSON_VIEW)
-              .addMember("value", "$T.class", model.getRequirements().controllerView())
+              .addMember("value", "$T.class", model.getRequirements().effectiveDetailView())
               .build()
       );
     }
@@ -222,10 +222,10 @@ public final class ControllerGenerator {
         .addParameter(ParameterSpec.builder(idType, idName).addAnnotation(PATH_VARIABLE).build())
         .addParameter(ParameterSpec.builder(entityType, "entity").addAnnotation(VALID).addAnnotation(REQUEST_BODY).build())
         .addStatement("return service.update($L, entity)", idName);
-    if (model.getRequirements().controllerView() != null) {
+    if (model.getRequirements().effectiveDetailView() != null) {
       updateBuilder.addAnnotation(
           AnnotationSpec.builder(JSON_VIEW)
-              .addMember("value", "$T.class", model.getRequirements().controllerView())
+              .addMember("value", "$T.class", model.getRequirements().effectiveDetailView())
               .build()
       );
     }
@@ -241,10 +241,10 @@ public final class ControllerGenerator {
         .addParameter(ParameterSpec.builder(idType, idName).addAnnotation(PATH_VARIABLE).build())
         .addParameter(ParameterSpec.builder(ParameterizedTypeName.get(java.util.Map.class, String.class, Object.class), "fields").addAnnotation(REQUEST_BODY).build())
         .addStatement("return service.patch($L, fields)", idName);
-    if (model.getRequirements().controllerView() != null) {
+    if (model.getRequirements().effectiveDetailView() != null) {
       patchBuilder.addAnnotation(
           AnnotationSpec.builder(JSON_VIEW)
-              .addMember("value", "$T.class", model.getRequirements().controllerView())
+              .addMember("value", "$T.class", model.getRequirements().effectiveDetailView())
               .build()
       );
     }

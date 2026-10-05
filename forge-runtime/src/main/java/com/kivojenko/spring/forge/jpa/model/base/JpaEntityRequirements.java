@@ -27,6 +27,8 @@ import javax.lang.model.type.TypeMirror;
  * @param controllerAnnotation  annotation for controller configuration
  * @param getOrCreateAnnotation annotation for "get or create" operation configuration
  * @param controllerView        Jackson JSON view for controller serialization
+ * @param controllerListView    Jackson JSON view for list endpoints
+ * @param controllerDetailView  Jackson JSON view for detail endpoints
  */
 public record JpaEntityRequirements(
         boolean hasName,
@@ -36,7 +38,9 @@ public record JpaEntityRequirements(
         WithRestController controllerAnnotation,
         GetOrCreate getOrCreateAnnotation,
         Boolean explicitAllowSlashes,
-        TypeName controllerView
+        TypeName controllerView,
+        TypeName controllerListView,
+        TypeName controllerDetailView
 )
 {
     public JpaEntityRequirements(
@@ -47,7 +51,7 @@ public record JpaEntityRequirements(
             WithRestController controllerAnnotation,
             GetOrCreate getOrCreateAnnotation
     ) {
-        this(hasName, repositoryAnnotation, repositoryInterfaces, serviceAnnotation, controllerAnnotation, getOrCreateAnnotation, null, null);
+        this(hasName, repositoryAnnotation, repositoryInterfaces, serviceAnnotation, controllerAnnotation, getOrCreateAnnotation, null, null, null, null);
     }
 
     public JpaEntityRequirements(
@@ -59,7 +63,20 @@ public record JpaEntityRequirements(
             GetOrCreate getOrCreateAnnotation,
             Boolean explicitAllowSlashes
     ) {
-        this(hasName, repositoryAnnotation, repositoryInterfaces, serviceAnnotation, controllerAnnotation, getOrCreateAnnotation, explicitAllowSlashes, null);
+        this(hasName, repositoryAnnotation, repositoryInterfaces, serviceAnnotation, controllerAnnotation, getOrCreateAnnotation, explicitAllowSlashes, null, null, null);
+    }
+
+    public JpaEntityRequirements(
+            boolean hasName,
+            WithJpaRepository repositoryAnnotation,
+            List<TypeName> repositoryInterfaces,
+            WithService serviceAnnotation,
+            WithRestController controllerAnnotation,
+            GetOrCreate getOrCreateAnnotation,
+            Boolean explicitAllowSlashes,
+            TypeName controllerView
+    ) {
+        this(hasName, repositoryAnnotation, repositoryInterfaces, serviceAnnotation, controllerAnnotation, getOrCreateAnnotation, explicitAllowSlashes, controllerView, null, null);
     }
 
     /**
@@ -100,6 +117,8 @@ public record JpaEntityRequirements(
         }
 
         var controllerView = controllerAnnotation != null ? EndpointRelationResolver.resolveView(controllerAnnotation::view) : null;
+        var controllerListView = controllerAnnotation != null ? EndpointRelationResolver.resolveView(controllerAnnotation::listView) : null;
+        var controllerDetailView = controllerAnnotation != null ? EndpointRelationResolver.resolveView(controllerAnnotation::detailView) : null;
 
         return new JpaEntityRequirements(
                 hasName,
@@ -109,7 +128,9 @@ public record JpaEntityRequirements(
                 controllerAnnotation,
                 getOrCreateAnnotation,
                 explicitAllowSlashes,
-                controllerView
+                controllerView,
+                controllerListView,
+                controllerDetailView
         );
     }
 
@@ -175,6 +196,14 @@ public record JpaEntityRequirements(
             return explicitAllowSlashes;
         }
         return SpringForgeConfig.allowSlashes;
+    }
+
+    public TypeName effectiveListView() {
+        return controllerListView != null ? controllerListView : controllerView;
+    }
+
+    public TypeName effectiveDetailView() {
+        return controllerDetailView != null ? controllerDetailView : controllerView;
     }
 
 }
