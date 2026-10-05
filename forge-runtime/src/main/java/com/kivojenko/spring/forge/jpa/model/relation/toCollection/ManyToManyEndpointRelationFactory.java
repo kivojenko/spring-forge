@@ -16,6 +16,7 @@ public class ManyToManyEndpointRelationFactory extends EndpointRelationFactory {
     return ReadManyToManyEndpointRelation
         .builder()
         .path(path)
+        .view(view)
         .field(field)
         .entityModel(entityModel)
         .targetEntityModel(targetEntityModel)
@@ -27,6 +28,7 @@ public class ManyToManyEndpointRelationFactory extends EndpointRelationFactory {
     return LinkExistingManyToManyEndpointRelation
         .builder()
         .path(path)
+        .view(view)
         .field(field)
         .entityModel(entityModel)
         .targetEntityModel(targetEntityModel)
@@ -41,6 +43,7 @@ public class ManyToManyEndpointRelationFactory extends EndpointRelationFactory {
     return AddNewManyToManyEndpointRelation
         .builder()
         .path(path)
+        .view(view)
         .field(field)
         .entityModel(entityModel)
         .targetEntityModel(targetEntityModel)
@@ -52,6 +55,7 @@ public class ManyToManyEndpointRelationFactory extends EndpointRelationFactory {
     return UnlinkManyToManyEndpointRelation
         .builder()
         .path(path)
+        .view(view)
         .field(field)
         .entityModel(entityModel)
         .targetEntityModel(targetEntityModel)

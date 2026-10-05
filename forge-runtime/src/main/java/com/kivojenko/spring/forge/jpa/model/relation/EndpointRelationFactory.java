@@ -1,6 +1,7 @@
 package com.kivojenko.spring.forge.jpa.model.relation;
 
 import com.kivojenko.spring.forge.jpa.model.base.JpaEntityModel;
+import com.squareup.javapoet.TypeName;
 import lombok.experimental.SuperBuilder;
 
 import javax.lang.model.element.VariableElement;
@@ -11,6 +12,7 @@ public abstract class EndpointRelationFactory {
   protected VariableElement field;
   protected JpaEntityModel entityModel;
   protected JpaEntityModel targetEntityModel;
+  protected TypeName view;
 
   public EndpointRelation getReadRelation() {
     return null;

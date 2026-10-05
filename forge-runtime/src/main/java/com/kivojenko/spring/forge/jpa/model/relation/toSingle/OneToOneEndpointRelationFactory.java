@@ -16,6 +16,7 @@ public class OneToOneEndpointRelationFactory extends EndpointRelationFactory {
     return ReadOneToOneEndpointRelation
         .builder()
         .path(path)
+        .view(view)
         .field(field)
         .entityModel(entityModel)
         .targetEntityModel(targetEntityModel)
@@ -27,6 +28,7 @@ public class OneToOneEndpointRelationFactory extends EndpointRelationFactory {
     return UnlinkOneToOneEndpointRelation
         .builder()
         .path(path)
+        .view(view)
         .field(field)
         .entityModel(entityModel)
         .targetEntityModel(targetEntityModel)
@@ -40,6 +42,7 @@ public class OneToOneEndpointRelationFactory extends EndpointRelationFactory {
       return AddNewEmbeddedOneToOneEndpointRelation
           .builder()
           .path(path)
+          .view(view)
           .field(field)
           .entityModel(entityModel)
           .targetEntityModel(targetEntityModel)
@@ -53,6 +56,7 @@ public class OneToOneEndpointRelationFactory extends EndpointRelationFactory {
     return AddNewEntityOneToOneEndpointRelation
         .builder()
         .path(path)
+        .view(view)
         .field(field)
         .entityModel(entityModel)
         .targetEntityModel(targetEntityModel)

@@ -12,17 +12,20 @@ import com.kivojenko.spring.forge.jpa.model.relation.toSingle.ManyToOneEndpointR
 import com.kivojenko.spring.forge.jpa.model.relation.toSingle.ReadSingleMethodEndpointRelation;
 import com.kivojenko.spring.forge.jpa.model.relation.toSingle.OneToOneEndpointRelationFactory;
 import com.kivojenko.spring.forge.jpa.utils.LoggingUtils;
+import com.squareup.javapoet.TypeName;
 import jakarta.persistence.*;
 import org.jspecify.annotations.NonNull;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.*;
 import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.MirroredTypeException;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.function.Supplier;
 
 import static java.beans.Introspector.decapitalize;
 
@@ -116,6 +119,8 @@ public class EndpointRelationResolver {
     var path = withEndpoints.path();
     if (path.isBlank()) path = field.getSimpleName().toString();
 
+    var view = resolveView(withEndpoints::view);
+
     var embedded = field.getAnnotation(Embedded.class);
     var oneToOne = field.getAnnotation(OneToOne.class);
 
@@ -123,6 +128,7 @@ public class EndpointRelationResolver {
       return OneToOneEndpointRelationFactory
           .builder()
           .path(path)
+          .view(view)
           .field(field)
           .targetEntityModel(getEntityModel(field, env))
           .build();
@@ -133,6 +139,7 @@ public class EndpointRelationResolver {
       return ManyToOneEndpointRelationFactory
           .builder()
           .path(path)
+          .view(view)
           .field(field)
           .targetEntityModel(getEntityModel(field, env))
           .build();
@@ -148,6 +155,7 @@ public class EndpointRelationResolver {
         return OneToManyEndpointRelationFactory
             .builder()
             .path(path)
+            .view(view)
             .mappedBy(mappedBy)
             .field(field)
             .targetEntityModel(getEntityModelFromList(field.asType(), field, env))
@@ -160,6 +168,7 @@ public class EndpointRelationResolver {
       return ManyToManyEndpointRelationFactory
           .builder()
           .path(path)
+          .view(view)
           .field(field)
           .targetEntityModel(getEntityModelFromList(field.asType(), field, env))
           .build();
@@ -185,11 +194,14 @@ public class EndpointRelationResolver {
       }
     }
 
+    var view = resolveView(withGetEndpoint::view);
+
     var returnType = getter.getReturnType();
     if (returnType instanceof DeclaredType declaredReturnType && declaredReturnType.getTypeArguments().isEmpty()) {
       return ReadSingleMethodEndpointRelation
           .builder()
           .path(path)
+          .view(view)
           .methodName(getter.getSimpleName().toString())
           .targetEntityModel(JpaEntityModelFactory.get((TypeElement) declaredReturnType.asElement()))
           .build();
@@ -201,9 +213,39 @@ public class EndpointRelationResolver {
     return ReadOneToManyEndpointRelation
         .builder()
         .path(path)
+        .view(view)
         .methodName(getter.getSimpleName().toString())
         .targetEntityModel(targetModel)
         .build();
+  }
+
+  private static TypeName resolveView(Supplier<Class<?>> viewSupplier) {
+    try {
+      Class<?> viewClass = viewSupplier.get();
+      if (viewClass == Void.class) {
+        return null;
+      }
+      return TypeName.get(viewClass);
+    } catch (MirroredTypeException mte) {
+      TypeMirror mirror = mte.getTypeMirror();
+      if (isVoid(mirror)) {
+        return null;
+      }
+      return TypeName.get(mirror);
+    }
+  }
+
+  private static boolean isVoid(TypeMirror mirror) {
+    if (mirror.getKind() == TypeKind.VOID) {
+      return true;
+    }
+    if (mirror instanceof DeclaredType declaredType) {
+      Element element = declaredType.asElement();
+      if (element instanceof TypeElement typeElement) {
+        return typeElement.getQualifiedName().contentEquals("java.lang.Void");
+      }
+    }
+    return false;
   }
 
   private static JpaEntityModel getEntityModel(Element element, ProcessingEnvironment env) {

@@ -48,4 +48,12 @@ public @interface WithEndpoints {
    * @return true if a DELETE endpoint should be generated, false otherwise
    */
   boolean remove() default true;
+
+  /**
+   * The Jackson JSON view to apply to the generated controller endpoints.
+   * If {@link Void}, no view is applied.
+   *
+   * @return the JSON view class
+   */
+  Class<?> view() default Void.class;
 }

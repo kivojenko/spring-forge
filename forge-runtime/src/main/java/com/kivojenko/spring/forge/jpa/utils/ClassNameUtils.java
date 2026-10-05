@@ -37,6 +37,8 @@ public interface ClassNameUtils {
   ClassName RESPONSE_STATUS = ClassName.get(BIND_ANNOTATION, "ResponseStatus");
   ClassName REQUEST_METHOD = ClassName.get(BIND_ANNOTATION, "RequestMethod");
 
+  ClassName JSON_VIEW = ClassName.get("com.fasterxml.jackson.annotation", "JsonView");
+
   ClassName VALID = ClassName.get("jakarta.validation", "Valid");
   ClassName NOT_NULL = ClassName.get("jakarta.validation.constraints", "NotNull");
   ClassName NOT_BLANK = ClassName.get("jakarta.validation.constraints", "NotBlank");

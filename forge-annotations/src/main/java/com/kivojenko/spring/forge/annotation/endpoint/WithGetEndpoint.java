@@ -18,4 +18,12 @@ public @interface WithGetEndpoint {
    * @return the custom path
    */
   String path() default "";
+
+  /**
+   * The Jackson JSON view to apply to the generated GET endpoint.
+   * If {@link Void}, no view is applied.
+   *
+   * @return the JSON view class
+   */
+  Class<?> view() default Void.class;
 }

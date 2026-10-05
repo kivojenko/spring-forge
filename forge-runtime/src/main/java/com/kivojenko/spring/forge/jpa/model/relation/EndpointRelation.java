@@ -84,6 +84,8 @@ public abstract class EndpointRelation {
 
   protected JpaEntityModel targetEntityModel;
 
+  protected TypeName view;
+
   public FieldSpec getControllerField() {
     return null;
   }
@@ -126,6 +128,10 @@ public abstract class EndpointRelation {
     return AnnotationSpec.builder(RESPONSE_STATUS).addMember("code", "$L.$L", HTTP_STATUS, status.toString()).build();
   }
 
+  protected AnnotationSpec jsonViewAnnotation() {
+    return AnnotationSpec.builder(JSON_VIEW).addMember("value", "$T.class", view).build();
+  }
+
   protected void addFindBase(MethodSpec.Builder methodSpec) {
     addFindBase(methodSpec, false);
   }
@@ -164,6 +170,9 @@ public abstract class EndpointRelation {
   public void addEndpoint(TypeSpec.Builder spec) {
     var method = getControllerMethod();
     if (method != null) {
+      if (view != null) {
+        method = method.toBuilder().addAnnotation(jsonViewAnnotation()).build();
+      }
       spec.addMethod(method);
     }
 
