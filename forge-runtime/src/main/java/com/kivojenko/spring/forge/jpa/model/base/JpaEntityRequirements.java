@@ -206,4 +206,8 @@ public record JpaEntityRequirements(
         return controllerDetailView != null ? controllerDetailView : controllerView;
     }
 
+    public String[] sort() {
+        return controllerAnnotation != null ? controllerAnnotation.sort() : new String[0];
+    }
+
 }

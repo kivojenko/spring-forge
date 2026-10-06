@@ -25,12 +25,14 @@ public class ReadOneToManyEndpointRelation extends EndpointRelation {
         .methodBuilder(generatedMethodName())
         .addJavadoc("Retrieves the {@link $T} entities associated with the {@link $T} by its ID.\n", targetEntityModel.getEntityType(), entityModel.getEntityType())
         .addJavadoc("@param $L the ID of the {@link $T} entity\n", baseIdParamName(), entityModel.getEntityType())
+        .addJavadoc("@param sort the sorting parameters\n")
         .addJavadoc("@return an iterable of associated {@link $T} entities\n", targetEntityModel.getEntityType())
         .addModifiers(Modifier.PUBLIC)
         .addAnnotation(annotation(GET_MAPPING))
         .returns(ParameterizedTypeName.get(ITERABLE, targetEntityModel.getEntityType()))
         .addParameter(baseParamSpec(true))
-        .addStatement("return getById($L).$L()", baseIdParamName(), generatedMethodName())
+        .addParameter(sortParamSpec())
+        .addStatement("return sort(getById($L).$L(), sort)", baseIdParamName(), generatedMethodName())
         .build();
   }
 

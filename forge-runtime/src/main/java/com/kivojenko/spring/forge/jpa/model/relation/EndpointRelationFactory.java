@@ -13,6 +13,7 @@ public abstract class EndpointRelationFactory {
   protected JpaEntityModel entityModel;
   protected JpaEntityModel targetEntityModel;
   protected TypeName view;
+  protected String[] sort;
 
   public EndpointRelation getReadRelation() {
     return null;

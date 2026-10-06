@@ -65,4 +65,11 @@ public @interface WithRestController {
      * @return the JSON view class for detail endpoints
      */
     Class<?> detailView() default Void.class;
+
+    /**
+     * The default sort properties to apply to list endpoints (e.g. {@code {"name"}}, {@code {"name,desc"}}).
+     *
+     * @return the default sort properties
+     */
+    String[] sort() default {};
 }

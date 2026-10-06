@@ -370,6 +370,7 @@ Each one implies the layers below it, so you only ever annotate for the topmost 
 | `view` | `Void.class` | Jackson JSON view (`@JsonView`) applied to controller and standard CRUD endpoints as default |
 | `listView` | `Void.class` | Jackson JSON view (`@JsonView`) applied to list endpoints (e.g. `/entities` / `findAll`) |
 | `detailView` | `Void.class` | Jackson JSON view (`@JsonView`) applied to detail endpoints (e.g. `/entities/{id}` / `getById`) |
+| `sort` | `{}` | Default sort properties applied to list endpoints (e.g. `{"name"}`, `{"name,desc"}`) |
 
 **`@GetOrCreate`**
 
@@ -427,11 +428,18 @@ Placed on an association field to expose that relation over REST. See
 | `linkExisting` | `true` | `PUT` an existing entity into the association (`@ManyToOne`, `@ManyToMany`) |
 | `remove` | `true` | `DELETE` the link |
 | `view` | `Void.class` | Jackson JSON view (`@JsonView`) applied to association endpoints |
+| `sort` | `{}` | Default sort properties applied to the generated GET endpoint (e.g. `{"name"}`, `{"name,desc"}`) |
 
 ### `@WithGetEndpoint`
 
 Placed on a **public entity method returning a generic collection**, it exposes that method per
 instance:
+
+| Attribute | Default | Description |
+|---|---|---|
+| `path` | method name | Endpoint path segment relative to the resource |
+| `view` | `Void.class` | Jackson JSON view (`@JsonView`) applied to the GET endpoint |
+| `sort` | `{}` | Default sort properties applied to the generated GET endpoint (e.g. `{"name"}`, `{"name,desc"}`) |
 
 ```java
 @WithGetEndpoint

@@ -17,6 +17,7 @@ public class OneToManyEndpointRelationFactory extends EndpointRelationFactory {
         .builder()
         .path(path)
         .view(view)
+        .sort(sort)
         .field(field)
         .entityModel(entityModel)
         .targetEntityModel(targetEntityModel)

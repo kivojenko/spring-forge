@@ -26,4 +26,11 @@ public @interface WithGetEndpoint {
    * @return the JSON view class
    */
   Class<?> view() default Void.class;
+
+  /**
+   * The default sort properties to apply to the generated GET endpoint (e.g. {@code {"name"}}, {@code {"name,desc"}}).
+   *
+   * @return the default sort properties
+   */
+  String[] sort() default {};
 }

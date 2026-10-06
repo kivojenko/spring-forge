@@ -86,6 +86,68 @@ public abstract class EndpointRelation {
 
   protected TypeName view;
 
+  protected String[] sort;
+
+  protected ParameterSpec sortParamSpec() {
+    var param = ParameterSpec.builder(SORT, "sort");
+    if (sort != null && sort.length > 0) {
+      param.addAnnotation(buildSortDefaultAnnotation(sort));
+    }
+    return param.build();
+  }
+
+  public static AnnotationSpec buildSortDefaultAnnotation(String[] sortValues) {
+    var builder = AnnotationSpec.builder(SORT_DEFAULT);
+    applySortValues(builder, sortValues);
+    return builder.build();
+  }
+
+  public static void applySortValues(AnnotationSpec.Builder builder, String[] sortValues) {
+    if (sortValues == null || sortValues.length == 0) {
+      return;
+    }
+    if (sortValues.length == 1) {
+      String val = sortValues[0].trim();
+      if ("desc".equalsIgnoreCase(val)) {
+        builder.addMember("sort", "$S", "desc");
+        builder.addMember("direction", "$T.DESC", SORT_DIRECTION);
+      } else if ("asc".equalsIgnoreCase(val)) {
+        builder.addMember("sort", "$S", "asc");
+        builder.addMember("direction", "$T.ASC", SORT_DIRECTION);
+      } else if (val.contains(",")) {
+        String[] parts = val.split(",", 2);
+        builder.addMember("sort", "$S", parts[0].trim());
+        if ("desc".equalsIgnoreCase(parts[1].trim())) {
+          builder.addMember("direction", "$T.DESC", SORT_DIRECTION);
+        } else if ("asc".equalsIgnoreCase(parts[1].trim())) {
+          builder.addMember("direction", "$T.ASC", SORT_DIRECTION);
+        }
+      } else {
+        builder.addMember("sort", "$S", val);
+      }
+    } else {
+      String last = sortValues[sortValues.length - 1].trim();
+      boolean lastIsDirection = "desc".equalsIgnoreCase(last) || "asc".equalsIgnoreCase(last);
+      int propCount = lastIsDirection ? sortValues.length - 1 : sortValues.length;
+      for (int i = 0; i < propCount; i++) {
+        String prop = sortValues[i].trim();
+        if (prop.contains(",")) {
+          String[] parts = prop.split(",", 2);
+          builder.addMember("sort", "$S", parts[0].trim());
+        } else {
+          builder.addMember("sort", "$S", prop);
+        }
+      }
+      if (lastIsDirection) {
+        if ("desc".equalsIgnoreCase(last)) {
+          builder.addMember("direction", "$T.DESC", SORT_DIRECTION);
+        } else {
+          builder.addMember("direction", "$T.ASC", SORT_DIRECTION);
+        }
+      }
+    }
+  }
+
   public FieldSpec getControllerField() {
     return null;
   }

@@ -120,6 +120,7 @@ public class EndpointRelationResolver {
     if (path.isBlank()) path = field.getSimpleName().toString();
 
     var view = resolveView(withEndpoints::view);
+    var sort = withEndpoints.sort();
 
     var embedded = field.getAnnotation(Embedded.class);
     var oneToOne = field.getAnnotation(OneToOne.class);
@@ -129,6 +130,7 @@ public class EndpointRelationResolver {
           .builder()
           .path(path)
           .view(view)
+          .sort(sort)
           .field(field)
           .targetEntityModel(getEntityModel(field, env))
           .build();
@@ -140,6 +142,7 @@ public class EndpointRelationResolver {
           .builder()
           .path(path)
           .view(view)
+          .sort(sort)
           .field(field)
           .targetEntityModel(getEntityModel(field, env))
           .build();
@@ -156,6 +159,7 @@ public class EndpointRelationResolver {
             .builder()
             .path(path)
             .view(view)
+            .sort(sort)
             .mappedBy(mappedBy)
             .field(field)
             .targetEntityModel(getEntityModelFromList(field.asType(), field, env))
@@ -169,6 +173,7 @@ public class EndpointRelationResolver {
           .builder()
           .path(path)
           .view(view)
+          .sort(sort)
           .field(field)
           .targetEntityModel(getEntityModelFromList(field.asType(), field, env))
           .build();
@@ -195,6 +200,7 @@ public class EndpointRelationResolver {
     }
 
     var view = resolveView(withGetEndpoint::view);
+    var sort = withGetEndpoint.sort();
 
     var returnType = getter.getReturnType();
     if (returnType instanceof DeclaredType declaredReturnType && declaredReturnType.getTypeArguments().isEmpty()) {
@@ -202,6 +208,7 @@ public class EndpointRelationResolver {
           .builder()
           .path(path)
           .view(view)
+          .sort(sort)
           .methodName(getter.getSimpleName().toString())
           .targetEntityModel(JpaEntityModelFactory.get((TypeElement) declaredReturnType.asElement()))
           .build();
@@ -214,6 +221,7 @@ public class EndpointRelationResolver {
         .builder()
         .path(path)
         .view(view)
+        .sort(sort)
         .methodName(getter.getSimpleName().toString())
         .targetEntityModel(targetModel)
         .build();

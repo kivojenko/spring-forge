@@ -23,6 +23,7 @@ import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.VALID;
 
 import com.kivojenko.spring.forge.config.SpringForgeConfig;
 import com.kivojenko.spring.forge.jpa.model.base.JpaEntityModel;
+import com.kivojenko.spring.forge.jpa.model.relation.EndpointRelation;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.JavaFile;
@@ -124,9 +125,11 @@ public final class ControllerGenerator {
 
     var pageableAnnotation = AnnotationSpec
         .builder(PAGEABLE_DEFAULT)
-        .addMember("size", "$L", SpringForgeConfig.getAllPageSize)
-        .build();
-    var pageableParam = ParameterSpec.builder(PAGEABLE, "pageable").addAnnotation(pageableAnnotation).build();
+        .addMember("size", "$L", SpringForgeConfig.getAllPageSize);
+    if (model.getRequirements().sort() != null && model.getRequirements().sort().length > 0) {
+      EndpointRelation.applySortValues(pageableAnnotation, model.getRequirements().sort());
+    }
+    var pageableParam = ParameterSpec.builder(PAGEABLE, "pageable").addAnnotation(pageableAnnotation.build()).build();
     var findAllBuilder = MethodSpec
         .methodBuilder("findAll")
         .addJavadoc("Retrieves a paged result of all {@link $T} entities.\n", model.getEntityType())

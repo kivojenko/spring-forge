@@ -57,6 +57,9 @@ public interface ClassNameUtils {
   ClassName PAGE = ClassName.get("org.springframework.data.domain", "Page");
   ClassName PAGEABLE = ClassName.get("org.springframework.data.domain", "Pageable");
   ClassName PAGEABLE_DEFAULT = ClassName.get("org.springframework.data.web", "PageableDefault");
+  ClassName SORT = ClassName.get("org.springframework.data.domain", "Sort");
+  ClassName SORT_DEFAULT = ClassName.get("org.springframework.data.web", "SortDefault");
+  ClassName SORT_DIRECTION = ClassName.get("org.springframework.data.domain.Sort", "Direction");
 
   ClassName JPA_REPOSITORY = ClassName.get("org.springframework.data.jpa.repository", "JpaRepository");
   ClassName SERVICE = ClassName.get("org.springframework.stereotype", "Service");
