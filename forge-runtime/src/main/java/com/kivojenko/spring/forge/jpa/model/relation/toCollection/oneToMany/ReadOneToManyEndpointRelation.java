@@ -32,7 +32,7 @@ public class ReadOneToManyEndpointRelation extends EndpointRelation {
         .returns(ParameterizedTypeName.get(ITERABLE, targetEntityModel.getEntityType()))
         .addParameter(baseParamSpec(true))
         .addParameter(sortParamSpec())
-        .addStatement("return sort(getById($L).$L(), sort)", baseIdParamName(), generatedMethodName())
+        .addStatement(readStatement(generatedMethodName(), methodName == null))
         .build();
   }
 

@@ -427,7 +427,7 @@ Placed on an association field to expose that relation over REST. See
 | `addNew` | `true` | `POST` a brand-new entity into the association |
 | `linkExisting` | `true` | `PUT` an existing entity into the association (`@ManyToOne`, `@ManyToMany`) |
 | `remove` | `true` | `DELETE` the link |
-| `view` | `Void.class` | Jackson JSON view (`@JsonView`) applied to association endpoints |
+| `view` | `Void.class` | Jackson JSON view (`@JsonView`) applied to association endpoints; on a collection, it also decides what is fetched — see [fetching what a view writes](#fetching-what-a-view-writes) |
 | `sort` | `{}` | Default sort properties applied to the generated GET endpoint (e.g. `{"name"}`, `{"name,desc"}`) |
 
 ### `@WithGetEndpoint`
@@ -578,6 +578,31 @@ DELETE /authors/{id}/books/{bookId}          unlink the book (sets its author to
 ```
 
 </details>
+
+### Fetching what a view writes
+
+A collection endpoint (`@OneToMany`, `@ManyToMany`) that has a `view` — its own, or the controller's — does not read
+the lazy collection of the owner. It calls `ForgeService.readAssociation(id, attribute, view)`, which
+
+1. loads the owner (an unknown id is an `EntityNotFoundException`, as ever);
+2. loads the associated entities;
+3. for each entity it has loaded, loads the associations that the view can write, plus the `EAGER` ones — one query
+   for all the single-valued associations and one per collection — and does the same for what they lead to, until
+   nothing new turns up.
+
+The number of statements depends on the shape of the entity graph, never on the number of rows, where reading the
+lazy collection costs a select per row for every association behind it.
+
+An association counts as written by the view unless it is `@JsonIgnore`d, write-only (`@JsonProperty(access =
+WRITE_ONLY)`) or tagged with a `@JsonView` that the view is not part of (a view is part of the views it extends;
+meta-annotations are followed). No `@JsonView` at all counts as written, so the plan can only fetch too much, not too
+little. Every `EAGER` association is fetched in the same query as the entity it hangs on, because Hibernate would
+otherwise resolve it one row at a time.
+
+> [!NOTE]
+> Properties that a getter computes are not followed. If `getTaxons()` reads `organs` and `secretions`, both have to
+> be visible properties of the view themselves — or the lazy reads happen as before. Endpoints without a view, and
+> `@WithGetEndpoint` methods, are unchanged.
 
 ---
 
@@ -1024,6 +1049,7 @@ Override these on a hand-written service that extends the generated one:
 |---|---|
 | `E fixParameters(E entity)` | before `create` and `PUT` update |
 | `E fixPatch(E entity)` | after `PATCH` fields are merged into the managed entity, before save |
+| `<T> List<T> readAssociation(ID id, String attribute, Class<?> view)` | a collection endpoint that has a view [loads its graph](#fetching-what-a-view-writes) |
 
 `fixPatch` receives the *managed* instance with changes already applied — adjust it in place
 (back-references, de-duplicated values); returning a different instance would discard the merged

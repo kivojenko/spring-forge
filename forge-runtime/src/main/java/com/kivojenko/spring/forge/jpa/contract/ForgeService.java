@@ -83,6 +83,25 @@ public abstract class ForgeService<E, ID, R extends JpaRepository<E, ID>> {
   }
 
   /**
+   * Retrieves a collection association of an entity together with everything {@code view} will write of it, in a
+   * number of queries that does not depend on the number of rows (see {@link AssociationReader}).
+   *
+   * <p>The owner is loaded first, so an unknown id is an {@link EntityNotFoundException} and an owner with nothing
+   * attached is an empty list.
+   *
+   * @param id        the ID of the owner
+   * @param attribute the name of the collection attribute
+   * @param view      the Jackson view the result will be written with
+   * @return the associated entities, in no particular order
+   * @throws EntityNotFoundException if no entity with the given ID exists
+   */
+  @Transactional(readOnly = true)
+  public <T> List<T> readAssociation(ID id, String attribute, Class<?> view) {
+    var owner = getById(id);
+    return new AssociationReader(entityManager, view).read(getEntityClass(), owner, attribute);
+  }
+
+  /**
    * Checks if an entity with the given ID exists.
    *
    * @param id the ID to check

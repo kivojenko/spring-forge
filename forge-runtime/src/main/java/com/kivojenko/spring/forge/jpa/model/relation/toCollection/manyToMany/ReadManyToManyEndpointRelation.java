@@ -34,7 +34,7 @@ public class ReadManyToManyEndpointRelation extends EndpointRelation {
         .returns(ParameterizedTypeName.get(ITERABLE, targetEntityModel.getEntityType()))
         .addParameter(baseParamSpec(true))
         .addParameter(sortParamSpec())
-        .addStatement("return sort(getById($L).$L(), sort)", baseIdParamName(), getterName(getFieldName()))
+        .addStatement(readStatement(getterName(getFieldName()), true))
         .build();
   }
 

@@ -83,6 +83,7 @@ dependencies {
     compileOnly("org.springframework:spring-web")
     compileOnly("com.fasterxml.jackson.core:jackson-databind")
     compileOnly("org.springframework.data:spring-data-jpa")
+    compileOnly("org.hibernate.orm:hibernate-core")
     implementation("org.springframework.boot:spring-boot-starter-aspectj")
 
     compileOnly("jakarta.validation:jakarta.validation-api")

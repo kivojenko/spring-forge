@@ -2,6 +2,7 @@ package com.kivojenko.spring.forge.jpa.model.relation;
 
 import com.kivojenko.spring.forge.jpa.model.base.JpaEntityModel;
 import com.kivojenko.spring.forge.jpa.utils.HttpStatusValue;
+import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.*;
 import lombok.Data;
 import lombok.Getter;
@@ -188,6 +189,28 @@ public abstract class EndpointRelation {
 
   protected AnnotationSpec responseStatus(HttpStatusValue status) {
     return AnnotationSpec.builder(RESPONSE_STATUS).addMember("code", "$L.$L", HTTP_STATUS, status.toString()).build();
+  }
+
+  /** The view the endpoint writes with: its own, else the controller's. */
+  protected TypeName effectiveView() {
+    if (view != null) return view;
+    return entityModel != null ? entityModel.getRequirements().controllerView() : null;
+  }
+
+  /**
+   * The body of a collection read: through {@code readAssociation}, which loads what the view writes in a fixed
+   * number of queries, when there is a view and {@code attribute} is a real attribute of the entity; otherwise
+   * through the getter, as before.
+   */
+  protected CodeBlock readStatement(String getter, boolean attribute) {
+    var effective = effectiveView();
+    if (effective == null || !attribute) {
+      return CodeBlock.of("return sort(getById($L).$L(), sort)", baseIdParamName(), getter);
+    }
+    return CodeBlock.of(
+        "return sort(service.<$T>readAssociation($L, $S, $T.class), sort)",
+        targetEntityModel.getEntityType(), baseIdParamName(), getFieldName(), effective
+    );
   }
 
   protected AnnotationSpec jsonViewAnnotation() {
