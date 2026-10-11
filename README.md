@@ -1089,6 +1089,35 @@ public class AuditLogger extends ForgePersistenceAspect<Product> {
 > `PATCH` has no "before" hook: `ForgeService.patch(ID, Map)` never receives the entity, only its id
 > and a field map, so there is nothing for AOP to hand you.
 
+### `ForgeReadAspect`
+
+AOP hooks around read calls in `ForgeService`. Extend it, implement `entityType()`, mark it `@Component`:
+
+```java
+@Component
+@Slf4j
+public class ProductReadLogger extends ForgeReadAspect<Product> {
+
+  @Override
+  protected Class<Product> entityType() {
+    return Product.class;
+  }
+
+  @Override
+  public void afterGet(Product product) {
+    log.info("Loaded {}", product);
+  }
+}
+```
+
+| Hook | Fires on |
+|---|---|
+| `beforeGet(Object id)` / `afterGet(E)` | `getById` |
+| `beforeFindAll()` / `afterFindAll(Iterable<E>)` / `afterFindAll(List<E>)` / `afterFindAll(Page<E>)` | `findAll` (including paged and filtered queries) |
+| `beforeReadAssociation(Object id, String attribute)` / `afterReadAssociation(Object id, String attribute, List<?> associatedEntities)` | `readAssociation` |
+| `beforeCount()` / `afterCount(long count)` | `count` |
+| `beforeExists(Object id)` / `afterExists(Object id, boolean exists)` | `exists` |
+
 ---
 
 ## Configuration
