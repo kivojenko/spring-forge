@@ -1,5 +1,6 @@
 package com.kivojenko.spring.forge.jpa.generator;
 
+import com.kivojenko.spring.forge.jpa.model.GetOrCreateModel;
 import com.kivojenko.spring.forge.jpa.model.base.JpaEntityModel;
 import com.squareup.javapoet.*;
 
@@ -8,7 +9,6 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.*;
-import static com.kivojenko.spring.forge.jpa.utils.StringUtils.capitalize;
 
 /**
  * Generator for Spring services.
@@ -81,45 +81,42 @@ public final class ServiceGenerator {
       builder.addMethod(create);
     }
 
-    // Generate getOrCreate by configured field (defaults to "name"). Supports nested paths like "country.code".
-    if (model.getRequirements().getOrCreateAnnotation() != null) {
-      var annotation = model.getRequirements().getOrCreateAnnotation();
-      var fieldPath = annotation.field().isEmpty() ? "name" : annotation.field();
-      var fieldType = model.resolveFieldTypeName(fieldPath);
-      boolean isString = fieldType.equals(ClassName.get(String.class));
-      boolean ignoreCase = isString && annotation.ignoreCase();
-      var suffix = toPropertyPathSuffix(fieldPath);
-      var paramName = toSafeParamName(fieldPath);
-      var findMethod = "findBy" + suffix + (ignoreCase ? "IgnoreCase" : "");
+    // Generate getOrCreate per @GetOrCreate (field defaults to "name"). Supports nested paths like "country.code".
+    for (var cfg : GetOrCreateModel.resolve(model)) {
+      var paramName = cfg.paramName();
+      var findMethod = cfg.findMethodName();
 
       var getOrCreate = MethodSpec
-          .methodBuilder("getOrCreate")
-          .addJavadoc("Retrieves an existing {@link $T} by $L or creates it if it does not exist.\n", model.getEntityType(), fieldPath)
-          .addJavadoc("@param $L the $L of the entity\n", paramName, fieldPath)
+          .methodBuilder(cfg.getOrCreateMethodName())
+          .addJavadoc("Retrieves an existing {@link $T} by $L or creates it if it does not exist.\n", model.getEntityType(), cfg.fieldPath())
+          .addJavadoc("@param $L the $L of the entity\n", paramName, cfg.fieldPath())
           .addJavadoc("@return the retrieved or newly created entity\n")
           .addModifiers(Modifier.PUBLIC)
           .addAnnotation(TRANSACTIONAL)
           .returns(model.getEntityType())
-          .addParameter(fieldType, paramName)
-          .addStatement("return repository.$L($L).orElseGet(() -> createSafely($L))", findMethod, paramName, paramName)
+          .addParameter(cfg.fieldType(), paramName)
+          .addStatement("return repository.$L($L).orElseGet(() -> $L($L))", findMethod, paramName, cfg.createSafelyMethodName(), paramName)
           .build();
 
       MethodSpec createSafely = MethodSpec
-          .methodBuilder("createSafely")
-          .addJavadoc("Attempts to create an entity with the given $L, handling race conditions where another thread might have created it.\n", fieldPath)
-          .addJavadoc("@param $L the $L of the entity\n", paramName, fieldPath)
+          .methodBuilder(cfg.createSafelyMethodName())
+          .addJavadoc("Attempts to create an entity with the given $L, handling race conditions where another thread might have created it.\n", cfg.fieldPath())
+          .addJavadoc("@param $L the $L of the entity\n", paramName, cfg.fieldPath())
           .addJavadoc("@return the retrieved or newly created entity\n")
           .addModifiers(Modifier.PROTECTED)
           .returns(model.getEntityType())
-          .addParameter(fieldType, paramName)
+          .addParameter(cfg.fieldType(), paramName)
           .beginControlFlow("try")
-          .addStatement("return repository.save(create($L))", paramName)
+          .addStatement("return repository.save($L($L))", cfg.createMethodName(), paramName)
           .nextControlFlow("catch ($T e)", DATA_INTEGRITY_VIOLATION_EXCEPTION)
           .addStatement("return repository.$L($L).orElseThrow()", findMethod, paramName)
           .endControlFlow()
           .build();
 
-      builder.addMethod(model.createMethodForField(fieldPath)).addMethod(getOrCreate).addMethod(createSafely);
+      builder
+          .addMethod(model.createMethodForField(cfg.fieldPath(), cfg.createMethodName()))
+          .addMethod(getOrCreate)
+          .addMethod(createSafely);
     }
 
 
@@ -162,26 +159,5 @@ public final class ServiceGenerator {
 
     model.getEndpointRelations().forEach(r -> r.addMethod(builder));
     return builder.build();
-  }
-
-  private static String toPropertyPathSuffix(String path) {
-    if (path.indexOf('.') < 0) return capitalize(path);
-    var parts = path.split("\\.");
-    var sb = new StringBuilder();
-    for (int i = 0; i < parts.length; i++) {
-      if (i > 0) sb.append('_');
-      sb.append(capitalize(parts[i]));
-    }
-    return sb.toString();
-  }
-
-  private static String toSafeParamName(String path) {
-    if (path.indexOf('.') < 0) return path;
-    var parts = path.split("\\.");
-    var sb = new StringBuilder(parts[0]);
-    for (int i = 1; i < parts.length; i++) {
-      sb.append(capitalize(parts[i]));
-    }
-    return sb.toString();
   }
 }

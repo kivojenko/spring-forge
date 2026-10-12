@@ -143,6 +143,13 @@ public final class JpaEntityModel {
      * Builds a {@code create(<fieldType> <fieldName>)} factory method using builder/setter/ctor paths for the given field.
      */
     public MethodSpec createMethodForField(String fieldName) {
+        return createMethodForField(fieldName, "create");
+    }
+
+    /**
+     * Builds a {@code <methodName>(<fieldType> <fieldName>)} factory method using builder/setter/ctor paths for the given field.
+     */
+    public MethodSpec createMethodForField(String fieldName, String methodName) {
         // Support nested path like "country.code" (relation.id)
         if (fieldName != null && fieldName.contains(".")) {
             var parts = fieldName.split("\\.");
@@ -173,7 +180,7 @@ public final class JpaEntityModel {
             }
 
             var idType = relationModel.getJpaId().type();
-            return createViaRelationId(relationField, relationModel.getEntityType(), idType);
+            return createViaRelationId(methodName, relationField, relationModel.getEntityType(), idType);
         }
 
         var typeMirror = findFieldTypeMirror(fieldName);
@@ -183,19 +190,19 @@ public final class JpaEntityModel {
         var typeName = TypeName.get(typeMirror);
 
         if (hasBuilder()) {
-            if (builderHasSetter(fieldName)) return createViaBuilder(fieldName, typeName);
-            return createViaBuilderAndSetter(fieldName, typeName);
+            if (builderHasSetter(fieldName)) return createViaBuilder(methodName, fieldName, typeName);
+            return createViaBuilderAndSetter(methodName, fieldName, typeName);
         }
 
-        if (hasEmptyCtor()) return createViaEmptyCtorAndSetter(fieldName, typeName);
-        if (hasCtorWithSingleParam(typeMirror)) return createViaCtor(fieldName, typeName);
+        if (hasEmptyCtor()) return createViaEmptyCtorAndSetter(methodName, fieldName, typeName);
+        if (hasCtorWithSingleParam(typeMirror)) return createViaCtor(methodName, fieldName, typeName);
 
         throw new IllegalStateException("Cannot generate create(..) for field '" + fieldName + "' on " + getElement().getSimpleName());
     }
 
-    private MethodSpec createViaCtor(String fieldName, TypeName fieldType) {
+    private MethodSpec createViaCtor(String methodName, String fieldName, TypeName fieldType) {
         return MethodSpec
-                .methodBuilder("create")
+                .methodBuilder(methodName)
                 .addJavadoc("Creates a new instance of {@link $T} with the given $L using the constructor.\n", getEntityType(), fieldName)
                 .addJavadoc("@param $L the $L of the entity\n", fieldName, fieldName)
                 .addJavadoc("@return the newly created entity\n")
@@ -206,9 +213,9 @@ public final class JpaEntityModel {
                 .build();
     }
 
-    private MethodSpec createViaBuilder(String fieldName, TypeName fieldType) {
+    private MethodSpec createViaBuilder(String methodName, String fieldName, TypeName fieldType) {
         return MethodSpec
-                .methodBuilder("create")
+                .methodBuilder(methodName)
                 .addJavadoc("Creates a new instance of {@link $T} with the given $L using the builder.\n", getEntityType(), fieldName)
                 .addJavadoc("@param $L the $L of the entity\n", fieldName, fieldName)
                 .addJavadoc("@return the newly created entity\n")
@@ -219,9 +226,9 @@ public final class JpaEntityModel {
                 .build();
     }
 
-    private MethodSpec createViaEmptyCtorAndSetter(String fieldName, TypeName fieldType) {
+    private MethodSpec createViaEmptyCtorAndSetter(String methodName, String fieldName, TypeName fieldType) {
         return MethodSpec
-                .methodBuilder("create")
+                .methodBuilder(methodName)
                 .addJavadoc("Creates a new instance of {@link $T} with the given $L using the empty constructor and a setter.\n", getEntityType(), fieldName)
                 .addJavadoc("@param $L the $L of the entity\n", fieldName, fieldName)
                 .addJavadoc("@return the newly created entity\n")
@@ -234,9 +241,9 @@ public final class JpaEntityModel {
                 .build();
     }
 
-    private MethodSpec createViaBuilderAndSetter(String fieldName, TypeName fieldType) {
+    private MethodSpec createViaBuilderAndSetter(String methodName, String fieldName, TypeName fieldType) {
         return MethodSpec
-                .methodBuilder("create")
+                .methodBuilder(methodName)
                 .addJavadoc("Creates a new instance of {@link $T} with the given $L using the builder and a setter.\n", getEntityType(), fieldName)
                 .addJavadoc("@param $L the $L of the entity\n", fieldName, fieldName)
                 .addJavadoc("@return the newly created entity\n")
@@ -332,14 +339,14 @@ public final class JpaEntityModel {
         return TypeName.get(tm);
     }
 
-    private MethodSpec createViaRelationId(String relationField, ClassName relationType, TypeName idType) {
+    private MethodSpec createViaRelationId(String methodName, String relationField, ClassName relationType, TypeName idType) {
         // create(<ID> relationId)
         var param = com.squareup.javapoet.ParameterSpec.builder(idType, relationField + "Id").build();
 
         if (hasBuilder()) {
             if (builderHasSetter(relationField)) {
                 return MethodSpec
-                        .methodBuilder("create")
+                        .methodBuilder(methodName)
                         .addJavadoc("Creates a new instance of {@link $T} linking '$L' by its ID.\n", getEntityType(), relationField)
                         .addJavadoc("@param $L the ID of $L\n", param.name, relationField)
                         .addJavadoc("@return the newly created entity\n")
@@ -351,7 +358,7 @@ public final class JpaEntityModel {
             }
             // builder exists but no direct setter on builder -> builder + setter
             return MethodSpec
-                    .methodBuilder("create")
+                    .methodBuilder(methodName)
                     .addJavadoc("Creates a new instance of {@link $T} linking '$L' by its ID.\n", getEntityType(), relationField)
                     .addJavadoc("@param $L the ID of $L\n", param.name, relationField)
                     .addJavadoc("@return the newly created entity\n")
@@ -366,7 +373,7 @@ public final class JpaEntityModel {
 
         if (hasEmptyCtor()) {
             return MethodSpec
-                    .methodBuilder("create")
+                    .methodBuilder(methodName)
                     .addJavadoc("Creates a new instance of {@link $T} linking '$L' by its ID.\n", getEntityType(), relationField)
                     .addJavadoc("@param $L the ID of $L\n", param.name, relationField)
                     .addJavadoc("@return the newly created entity\n")

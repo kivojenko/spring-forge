@@ -25,7 +25,7 @@ import javax.lang.model.type.TypeMirror;
  * @param repositoryInterfaces  additional interfaces for the repository
  * @param serviceAnnotation     annotation for service configuration
  * @param controllerAnnotation  annotation for controller configuration
- * @param getOrCreateAnnotation annotation for "get or create" operation configuration
+ * @param getOrCreateAnnotations "get or create" operation configurations, one per declared annotation
  * @param controllerView        Jackson JSON view for controller serialization
  * @param controllerListView    Jackson JSON view for list endpoints
  * @param controllerDetailView  Jackson JSON view for detail endpoints
@@ -36,7 +36,7 @@ public record JpaEntityRequirements(
         List<TypeName> repositoryInterfaces,
         WithService serviceAnnotation,
         WithRestController controllerAnnotation,
-        GetOrCreate getOrCreateAnnotation,
+        List<GetOrCreate> getOrCreateAnnotations,
         Boolean explicitAllowSlashes,
         TypeName controllerView,
         TypeName controllerListView,
@@ -49,9 +49,9 @@ public record JpaEntityRequirements(
             List<TypeName> repositoryInterfaces,
             WithService serviceAnnotation,
             WithRestController controllerAnnotation,
-            GetOrCreate getOrCreateAnnotation
+            List<GetOrCreate> getOrCreateAnnotations
     ) {
-        this(hasName, repositoryAnnotation, repositoryInterfaces, serviceAnnotation, controllerAnnotation, getOrCreateAnnotation, null, null, null, null);
+        this(hasName, repositoryAnnotation, repositoryInterfaces, serviceAnnotation, controllerAnnotation, getOrCreateAnnotations, null, null, null, null);
     }
 
     public JpaEntityRequirements(
@@ -60,10 +60,10 @@ public record JpaEntityRequirements(
             List<TypeName> repositoryInterfaces,
             WithService serviceAnnotation,
             WithRestController controllerAnnotation,
-            GetOrCreate getOrCreateAnnotation,
+            List<GetOrCreate> getOrCreateAnnotations,
             Boolean explicitAllowSlashes
     ) {
-        this(hasName, repositoryAnnotation, repositoryInterfaces, serviceAnnotation, controllerAnnotation, getOrCreateAnnotation, explicitAllowSlashes, null, null, null);
+        this(hasName, repositoryAnnotation, repositoryInterfaces, serviceAnnotation, controllerAnnotation, getOrCreateAnnotations, explicitAllowSlashes, null, null, null);
     }
 
     public JpaEntityRequirements(
@@ -72,11 +72,11 @@ public record JpaEntityRequirements(
             List<TypeName> repositoryInterfaces,
             WithService serviceAnnotation,
             WithRestController controllerAnnotation,
-            GetOrCreate getOrCreateAnnotation,
+            List<GetOrCreate> getOrCreateAnnotations,
             Boolean explicitAllowSlashes,
             TypeName controllerView
     ) {
-        this(hasName, repositoryAnnotation, repositoryInterfaces, serviceAnnotation, controllerAnnotation, getOrCreateAnnotation, explicitAllowSlashes, controllerView, null, null);
+        this(hasName, repositoryAnnotation, repositoryInterfaces, serviceAnnotation, controllerAnnotation, getOrCreateAnnotations, explicitAllowSlashes, controllerView, null, null);
     }
 
     /**
@@ -98,7 +98,7 @@ public record JpaEntityRequirements(
         var repositoryAnnotation = entity.getAnnotation(WithJpaRepository.class);
         var repositoryInterfaces = resolveRepositoryInterfaces(entity, repositoryAnnotation, env);
 
-        var getOrCreateAnnotation = entity.getAnnotation(GetOrCreate.class);
+        var getOrCreateAnnotations = List.of(entity.getAnnotationsByType(GetOrCreate.class));
 
         Boolean explicitAllowSlashes = null;
         var withRestControllerType = elements.getTypeElement(WithRestController.class.getCanonicalName());
@@ -126,7 +126,7 @@ public record JpaEntityRequirements(
                 repositoryInterfaces,
                 serviceAnnotation,
                 controllerAnnotation,
-                getOrCreateAnnotation,
+                getOrCreateAnnotations,
                 explicitAllowSlashes,
                 controllerView,
                 controllerListView,
@@ -176,7 +176,11 @@ public record JpaEntityRequirements(
     }
 
     public boolean wantsService() {
-        return serviceAnnotation != null || getOrCreateAnnotation != null || wantsController();
+        return serviceAnnotation != null || wantsGetOrCreate() || wantsController();
+    }
+
+    public boolean wantsGetOrCreate() {
+        return getOrCreateAnnotations != null && !getOrCreateAnnotations.isEmpty();
     }
 
     public boolean wantsAbstractService() {

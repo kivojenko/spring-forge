@@ -22,6 +22,7 @@ import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.REST_CONTROLLE
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.VALID;
 
 import com.kivojenko.spring.forge.config.SpringForgeConfig;
+import com.kivojenko.spring.forge.jpa.model.GetOrCreateModel;
 import com.kivojenko.spring.forge.jpa.model.base.JpaEntityModel;
 import com.kivojenko.spring.forge.jpa.model.relation.EndpointRelation;
 import com.squareup.javapoet.AnnotationSpec;
@@ -32,6 +33,7 @@ import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
+import java.util.List;
 import javax.lang.model.element.Modifier;
 
 /**
@@ -91,28 +93,27 @@ public final class ControllerGenerator {
       );
     }
 
-    if (model.getRequirements().getOrCreateAnnotation() != null && !model.isAbstract()) {
-      var cfg = model.getRequirements().getOrCreateAnnotation();
-      var path = cfg.path().isEmpty() ? "/get-or-create" : cfg.path();
-      var mapping = AnnotationSpec.builder(POST_MAPPING).addMember("value", "$S", path).build();
-      var fieldPath = cfg.field().isEmpty() ? "name" : cfg.field();
-      var fieldType = model.resolveFieldTypeName(fieldPath);
+    var getOrCreates = model.isAbstract() ? List.<GetOrCreateModel>of() : GetOrCreateModel.resolve(model);
+    for (var cfg : getOrCreates) {
+      var mapping = AnnotationSpec.builder(POST_MAPPING).addMember("value", "$S", cfg.path());
+      // Several get-or-creates may share a path; the request parameter tells them apart.
+      if (getOrCreates.size() > 1) mapping.addMember("params", "$S", cfg.fieldPath());
 
-      var paramName = toSafeParamName(fieldPath);
+      var paramName = cfg.paramName();
       var requestParam = AnnotationSpec.builder(REQUEST_PARAM)
-          .addMember("name", "$S", fieldPath)
+          .addMember("name", "$S", cfg.fieldPath())
           .build();
-      var param = ParameterSpec.builder(fieldType, paramName).addAnnotation(requestParam).build();
+      var param = ParameterSpec.builder(cfg.fieldType(), paramName).addAnnotation(requestParam).build();
       var getOrCreateBuilder = MethodSpec
-          .methodBuilder("getOrCreate")
-          .addJavadoc("Retrieves an existing {@link $T} by $L or creates it if it does not exist.\n", model.getEntityType(), fieldPath)
-          .addJavadoc("@param $L the $L of the entity\n", paramName, fieldPath)
+          .methodBuilder(cfg.getOrCreateMethodName())
+          .addJavadoc("Retrieves an existing {@link $T} by $L or creates it if it does not exist.\n", model.getEntityType(), cfg.fieldPath())
+          .addJavadoc("@param $L the $L of the entity\n", paramName, cfg.fieldPath())
           .addJavadoc("@return the retrieved or newly created entity\n")
           .addModifiers(Modifier.PUBLIC)
-          .addAnnotation(mapping)
+          .addAnnotation(mapping.build())
           .addParameter(param)
           .returns(model.getEntityType())
-          .addStatement("return service.getOrCreate($L)", paramName);
+          .addStatement("return service.$L($L)", cfg.getOrCreateMethodName(), paramName);
       if (model.getRequirements().effectiveDetailView() != null) {
         getOrCreateBuilder.addAnnotation(
             AnnotationSpec.builder(JSON_VIEW)
@@ -271,15 +272,5 @@ public final class ControllerGenerator {
             .addStatement("service.deleteById($L)", idName)
             .build()
     );
-  }
-
-  private static String toSafeParamName(String path) {
-    if (path.indexOf('.') < 0) return path;
-    var parts = path.split("\\.");
-    var sb = new StringBuilder(parts[0]);
-    for (int i = 1; i < parts.length; i++) {
-      sb.append(com.kivojenko.spring.forge.jpa.utils.StringUtils.capitalize(parts[i]));
-    }
-    return sb.toString();
   }
 }

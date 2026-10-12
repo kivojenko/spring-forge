@@ -1,6 +1,7 @@
 package com.kivojenko.spring.forge.processor;
 
 import com.kivojenko.spring.forge.annotation.GetOrCreate;
+import com.kivojenko.spring.forge.annotation.GetOrCreates;
 import com.kivojenko.spring.forge.annotation.WithJpaRepository;
 import com.kivojenko.spring.forge.annotation.WithRestController;
 import com.kivojenko.spring.forge.annotation.WithService;
@@ -44,6 +45,7 @@ public final class ForgeProcessor extends AbstractProcessor {
         WithJpaRepository.class,
         WithService.class,
         GetOrCreate.class,
+        GetOrCreates.class,
         WithRestController.class
     );
     Set<TypeElement> rootEntities = new HashSet<>();

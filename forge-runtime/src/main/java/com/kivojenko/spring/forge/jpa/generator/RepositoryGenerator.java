@@ -5,14 +5,19 @@ import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.HAS_NAME_REPOS
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.JPA_REPOSITORY;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.LIST;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.QUERY_DSL_PREDICATE_EXECUTOR;
-import static com.kivojenko.spring.forge.jpa.utils.StringUtils.capitalize;
 
 import com.kivojenko.spring.forge.jpa.model.FilterFieldModel;
+import com.kivojenko.spring.forge.jpa.model.GetOrCreateModel;
 import com.kivojenko.spring.forge.jpa.model.base.JpaEntityModel;
+import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeSpec;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import javax.lang.model.element.Modifier;
 
 /**
@@ -51,79 +56,54 @@ public final class RepositoryGenerator {
             addFilterMethods(builder, model);
         }
 
-        // Add minimal query support for @GetOrCreate when not covered by HasNameRepository
-        if (model.getRequirements().getOrCreateAnnotation() != null) {
-            var cfg = model.getRequirements().getOrCreateAnnotation();
-            var fieldPath = cfg.field().isEmpty() ? "name" : cfg.field();
-            var needCustom = !(model.getRequirements().hasName() && fieldPath.equals("name"));
-            if (needCustom) {
-                var fieldType = model.resolveFieldTypeName(fieldPath);
-                boolean isString = fieldType.equals(com.squareup.javapoet.ClassName.get(String.class));
-                boolean ignoreCase = isString && cfg.ignoreCase();
-                var optEntity = ParameterizedTypeName.get(
-                        com.squareup.javapoet.ClassName.get(java.util.Optional.class),
-                        model.getEntityType()
-                );
-
-                var suffix = toPropertyPathSuffix(fieldPath); // e.g., Country_Code for country.code
-                var paramName = toSafeParamName(fieldPath);   // e.g., countryCode
-                var findMethodName = "findBy" + suffix + (ignoreCase ? "IgnoreCase" : "");
-                var findMethod = MethodSpec.methodBuilder(findMethodName)
-                        .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
-                        .returns(optEntity)
-                        .addParameter(fieldType, paramName)
-                        .build();
-                builder.addMethod(findMethod);
-            }
+        // Add lookup methods for @GetOrCreate when not covered by HasNameRepository
+        for (var cfg : GetOrCreateModel.resolve(model)) {
+            if (model.getRequirements().hasName() && cfg.fieldPath().equals("name")) continue;
+            var findMethod = MethodSpec.methodBuilder(cfg.findMethodName())
+                    .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
+                    .returns(ParameterizedTypeName.get(ClassName.get(Optional.class), model.getEntityType()))
+                    .addParameter(cfg.fieldType(), cfg.paramName())
+                    .build();
+            builder.addMethod(findMethod);
         }
 
         return builder.build();
     }
 
-    private static String toPropertyPathSuffix(String path) {
-        if (path.indexOf('.') < 0) return capitalize(path);
-        var parts = path.split("\\.");
-        var sb = new StringBuilder();
-        for (int i = 0; i < parts.length; i++) {
-            if (i > 0) sb.append('_');
-            sb.append(capitalize(parts[i]));
-        }
-        return sb.toString();
-    }
-
-    private static String toSafeParamName(String path) {
-        if (path.indexOf('.') < 0) return path;
-        var parts = path.split("\\.");
-        var sb = new StringBuilder(parts[0]);
-        for (int i = 1; i < parts.length; i++) {
-            sb.append(capitalize(parts[i]));
-        }
-        return sb.toString();
-    }
-
     private static void addFilterMethods(TypeSpec.Builder builder, JpaEntityModel model) {
-        for (FilterFieldModel field : model.getFilterableFields()) {
-            if (field.isIterable() || field.isSingleEntity() || field.isDiscriminator() || field.isPresent()) {
-                continue;
-            }
-            if (model.getRequirements().hasName() && field.getOriginalName().equals("name")) {
-                continue;
-            }
-
-            // Name the query after the property it actually reads (category.name → findByCategory_Name);
-            // paths Spring Data cannot derive (collections, size()) are left to the QueryDSL predicate.
-            var propertyPath = field.getDerivedQueryPath();
-            if (propertyPath == null) {
-                continue;
-            }
-
-            var method = MethodSpec.methodBuilder("findBy" + propertyPath)
+        for (FilterFieldModel field : filterFinderFields(model)) {
+            var method = MethodSpec.methodBuilder(filterFinderName(field))
                     .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
                     .returns(ParameterizedTypeName.get(LIST, model.getEntityType()))
                     .addParameter(field.getTypeName(), field.getName())
                     .build();
             builder.addMethod(method);
         }
+    }
+
+    /**
+     * Returns the names of the {@code List}-returning finders generated for filter fields.
+     *
+     * @param model the entity model
+     * @return finder method names, empty when the entity has no filter
+     */
+    public static Set<String> filterFinderNames(JpaEntityModel model) {
+        if (!model.wantsFilter()) return Set.of();
+        return filterFinderFields(model).stream().map(RepositoryGenerator::filterFinderName).collect(Collectors.toSet());
+    }
+
+    private static List<FilterFieldModel> filterFinderFields(JpaEntityModel model) {
+        return model.getFilterableFields().stream()
+                .filter(field -> !(field.isIterable() || field.isSingleEntity() || field.isDiscriminator() || field.isPresent()))
+                .filter(field -> !(model.getRequirements().hasName() && field.getOriginalName().equals("name")))
+                // Name the query after the property it actually reads (category.name → findByCategory_Name);
+                // paths Spring Data cannot derive (collections, size()) are left to the QueryDSL predicate.
+                .filter(field -> field.getDerivedQueryPath() != null)
+                .toList();
+    }
+
+    private static String filterFinderName(FilterFieldModel field) {
+        return "findBy" + field.getDerivedQueryPath();
     }
 
     private static ParameterizedTypeName jpaRepositoryOf(JpaEntityModel model) {

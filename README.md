@@ -415,6 +415,24 @@ on a single row instead of blowing up. Any field works, including a nested one:
 @GetOrCreate(field = "country.code")   // POST /offices/get-or-create?country.code=EE
 ```
 
+`@GetOrCreate` is repeatable. Declare it once per lookup field; the generated methods are then named
+after the field, and the endpoints share the path, told apart by the request parameter:
+
+```java
+@GetOrCreate(field = "sku")                       // POST /products/get-or-create?sku=SKU-1
+@GetOrCreate(field = "name", ignoreCase = false)  // POST /products/get-or-create?name=Widget
+public class Product { … }
+```
+
+```java
+// generated in ProductForgeService
+public Product getOrCreateBySku(String sku) { … }
+public Product getOrCreateByName(String name) { … }
+```
+
+With a single annotation the names stay `getOrCreate` / `create` / `createSafely`. If a `@FilterField`
+already generates `findBy<Field>` for the same field, the lookup uses `findOneBy<Field>` instead.
+
 ### `@WithEndpoints`
 
 Placed on an association field to expose that relation over REST. See
