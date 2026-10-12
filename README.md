@@ -376,9 +376,9 @@ Each one implies the layers below it, so you only ever annotate for the topmost 
 
 | Attribute | Default | Description |
 |---|---|---|
-| `field` | `"name"` | Lookup/creation field. Supports nested paths such as `"country.code"` |
+| `fields` | `{"name"}` | Lookup/creation key; several fields form a composite key. Supports nested paths such as `"country.code"` |
 | `path` | `"/get-or-create"` | Endpoint path, relative to the resource |
-| `ignoreCase` | `true` | Case-insensitive lookup for `String` fields; ignored for other types |
+| `ignoreCase` | `true` | Case-insensitive lookup for the `String` fields of the key; ignored for other types |
 
 > [!IMPORTANT]
 > `packageName` is a *sub-package*, appended to the configured (or entity's own) base package.
@@ -411,16 +411,31 @@ protected Role create(String name) {
 on a single row instead of blowing up. Any field works, including a nested one:
 
 ```java
-@GetOrCreate(field = "sku")            // POST /products/get-or-create?sku=SKU-1
-@GetOrCreate(field = "country.code")   // POST /offices/get-or-create?country.code=EE
+@GetOrCreate(fields = "sku")            // POST /products/get-or-create?sku=SKU-1
+@GetOrCreate(fields = "country.code")   // POST /offices/get-or-create?country.code=EE
 ```
 
-`@GetOrCreate` is repeatable. Declare it once per lookup field; the generated methods are then named
-after the field, and the endpoints share the path, told apart by the request parameter:
+Several fields form a composite key: the entity is looked up by all of them and created with all of them set.
 
 ```java
-@GetOrCreate(field = "sku")                       // POST /products/get-or-create?sku=SKU-1
-@GetOrCreate(field = "name", ignoreCase = false)  // POST /products/get-or-create?name=Widget
+@GetOrCreate(fields = {"name", "country.code"})   // POST /offices/get-or-create?name=HQ&country.code=EE
+```
+
+```java
+// generated in OfficeForgeService
+public Office getOrCreate(String name, String countryCode) {
+  return repository.findByNameIgnoreCaseAndCountry_CodeIgnoreCase(name, countryCode)
+      .orElseGet(() -> createSafely(name, countryCode));
+}
+```
+
+`@GetOrCreate` is repeatable. Declare it once per lookup key; the generated methods are then named
+after the key's fields, and the endpoints share the path, told apart by the request parameters:
+
+```java
+@GetOrCreate(fields = "sku")                       // POST /products/get-or-create?sku=SKU-1
+@GetOrCreate(fields = "name", ignoreCase = false)  // POST /products/get-or-create?name=Widget
+@GetOrCreate(fields = {"brand", "name"})           // POST /products/get-or-create?brand=Acme&name=Anvil
 public class Product { … }
 ```
 
@@ -428,7 +443,11 @@ public class Product { … }
 // generated in ProductForgeService
 public Product getOrCreateBySku(String sku) { … }
 public Product getOrCreateByName(String name) { … }
+public Product getOrCreateByBrandAndName(String brand, String name) { … }
 ```
+
+When a request carries the parameters of several keys, Spring picks the mapping with the most matching
+parameters, so `?brand=Acme&name=Anvil` goes to the composite key rather than to `name` alone.
 
 With a single annotation the names stay `getOrCreate` / `create` / `createSafely`. If a `@FilterField`
 already generates `findBy<Field>` for the same field, the lookup uses `findOneBy<Field>` instead.

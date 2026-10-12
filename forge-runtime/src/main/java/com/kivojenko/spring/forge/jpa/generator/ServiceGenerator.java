@@ -81,42 +81,45 @@ public final class ServiceGenerator {
       builder.addMethod(create);
     }
 
-    // Generate getOrCreate per @GetOrCreate (field defaults to "name"). Supports nested paths like "country.code".
+    // Generate getOrCreate per @GetOrCreate (fields default to "name"). Supports nested paths like "country.code".
     for (var cfg : GetOrCreateModel.resolve(model)) {
-      var paramName = cfg.paramName();
+      var args = cfg.arguments();
       var findMethod = cfg.findMethodName();
 
       var getOrCreate = MethodSpec
           .methodBuilder(cfg.getOrCreateMethodName())
-          .addJavadoc("Retrieves an existing {@link $T} by $L or creates it if it does not exist.\n", model.getEntityType(), cfg.fieldPath())
-          .addJavadoc("@param $L the $L of the entity\n", paramName, cfg.fieldPath())
+          .addJavadoc("Retrieves an existing {@link $T} by $L or creates it if it does not exist.\n", model.getEntityType(), cfg.description());
+      var createSafely = MethodSpec
+          .methodBuilder(cfg.createSafelyMethodName())
+          .addJavadoc("Attempts to create an entity with the given $L, handling race conditions where another thread might have created it.\n", cfg.description());
+      for (var field : cfg.fields()) {
+        getOrCreate.addJavadoc("@param $L the $L of the entity\n", field.paramName(), field.fieldPath());
+        createSafely.addJavadoc("@param $L the $L of the entity\n", field.paramName(), field.fieldPath());
+      }
+
+      getOrCreate
           .addJavadoc("@return the retrieved or newly created entity\n")
           .addModifiers(Modifier.PUBLIC)
           .addAnnotation(TRANSACTIONAL)
           .returns(model.getEntityType())
-          .addParameter(cfg.fieldType(), paramName)
-          .addStatement("return repository.$L($L).orElseGet(() -> $L($L))", findMethod, paramName, cfg.createSafelyMethodName(), paramName)
-          .build();
+          .addParameters(cfg.parameters())
+          .addStatement("return repository.$L($L).orElseGet(() -> $L($L))", findMethod, args, cfg.createSafelyMethodName(), args);
 
-      MethodSpec createSafely = MethodSpec
-          .methodBuilder(cfg.createSafelyMethodName())
-          .addJavadoc("Attempts to create an entity with the given $L, handling race conditions where another thread might have created it.\n", cfg.fieldPath())
-          .addJavadoc("@param $L the $L of the entity\n", paramName, cfg.fieldPath())
+      createSafely
           .addJavadoc("@return the retrieved or newly created entity\n")
           .addModifiers(Modifier.PROTECTED)
           .returns(model.getEntityType())
-          .addParameter(cfg.fieldType(), paramName)
+          .addParameters(cfg.parameters())
           .beginControlFlow("try")
-          .addStatement("return repository.save($L($L))", cfg.createMethodName(), paramName)
+          .addStatement("return repository.save($L($L))", cfg.createMethodName(), args)
           .nextControlFlow("catch ($T e)", DATA_INTEGRITY_VIOLATION_EXCEPTION)
-          .addStatement("return repository.$L($L).orElseThrow()", findMethod, paramName)
-          .endControlFlow()
-          .build();
+          .addStatement("return repository.$L($L).orElseThrow()", findMethod, args)
+          .endControlFlow();
 
       builder
-          .addMethod(model.createMethodForField(cfg.fieldPath(), cfg.createMethodName()))
-          .addMethod(getOrCreate)
-          .addMethod(createSafely);
+          .addMethod(model.createMethodForFields(cfg.fields(), cfg.createMethodName()))
+          .addMethod(getOrCreate.build())
+          .addMethod(createSafely.build());
     }
 
 

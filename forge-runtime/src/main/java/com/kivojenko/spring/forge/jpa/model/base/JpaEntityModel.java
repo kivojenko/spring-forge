@@ -5,10 +5,12 @@ import com.kivojenko.spring.forge.jpa.factory.EndpointRelationResolver;
 import com.kivojenko.spring.forge.jpa.factory.FilterFieldModelFactory;
 import com.kivojenko.spring.forge.jpa.model.FilterFieldModel;
 import com.kivojenko.spring.forge.jpa.model.FilterSearchFieldModel;
+import com.kivojenko.spring.forge.jpa.model.GetOrCreateModel;
 import com.kivojenko.spring.forge.jpa.model.relation.EndpointRelation;
 import com.kivojenko.spring.forge.jpa.utils.StringUtils;
 import com.querydsl.core.BooleanBuilder;
 import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeName;
 import jakarta.persistence.MappedSuperclass;
@@ -147,38 +149,69 @@ public final class JpaEntityModel {
     }
 
     /**
+     * Builds a {@code <methodName>(...)} factory method that sets every given key field.
+     * A single field keeps the builder/setter/ctor paths of {@link #createMethodForField(String, String)};
+     * several fields are set through the builder where it exposes them and through setters otherwise.
+     */
+    public MethodSpec createMethodForFields(List<GetOrCreateModel.KeyField> fields, String methodName) {
+        if (fields.size() == 1) return createMethodForField(fields.getFirst().fieldPath(), methodName);
+
+        var builderAssignments = new ArrayList<CodeBlock>();
+        var setterAssignments = new ArrayList<CodeBlock>();
+        var method = MethodSpec
+                .methodBuilder(methodName)
+                .addJavadoc("Creates a new instance of {@link $T} with the given key fields.\n", getEntityType());
+
+        for (var field : fields) {
+            var path = field.fieldPath();
+            String target;
+            CodeBlock value;
+            if (path.contains(".")) {
+                var relationField = path.split("\\.")[0];
+                var relationModel = resolveRelationIdTarget(path);
+                target = relationField;
+                value = CodeBlock.of("entityManager.getReference($T.class, $L)", relationModel.getEntityType(), field.paramName());
+            } else {
+                target = path;
+                value = CodeBlock.of("$L", field.paramName());
+            }
+
+            method.addJavadoc("@param $L the $L of the entity\n", field.paramName(), path);
+            method.addParameter(field.parameter());
+            if (hasBuilder() && builderHasSetter(target)) {
+                builderAssignments.add(CodeBlock.of(".$L($L)", target, value));
+            } else {
+                setterAssignments.add(CodeBlock.of("entity.$L($L)", StringUtils.setterName(target), value));
+            }
+        }
+
+        method.addJavadoc("@return the newly created entity\n")
+                .addModifiers(Modifier.PROTECTED)
+                .returns(getEntityType());
+
+        if (hasBuilder()) {
+            var build = CodeBlock.of("$T.builder()$L.build()", getEntityType(), CodeBlock.join(builderAssignments, ""));
+            if (setterAssignments.isEmpty()) return method.addStatement("return $L", build).build();
+            method.addStatement("var entity = $L", build);
+        } else if (hasEmptyCtor()) {
+            method.addStatement("var entity = new $T()", getEntityType());
+        } else {
+            throw new IllegalStateException("Cannot generate " + methodName + "(..) for fields " +
+                    fields.stream().map(GetOrCreateModel.KeyField::fieldPath).toList() + " on " + getElement().getSimpleName() +
+                    ": a builder or an empty constructor is required");
+        }
+        setterAssignments.forEach(method::addStatement);
+        return method.addStatement("return entity").build();
+    }
+
+    /**
      * Builds a {@code <methodName>(<fieldType> <fieldName>)} factory method using builder/setter/ctor paths for the given field.
      */
     public MethodSpec createMethodForField(String fieldName, String methodName) {
         // Support nested path like "country.code" (relation.id)
         if (fieldName != null && fieldName.contains(".")) {
-            var parts = fieldName.split("\\.");
-            if (parts.length < 2) {
-                throw new IllegalStateException("Invalid nested field path: " + fieldName);
-            }
-            var relationField = parts[0];
-            var idField = parts[parts.length - 1];
-
-            // Resolve relation type
-            var relationVar = findFieldInHierarchy(getElement(), relationField);
-            if (relationVar == null) {
-                throw new IllegalStateException("Cannot find relation field '" + relationField + "' on " + getElement().getSimpleName());
-            }
-            if (!(relationVar.asType() instanceof DeclaredType declared)) {
-                throw new IllegalStateException("Field '" + relationField + "' is not an entity type on " + getElement().getSimpleName());
-            }
-            var relationEl = (TypeElement) declared.asElement();
-            var relationModel = com.kivojenko.spring.forge.jpa.factory.JpaEntityModelFactory.get(relationEl);
-            if (relationModel == null) {
-                throw new IllegalStateException("Cannot resolve model for relation '" + relationField + "'");
-            }
-
-            // Ensure we target the relation's ID field
-            var expectedId = relationModel.getJpaId().name();
-            if (!expectedId.equals(idField)) {
-                throw new IllegalStateException("Nested get-or-create currently supports relation ID only: expected '" + relationField + "." + expectedId + "' but got '" + fieldName + "'");
-            }
-
+            var relationField = fieldName.split("\\.")[0];
+            var relationModel = resolveRelationIdTarget(fieldName);
             var idType = relationModel.getJpaId().type();
             return createViaRelationId(methodName, relationField, relationModel.getEntityType(), idType);
         }
@@ -198,6 +231,39 @@ public final class JpaEntityModel {
         if (hasCtorWithSingleParam(typeMirror)) return createViaCtor(methodName, fieldName, typeName);
 
         throw new IllegalStateException("Cannot generate create(..) for field '" + fieldName + "' on " + getElement().getSimpleName());
+    }
+
+    /**
+     * Resolves the related entity of a nested key path such as {@code country.code}; the path must end at the relation's ID.
+     */
+    private JpaEntityModel resolveRelationIdTarget(String fieldName) {
+        var parts = fieldName.split("\\.");
+        if (parts.length < 2) {
+            throw new IllegalStateException("Invalid nested field path: " + fieldName);
+        }
+        var relationField = parts[0];
+        var idField = parts[parts.length - 1];
+
+        // Resolve relation type
+        var relationVar = findFieldInHierarchy(getElement(), relationField);
+        if (relationVar == null) {
+            throw new IllegalStateException("Cannot find relation field '" + relationField + "' on " + getElement().getSimpleName());
+        }
+        if (!(relationVar.asType() instanceof DeclaredType declared)) {
+            throw new IllegalStateException("Field '" + relationField + "' is not an entity type on " + getElement().getSimpleName());
+        }
+        var relationEl = (TypeElement) declared.asElement();
+        var relationModel = com.kivojenko.spring.forge.jpa.factory.JpaEntityModelFactory.get(relationEl);
+        if (relationModel == null) {
+            throw new IllegalStateException("Cannot resolve model for relation '" + relationField + "'");
+        }
+
+        // Ensure we target the relation's ID field
+        var expectedId = relationModel.getJpaId().name();
+        if (!expectedId.equals(idField)) {
+            throw new IllegalStateException("Nested get-or-create currently supports relation ID only: expected '" + relationField + "." + expectedId + "' but got '" + fieldName + "'");
+        }
+        return relationModel;
     }
 
     private MethodSpec createViaCtor(String methodName, String fieldName, TypeName fieldType) {

@@ -58,11 +58,11 @@ public final class RepositoryGenerator {
 
         // Add lookup methods for @GetOrCreate when not covered by HasNameRepository
         for (var cfg : GetOrCreateModel.resolve(model)) {
-            if (model.getRequirements().hasName() && cfg.fieldPath().equals("name")) continue;
+            if (model.getRequirements().hasName() && cfg.isNameOnly()) continue;
             var findMethod = MethodSpec.methodBuilder(cfg.findMethodName())
                     .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
                     .returns(ParameterizedTypeName.get(ClassName.get(Optional.class), model.getEntityType()))
-                    .addParameter(cfg.fieldType(), cfg.paramName())
+                    .addParameters(cfg.parameters())
                     .build();
             builder.addMethod(findMethod);
         }

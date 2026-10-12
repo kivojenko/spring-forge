@@ -96,24 +96,29 @@ public final class ControllerGenerator {
     var getOrCreates = model.isAbstract() ? List.<GetOrCreateModel>of() : GetOrCreateModel.resolve(model);
     for (var cfg : getOrCreates) {
       var mapping = AnnotationSpec.builder(POST_MAPPING).addMember("value", "$S", cfg.path());
-      // Several get-or-creates may share a path; the request parameter tells them apart.
-      if (getOrCreates.size() > 1) mapping.addMember("params", "$S", cfg.fieldPath());
+      // Several get-or-creates may share a path; the request parameters tell them apart.
+      if (getOrCreates.size() > 1) {
+        var params = cfg.fields().stream().map(f -> CodeBlock.of("$S", f.fieldPath())).collect(CodeBlock.joining(", "));
+        mapping.addMember("params", "{$L}", params);
+      }
 
-      var paramName = cfg.paramName();
-      var requestParam = AnnotationSpec.builder(REQUEST_PARAM)
-          .addMember("name", "$S", cfg.fieldPath())
-          .build();
-      var param = ParameterSpec.builder(cfg.fieldType(), paramName).addAnnotation(requestParam).build();
       var getOrCreateBuilder = MethodSpec
           .methodBuilder(cfg.getOrCreateMethodName())
-          .addJavadoc("Retrieves an existing {@link $T} by $L or creates it if it does not exist.\n", model.getEntityType(), cfg.fieldPath())
-          .addJavadoc("@param $L the $L of the entity\n", paramName, cfg.fieldPath())
+          .addJavadoc("Retrieves an existing {@link $T} by $L or creates it if it does not exist.\n", model.getEntityType(), cfg.description());
+      for (var field : cfg.fields()) {
+        var requestParam = AnnotationSpec.builder(REQUEST_PARAM)
+            .addMember("name", "$S", field.fieldPath())
+            .build();
+        getOrCreateBuilder
+            .addJavadoc("@param $L the $L of the entity\n", field.paramName(), field.fieldPath())
+            .addParameter(field.parameter().toBuilder().addAnnotation(requestParam).build());
+      }
+      getOrCreateBuilder
           .addJavadoc("@return the retrieved or newly created entity\n")
           .addModifiers(Modifier.PUBLIC)
           .addAnnotation(mapping.build())
-          .addParameter(param)
           .returns(model.getEntityType())
-          .addStatement("return service.$L($L)", cfg.getOrCreateMethodName(), paramName);
+          .addStatement("return service.$L($L)", cfg.getOrCreateMethodName(), cfg.arguments());
       if (model.getRequirements().effectiveDetailView() != null) {
         getOrCreateBuilder.addAnnotation(
             AnnotationSpec.builder(JSON_VIEW)

@@ -10,7 +10,7 @@ import lombok.Setter;
 @Entity
 @DiscriminatorValue("CAR")
 @WithRestController
-@GetOrCreate(field = "name")
+@GetOrCreate(fields = "name")
 @Getter
 @Setter
 public class Car extends Vehicle {

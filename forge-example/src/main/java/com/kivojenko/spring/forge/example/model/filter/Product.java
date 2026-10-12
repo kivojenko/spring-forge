@@ -34,8 +34,9 @@ import java.util.Set;
 @Entity
 @Table(name = "products")
 @WithRestController
-@GetOrCreate(field = "sku")
-@GetOrCreate(field = "name", ignoreCase = false)
+@GetOrCreate(fields = "sku")
+@GetOrCreate(fields = "name", ignoreCase = false)
+@GetOrCreate(fields = {"brand", "name"})
 public class Product {
 
   @Id

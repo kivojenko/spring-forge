@@ -63,4 +63,25 @@ public class OfficeGetOrCreateByCountryCodeTest extends WithPostgres {
 
     mockMvc.perform(get("/offices/count")).andExpect(status().isOk()).andExpect(jsonPath("$", is(1)));
   }
+
+  @Test
+  void testGetOrCreateByNameAndCountryCode() throws Exception {
+    mockMvc.perform(post("/offices/get-or-create").param("name", "HQ").param("country.code", "EE"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.name", is("HQ")))
+        .andExpect(jsonPath("$.country.code", is("EE")));
+
+    mockMvc.perform(post("/offices/get-or-create").param("name", "hq").param("country.code", "EE"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.name", is("HQ")));
+
+    mockMvc.perform(get("/offices/count")).andExpect(status().isOk()).andExpect(jsonPath("$", is(1)));
+
+    // Same name in another country is a different office
+    mockMvc.perform(post("/offices/get-or-create").param("name", "HQ").param("country.code", "DE"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.country.code", is("DE")));
+
+    mockMvc.perform(get("/offices/count")).andExpect(status().isOk()).andExpect(jsonPath("$", is(2)));
+  }
 }

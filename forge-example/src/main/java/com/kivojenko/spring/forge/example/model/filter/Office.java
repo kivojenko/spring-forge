@@ -23,7 +23,8 @@ import lombok.Setter;
 @Entity
 @Table(name = "offices")
 @WithRestController
-@GetOrCreate(field = "country.code")
+@GetOrCreate(fields = "country.code")
+@GetOrCreate(fields = {"name", "country.code"})
 public class Office {
 
     @Id
