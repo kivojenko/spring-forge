@@ -415,6 +415,10 @@ on a single row instead of blowing up. Any field works, including a nested one:
 @GetOrCreate(fields = "country.code")   // POST /offices/get-or-create?country.code=EE
 ```
 
+A nested key field must end at the related entity's ID. When the entity is created, the related entity is
+fetched by that ID or created if it does not exist yet, so `?country.code=FI` also creates country `FI`.
+Relations with a database-generated ID (`@GeneratedValue`) cannot be created from a key and are linked by reference.
+
 Several fields form a composite key: the entity is looked up by all of them and created with all of them set.
 
 ```java

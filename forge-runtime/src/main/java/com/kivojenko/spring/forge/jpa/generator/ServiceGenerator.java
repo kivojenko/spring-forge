@@ -5,6 +5,7 @@ import com.kivojenko.spring.forge.jpa.model.base.JpaEntityModel;
 import com.squareup.javapoet.*;
 
 import javax.lang.model.element.Modifier;
+import java.util.LinkedHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -82,7 +83,11 @@ public final class ServiceGenerator {
     }
 
     // Generate getOrCreate per @GetOrCreate (fields default to "name"). Supports nested paths like "country.code".
+    var relationHelpers = new LinkedHashMap<String, MethodSpec>();
     for (var cfg : GetOrCreateModel.resolve(model)) {
+      // Missing related entities of nested key fields are created too; a relation shared by several keys gets one helper.
+      model.relationGetOrCreateMethods(cfg.fields()).forEach(m -> relationHelpers.putIfAbsent(m.name, m));
+
       var args = cfg.arguments();
       var findMethod = cfg.findMethodName();
 
@@ -121,6 +126,7 @@ public final class ServiceGenerator {
           .addMethod(getOrCreate.build())
           .addMethod(createSafely.build());
     }
+    builder.addMethods(relationHelpers.values());
 
 
     if (model.wantsFilter()) {

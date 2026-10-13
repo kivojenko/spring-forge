@@ -13,6 +13,7 @@ import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeName;
+import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.MappedSuperclass;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -167,10 +168,8 @@ public final class JpaEntityModel {
             String target;
             CodeBlock value;
             if (path.contains(".")) {
-                var relationField = path.split("\\.")[0];
-                var relationModel = resolveRelationIdTarget(path);
-                target = relationField;
-                value = CodeBlock.of("entityManager.getReference($T.class, $L)", relationModel.getEntityType(), field.paramName());
+                target = path.split("\\.")[0];
+                value = relationValue(path, field.paramName());
             } else {
                 target = path;
                 value = CodeBlock.of("$L", field.paramName());
@@ -211,9 +210,8 @@ public final class JpaEntityModel {
         // Support nested path like "country.code" (relation.id)
         if (fieldName != null && fieldName.contains(".")) {
             var relationField = fieldName.split("\\.")[0];
-            var relationModel = resolveRelationIdTarget(fieldName);
-            var idType = relationModel.getJpaId().type();
-            return createViaRelationId(methodName, relationField, relationModel.getEntityType(), idType);
+            var idType = resolveRelationIdTarget(fieldName).getJpaId().type();
+            return createViaRelationId(methodName, relationField, idType, relationValue(fieldName, relationField + "Id"));
         }
 
         var typeMirror = findFieldTypeMirror(fieldName);
@@ -231,6 +229,66 @@ public final class JpaEntityModel {
         if (hasCtorWithSingleParam(typeMirror)) return createViaCtor(methodName, fieldName, typeName);
 
         throw new IllegalStateException("Cannot generate create(..) for field '" + fieldName + "' on " + getElement().getSimpleName());
+    }
+
+    /**
+     * The expression linking the relation of a nested key path to the entity being created: the related entity
+     * fetched or created by its ID, or a plain reference when the related ID is database-generated.
+     */
+    private CodeBlock relationValue(String path, String paramName) {
+        var relationModel = resolveRelationIdTarget(path);
+        if (relationModel.isIdGenerated()) {
+            return CodeBlock.of("entityManager.getReference($T.class, $L)", relationModel.getEntityType(), paramName);
+        }
+        return CodeBlock.of("$L($L)", relationGetOrCreateMethodName(path), paramName);
+    }
+
+    private static String relationGetOrCreateMethodName(String path) {
+        return "getOrCreate" + StringUtils.capitalize(path.split("\\.")[0]);
+    }
+
+    /**
+     * Builds the helpers that fetch or create the related entities of the given key fields by their ID,
+     * one per relation, so that get-or-create also creates a missing related entity.
+     * Relations whose ID is database-generated are linked by reference and get no helper.
+     */
+    public List<MethodSpec> relationGetOrCreateMethods(List<GetOrCreateModel.KeyField> fields) {
+        var methods = new ArrayList<MethodSpec>();
+        for (var field : fields) {
+            var path = field.fieldPath();
+            if (!path.contains(".")) continue;
+            var relationModel = resolveRelationIdTarget(path);
+            if (relationModel.isIdGenerated()) continue;
+
+            var relationField = path.split("\\.")[0];
+            var relationType = relationModel.getEntityType();
+            var idName = relationModel.getJpaId().name();
+            var newMethodName = "new" + StringUtils.capitalize(relationField);
+            methods.add(relationModel.createMethodForField(idName, newMethodName));
+            methods.add(MethodSpec
+                    .methodBuilder(relationGetOrCreateMethodName(path))
+                    .addJavadoc("Retrieves the {@link $T} with the given ID or creates it if it does not exist.\n", relationType)
+                    .addJavadoc("@param $L the ID of $L\n", idName, relationField)
+                    .addJavadoc("@return the retrieved or newly created related entity\n")
+                    .addModifiers(Modifier.PROTECTED)
+                    .returns(relationType)
+                    .addParameter(relationModel.getJpaId().type(), idName)
+                    .addStatement("var existing = entityManager.find($T.class, $L)", relationType, idName)
+                    .beginControlFlow("if (existing != null)")
+                    .addStatement("return existing")
+                    .endControlFlow()
+                    .addStatement("var created = $L($L)", newMethodName, idName)
+                    .addStatement("entityManager.persist(created)")
+                    .addStatement("return created")
+                    .build());
+        }
+        return methods;
+    }
+
+    /** @return whether the ID of this entity is assigned by the database ({@link GeneratedValue}) */
+    public boolean isIdGenerated() {
+        var idField = findFieldInHierarchy(getElement(), getJpaId().name());
+        return idField != null && idField.getAnnotation(GeneratedValue.class) != null;
     }
 
     /**
@@ -405,7 +463,7 @@ public final class JpaEntityModel {
         return TypeName.get(tm);
     }
 
-    private MethodSpec createViaRelationId(String methodName, String relationField, ClassName relationType, TypeName idType) {
+    private MethodSpec createViaRelationId(String methodName, String relationField, TypeName idType, CodeBlock value) {
         // create(<ID> relationId)
         var param = com.squareup.javapoet.ParameterSpec.builder(idType, relationField + "Id").build();
 
@@ -419,7 +477,7 @@ public final class JpaEntityModel {
                         .addModifiers(Modifier.PROTECTED)
                         .returns(getEntityType())
                         .addParameter(param)
-                        .addStatement("return $T.builder().$L(entityManager.getReference($T.class, $L)).build()", getEntityType(), relationField, relationType, param.name)
+                        .addStatement("return $T.builder().$L($L).build()", getEntityType(), relationField, value)
                         .build();
             }
             // builder exists but no direct setter on builder -> builder + setter
@@ -432,7 +490,7 @@ public final class JpaEntityModel {
                     .returns(getEntityType())
                     .addParameter(param)
                     .addStatement("var entity = $T.builder().build()", getEntityType())
-                    .addStatement("entity.$L(entityManager.getReference($T.class, $L))", StringUtils.setterName(relationField), relationType, param.name)
+                    .addStatement("entity.$L($L)", StringUtils.setterName(relationField), value)
                     .addStatement("return entity")
                     .build();
         }
@@ -447,7 +505,7 @@ public final class JpaEntityModel {
                     .returns(getEntityType())
                     .addParameter(param)
                     .addStatement("var entity = new $T()", getEntityType())
-                    .addStatement("entity.$L(entityManager.getReference($T.class, $L))", StringUtils.setterName(relationField), relationType, param.name)
+                    .addStatement("entity.$L($L)", StringUtils.setterName(relationField), value)
                     .addStatement("return entity")
                     .build();
         }

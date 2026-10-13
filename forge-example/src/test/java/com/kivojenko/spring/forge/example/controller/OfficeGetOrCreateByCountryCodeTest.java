@@ -84,4 +84,24 @@ public class OfficeGetOrCreateByCountryCodeTest extends WithPostgres {
 
     mockMvc.perform(get("/offices/count")).andExpect(status().isOk()).andExpect(jsonPath("$", is(2)));
   }
+
+  @Test
+  void testGetOrCreateCreatesMissingCountry() throws Exception {
+    mockMvc.perform(post("/offices/get-or-create").param("country.code", "FI"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.country.code", is("FI")))
+        .andExpect(jsonPath("$.id").exists());
+
+    mockMvc.perform(get("/countries/{id}", "FI")).andExpect(status().isOk()).andExpect(jsonPath("$.code", is("FI")));
+    mockMvc.perform(get("/countries/count")).andExpect(status().isOk()).andExpect(jsonPath("$", is(3)));
+
+    // A composite key reuses the country created above instead of creating it again
+    mockMvc.perform(post("/offices/get-or-create").param("name", "Helsinki").param("country.code", "FI"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.name", is("Helsinki")))
+        .andExpect(jsonPath("$.country.code", is("FI")));
+
+    mockMvc.perform(get("/countries/count")).andExpect(status().isOk()).andExpect(jsonPath("$", is(3)));
+    mockMvc.perform(get("/offices/count")).andExpect(status().isOk()).andExpect(jsonPath("$", is(2)));
+  }
 }
