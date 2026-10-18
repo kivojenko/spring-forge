@@ -4,6 +4,7 @@ import com.kivojenko.spring.forge.annotation.WithRestController;
 import com.kivojenko.spring.forge.annotation.filter.FilterField;
 import com.kivojenko.spring.forge.annotation.filter.FilterSearchField;
 import com.kivojenko.spring.forge.annotation.filter.StringMatchMode;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -12,6 +13,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,6 +52,20 @@ public class Post {
   @Builder.Default
   @FilterSearchField(stringMatchMode = StringMatchMode.CONTAINS_IGNORE_CASE)
   private List<String> tags = new ArrayList<>();
+
+  // Entity collection searched by a field of its elements: id in (select … join aliases a where a.value …)
+  @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+  @JoinColumn(name = "post_id")
+  @Builder.Default
+  @FilterSearchField(targetField = "value", stringMatchMode = StringMatchMode.CONTAINS_IGNORE_CASE)
+  private List<PostAlias> aliases = new ArrayList<>();
+
+  // Collection of embeddables searched by a field of its elements
+  @ElementCollection
+  @CollectionTable(name = "post_links", joinColumns = @JoinColumn(name = "post_id"))
+  @Builder.Default
+  @FilterSearchField(targetField = "label", stringMatchMode = StringMatchMode.CONTAINS_IGNORE_CASE)
+  private List<PostLink> links = new ArrayList<>();
 
   // Standalone filter field alongside search fields
   @FilterField

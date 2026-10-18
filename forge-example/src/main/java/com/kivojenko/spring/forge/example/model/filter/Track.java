@@ -52,6 +52,9 @@ public class Track {
   @Column(name = "tag")
   @Builder.Default
   @FilterField(stringMatchMode = StringMatchMode.STARTS_WITH_ANY)
+  @FilterField(name = "tagPrefix", stringMatchMode = StringMatchMode.STARTS_WITH_ANY_IGNORE_CASE)
+  @FilterField(name = "tagSuffix", stringMatchMode = StringMatchMode.ENDS_WITH_ANY_IGNORE_CASE)
+  @FilterField(name = "tagEnding", stringMatchMode = StringMatchMode.ENDS_WITH_IGNORE_CASE)
   private List<String> tags = new ArrayList<>();
 
   // Multi-value members of a family: either credit may match any of the values sent for it

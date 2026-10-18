@@ -220,6 +220,17 @@ class ProductControllerTest extends WithPostgres {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.content", hasSize(1)))
         .andExpect(jsonPath("$.content[0].brand", is("Samsung")));
+
+    // STARTS_WITH_IGNORE_CASE: a prefix in any case matches
+    mockMvc.perform(get("/products").param("manufacturer", "sAm"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(1)))
+        .andExpect(jsonPath("$.content[0].brand", is("Samsung")));
+
+    // ...but a match inside the value does not
+    mockMvc.perform(get("/products").param("manufacturer", "sung"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(0)));
   }
 
   @Test

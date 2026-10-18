@@ -31,6 +31,11 @@ public @interface GetOrCreate {
     /**
      * The entity fields to use for get-or-create lookup and creation; together they form the lookup key.
      * Defaults to {@code name}. Nested relation IDs are supported, e.g. {@code country.code}.
+     * <p>
+     * A path may go through a collection, matching when any element has the value and adding the value to the
+     * collection on creation: an {@code @ElementCollection} of basic values ({@code synonyms}), or a collection of
+     * entities keyed by the element's ID ({@code tags.code}), optionally inside {@code @Embedded} objects
+     * ({@code numberReferences.casNumbers.number}).
      */
     String[] fields() default {"name"};
 

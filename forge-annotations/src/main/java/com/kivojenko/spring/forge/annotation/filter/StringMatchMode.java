@@ -19,8 +19,12 @@ public enum StringMatchMode {
   CONTAINS_IGNORE_CASE,
   /** The target must start with the value. */
   STARTS_WITH,
+  /** The target must start with the value, ignoring case. */
+  STARTS_WITH_IGNORE_CASE,
   /** The target must end with the value. */
   ENDS_WITH,
+  /** The target must end with the value, ignoring case. */
+  ENDS_WITH_IGNORE_CASE,
   /** The target must equal at least one of the values. */
   EQUALS_ANY,
   /** The target must equal at least one of the values, ignoring case. */
@@ -31,8 +35,12 @@ public enum StringMatchMode {
   CONTAINS_ANY_IGNORE_CASE,
   /** The target must start with at least one of the values. */
   STARTS_WITH_ANY,
+  /** The target must start with at least one of the values, ignoring case. */
+  STARTS_WITH_ANY_IGNORE_CASE,
   /** The target must end with at least one of the values. */
-  ENDS_WITH_ANY;
+  ENDS_WITH_ANY,
+  /** The target must end with at least one of the values, ignoring case. */
+  ENDS_WITH_ANY_IGNORE_CASE;
 
   /**
    * The single-value mode this one applies to each supplied value — itself for a mode that already takes
@@ -47,7 +55,9 @@ public enum StringMatchMode {
       case CONTAINS_ANY -> CONTAINS;
       case CONTAINS_ANY_IGNORE_CASE -> CONTAINS_IGNORE_CASE;
       case STARTS_WITH_ANY -> STARTS_WITH;
+      case STARTS_WITH_ANY_IGNORE_CASE -> STARTS_WITH_IGNORE_CASE;
       case ENDS_WITH_ANY -> ENDS_WITH;
+      case ENDS_WITH_ANY_IGNORE_CASE -> ENDS_WITH_IGNORE_CASE;
       default -> this;
     };
   }

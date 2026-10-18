@@ -42,6 +42,11 @@ dependencies {
     testImplementation("org.testcontainers:junit-jupiter")
     testImplementation("org.testcontainers:postgresql")
     testImplementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.3")
+
+    // Compile-time error checks run the processor directly
+    testImplementation(project(":forge-processor"))
+    testImplementation(project(":forge-annotations"))
+    testImplementation("com.google.testing.compile:compile-testing:0.23.0")
 }
 
 

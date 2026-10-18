@@ -176,6 +176,50 @@ public class TrackFilterMultiValueStringTest extends WithPostgres {
   }
 
   @Test
+  void startsWithAnyIgnoreCaseMatchesPrefixesInAnyCase() throws Exception {
+    mockMvc.perform(get("/tracks").param("tagPrefix", "JAZZ"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(2)))
+        .andExpect(jsonPath("$.content[?(@.name == 'Alfa')]").exists())
+        .andExpect(jsonPath("$.content[?(@.name == 'Gamma')]").exists());
+
+    mockMvc.perform(get("/tracks").param("tagPrefix", "CLASS").param("tagPrefix", "Li"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(2)))
+        .andExpect(jsonPath("$.content[?(@.name == 'Alfa')]").exists())
+        .andExpect(jsonPath("$.content[?(@.name == 'Beta')]").exists());
+
+    mockMvc.perform(get("/tracks").param("tagPrefix", "FUSION"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(0)));
+  }
+
+  @Test
+  void endsWithAnyIgnoreCaseMatchesSuffixesInAnyCase() throws Exception {
+    mockMvc.perform(get("/tracks").param("tagSuffix", "FUSION").param("tagSuffix", "Ical"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(2)))
+        .andExpect(jsonPath("$.content[?(@.name == 'Beta')]").exists())
+        .andExpect(jsonPath("$.content[?(@.name == 'Gamma')]").exists());
+
+    // ENDS_WITH, so a prefix alone matches nothing
+    mockMvc.perform(get("/tracks").param("tagSuffix", "JAZ"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(0)));
+  }
+
+  @Test
+  void endsWithIgnoreCaseTakesASingleValue() throws Exception {
+    var filterClass = Class.forName("com.kivojenko.spring.forge.example.model.filter.TrackForgeFilter");
+    Assertions.assertEquals(String.class, filterClass.getDeclaredField("tagEnding").getType());
+
+    mockMvc.perform(get("/tracks").param("tagEnding", "VE"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(1)))
+        .andExpect(jsonPath("$.content[0].name").value("Alfa"));
+  }
+
+  @Test
   void multiValueMembersOfAFamilyAreOrEdWithEachOther() throws Exception {
     mockMvc.perform(get("/tracks").param("artist", "ada").param("artist", "cyd"))
         .andExpect(status().isOk())

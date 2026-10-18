@@ -404,7 +404,9 @@ public class FilterFieldModel {
   public static String stringOperator(StringMatchMode mode) {
     return switch (mode.singleValue()) {
       case STARTS_WITH -> "startsWith";
+      case STARTS_WITH_IGNORE_CASE -> "startsWithIgnoreCase";
       case ENDS_WITH -> "endsWith";
+      case ENDS_WITH_IGNORE_CASE -> "endsWithIgnoreCase";
       case CONTAINS -> "contains";
       case EQUALS -> "eq";
       case EQUALS_IGNORE_CASE -> "equalsIgnoreCase";

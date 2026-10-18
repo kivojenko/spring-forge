@@ -46,8 +46,10 @@ public class FilterFieldModelFactory {
    * @param type          the type of the leaf field (the element type when the leaf is a collection)
    * @param queryPath     the QueryDSL path, with {@code .any()} inserted for intermediate collections
    * @param collectionLeaf whether the leaf field is a collection
+   * @param collectionElements the element type of every collection met along the path, in order
    */
-  private record TargetPath(TypeMirror type, String queryPath, boolean collectionLeaf) {}
+  private record TargetPath(
+      TypeMirror type, String queryPath, boolean collectionLeaf, List<TypeMirror> collectionElements) {}
 
   public static List<FilterFieldModel> resolve(TypeElement entity, ProcessingEnvironment env) {
     var filterFields = collect(entity, env, true);
@@ -121,12 +123,18 @@ public class FilterFieldModelFactory {
           var originalSingleEntity = singleEntity;
           var targetPath = targetField;
           var scalarCollection = false;
+          // Element types of the collections between the entity and the searched value, in path order
+          var collectionElements = new ArrayList<TypeMirror>();
+          if (isIterable && !typeUtils.isSameType(entityCandidate, type)) {
+            collectionElements.add(entityCandidate);
+          }
 
           if (!targetField.isEmpty()) {
             var base = singleEntity || isIterable || embedded ? entityCandidate : entity.asType();
             var resolvedTarget = resolveTargetPath(base, targetField, env);
             targetPath = resolvedTarget.queryPath();
             scalarCollection = resolvedTarget.collectionLeaf();
+            collectionElements.addAll(resolvedTarget.collectionElements());
           } else if (scalarElements) {
             scalarCollection = true;
           }
@@ -145,6 +153,7 @@ public class FilterFieldModelFactory {
               .originalSingleEntity(originalSingleEntity)
               .originalEmbedded(embedded)
               .scalarCollection(scalarCollection)
+              .joinAliasTypes(joinAliasTypes(collectionElements, env))
               .build();
 
           searchFields.add(model);
@@ -160,6 +169,28 @@ public class FilterFieldModelFactory {
     }
 
     return searchFields;
+  }
+
+  /**
+   * The QueryDSL path type each collection element is joined as: the generated {@code Q} class of an
+   * entity or embeddable, or {@code null} for a scalar element, which is joined as a plain string path.
+   */
+  private static List<ClassName> joinAliasTypes(List<TypeMirror> elements, ProcessingEnvironment env) {
+    var aliasTypes = new ArrayList<ClassName>();
+    for (var element : elements) {
+      var typeElement = env.getTypeUtils().asElement(element);
+      var managed = typeElement instanceof TypeElement te
+          && (te.getAnnotation(Entity.class) != null
+              || te.getAnnotation(jakarta.persistence.Embeddable.class) != null
+              || te.getAnnotation(MappedSuperclass.class) != null);
+      if (!managed) {
+        aliasTypes.add(null);
+        continue;
+      }
+      var className = ClassName.get((TypeElement) typeElement);
+      aliasTypes.add(ClassName.get(className.packageName(), "Q" + String.join("_", className.simpleNames())));
+    }
+    return aliasTypes;
   }
 
   private static List<FilterFieldModel> collect(TypeElement entity, ProcessingEnvironment env, boolean uniqueByName) {
@@ -447,18 +478,19 @@ public class FilterFieldModelFactory {
 
     var currentType = startType;
     var resolved = new StringBuilder();
+    var collectionElements = new ArrayList<TypeMirror>();
     var parts = path.split("\\.");
 
     for (int i = 0; i < parts.length; i++) {
       var element = typeUtils.asElement(currentType);
       if (!(element instanceof TypeElement typeElement)) {
-        return new TargetPath(currentType, path, false);
+        return new TargetPath(currentType, path, false, collectionElements);
       }
 
       var field = findFieldInHierarchy(typeElement, parts[i], env);
       if (field == null) {
         // If not found anywhere in the hierarchy, keep current type and path (best-effort, backward compatible)
-        return new TargetPath(currentType, path, false);
+        return new TargetPath(currentType, path, false, collectionElements);
       }
 
       currentType = field.asType();
@@ -474,16 +506,17 @@ public class FilterFieldModelFactory {
       var elementType = elementTypeOf(currentType);
       if (typeUtils.isSameType(elementType, currentType)) {
         // Raw collection — we cannot say what it holds, so leave the path alone
-        return new TargetPath(currentType, resolved.toString(), false);
+        return new TargetPath(currentType, resolved.toString(), false, collectionElements);
       }
       currentType = elementType;
+      collectionElements.add(elementType);
       if (i == parts.length - 1) {
-        return new TargetPath(currentType, resolved.toString(), true);
+        return new TargetPath(currentType, resolved.toString(), true, collectionElements);
       }
       resolved.append(".any()");
     }
 
-    return new TargetPath(currentType, resolved.toString(), false);
+    return new TargetPath(currentType, resolved.toString(), false, collectionElements);
   }
 
   /**

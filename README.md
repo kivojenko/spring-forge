@@ -376,7 +376,7 @@ Each one implies the layers below it, so you only ever annotate for the topmost 
 
 | Attribute | Default | Description |
 |---|---|---|
-| `fields` | `{"name"}` | Lookup/creation key; several fields form a composite key. Supports nested paths such as `"country.code"` |
+| `fields` | `{"name"}` | Lookup/creation key; several fields form a composite key. Supports nested paths such as `"country.code"` and [collection elements](#collection-keys) such as `"tags.code"` |
 | `path` | `"/get-or-create"` | Endpoint path, relative to the resource |
 | `ignoreCase` | `true` | Case-insensitive lookup for the `String` fields of the key; ignored for other types |
 
@@ -455,6 +455,69 @@ parameters, so `?brand=Acme&name=Anvil` goes to the composite key rather than to
 
 With a single annotation the names stay `getOrCreate` / `create` / `createSafely`. If a `@FilterField`
 already generates `findBy<Field>` for the same field, the lookup uses `findOneBy<Field>` instead.
+
+#### Collection keys
+
+A key field may go through a collection: the entity matches when **any** element has the given value, and a
+created entity gets the value added to the collection. Two shapes are supported:
+
+| Collection | Key path | Lookup matches | On create |
+|---|---|---|---|
+| `@ElementCollection Set<String> synonyms` | `"synonyms"` | any synonym equal to the value | the value is added |
+| `@ManyToMany Set<Cas> casNumbers` | `"casNumbers.number"` (the element's `@Id`) | any element with that ID | the element is added, fetched by its ID or created if missing |
+
+The collection may sit inside `@Embedded` objects, and collection keys combine with plain fields and with
+other `@GetOrCreate`s like any other key:
+
+```java
+@Embeddable
+public class NumberReferences {
+  @ManyToMany private Set<Cas> casNumbers;   // Cas: @Id String number
+}
+
+@Entity
+@WithRestController
+@GetOrCreate(fields = "numberReferences.casNumbers.number")  // POST /chemicals/get-or-create?numberReferences.casNumbers.number=7732-18-5
+@GetOrCreate(fields = "synonyms")                            // POST /chemicals/get-or-create?synonyms=Aqua
+@GetOrCreate(fields = {"name", "hazards.code"})              // POST /chemicals/get-or-create?name=Ethanol&hazards.code=H225
+public class Chemical {
+  @Embedded private NumberReferences numberReferences;
+  @ElementCollection private Set<String> synonyms;
+  @ManyToMany private List<Hazard> hazards;                  // Hazard: @Id String code
+}
+```
+
+```java
+// generated in ChemicalForgeService
+public Chemical getOrCreateByNumberReferencesCasNumbersNumber(String numberReferencesCasNumbersNumber) {
+  return repository.findFirstByNumberReferences_CasNumbers_NumberIgnoreCaseOrderByIdAsc(numberReferencesCasNumbersNumber)
+      .orElseGet(() -> createSafelyByNumberReferencesCasNumbersNumber(numberReferencesCasNumbersNumber));
+}
+
+protected Chemical createByNumberReferencesCasNumbersNumber(String numberReferencesCasNumbersNumber) {
+  var entity = Chemical.builder().build();
+  if (entity.getNumberReferences() == null) entity.setNumberReferences(new NumberReferences());
+  if (entity.getNumberReferences().getCasNumbers() == null) entity.getNumberReferences().setCasNumbers(new LinkedHashSet<>());
+  entity.getNumberReferences().getCasNumbers().add(getOrCreateCas(numberReferencesCasNumbersNumber));
+  return entity;
+}
+```
+
+- **Lookup.** Since several entities (or several elements of one entity) can match, the finder is
+  `findFirstBy…OrderBy<Id>Asc`: the entity with the lowest ID wins. `ignoreCase` applies to `String` elements.
+- **Missing elements.** As with [nested keys](#getorcreate-in-detail), an element entity whose ID is assigned
+  (not `@GeneratedValue`) is created when missing, through a `getOrCreate<Element>` helper on the service
+  (`getOrCreateCas` above). An element with a database-generated ID is linked with `entityManager.getReference`
+  and must already exist.
+- **Initialization.** A `null` collection is initialized (`LinkedHashSet` for sets, `ArrayList` for lists, or
+  the declared class when it is concrete), and so is a `null` `@Embedded` object (public no-arg constructor or
+  Lombok builder). A `@Builder.Default` collection is used as is.
+
+These shapes are rejected at compile time with an `Unsupported @GetOrCreate key` error:
+a `Map`; a collection of entities not keyed by the element's `@Id` (`tags.name`, or just `tags`);
+a path continuing past a collection of basic values; a collection of `@Embeddable` values; the inverse
+(`mappedBy`) side of an association, where adding an element would not be persisted; and a collection
+reached through a related entity (`owner.tags.code`) rather than through `@Embedded` objects.
 
 ### `@WithEndpoints`
 
@@ -744,8 +807,8 @@ private String brand;              // ?manufacturer=Acme
 
 | Attribute | Values | Default |
 |---|---|---|
-| `stringMatchMode` | `EQUALS`, `EQUALS_IGNORE_CASE`, `CONTAINS`, `CONTAINS_IGNORE_CASE`, `STARTS_WITH`, `ENDS_WITH` | `CONTAINS` |
-| `stringMatchMode`, several values | `EQUALS_ANY`, `EQUALS_ANY_IGNORE_CASE`, `CONTAINS_ANY`, `CONTAINS_ANY_IGNORE_CASE`, `STARTS_WITH_ANY`, `ENDS_WITH_ANY` | — |
+| `stringMatchMode` | `EQUALS`, `EQUALS_IGNORE_CASE`, `CONTAINS`, `CONTAINS_IGNORE_CASE`, `STARTS_WITH`, `STARTS_WITH_IGNORE_CASE`, `ENDS_WITH`, `ENDS_WITH_IGNORE_CASE` | `CONTAINS` |
+| `stringMatchMode`, several values | `EQUALS_ANY`, `EQUALS_ANY_IGNORE_CASE`, `CONTAINS_ANY`, `CONTAINS_ANY_IGNORE_CASE`, `STARTS_WITH_ANY`, `STARTS_WITH_ANY_IGNORE_CASE`, `ENDS_WITH_ANY`, `ENDS_WITH_ANY_IGNORE_CASE` | — |
 | `comparisonMatchMode` | `EXACT`, `RANGE`, `EXACT_OR_RANGE` | `EXACT_OR_RANGE` |
 | `iterableMatchMode` | `ANY`, `ALL` | `ANY` |
 | `minBoundMode` / `maxBoundMode` | `INCLUDES`, `EXCLUDES` | `INCLUDES` |
@@ -979,7 +1042,7 @@ A request like `GET /posts?search=spring` will match posts where `title`, `conte
 
 | Attribute | Default | Description |
 |---|---|---|
-| `stringMatchMode` | `CONTAINS` | String matching mode (`CONTAINS`, `CONTAINS_IGNORE_CASE`, `STARTS_WITH`, `ENDS_WITH`, `EQUALS`, `EQUALS_IGNORE_CASE`, etc.) |
+| `stringMatchMode` | `CONTAINS` | String matching mode (`CONTAINS`, `CONTAINS_IGNORE_CASE`, `STARTS_WITH`, `STARTS_WITH_IGNORE_CASE`, `ENDS_WITH`, `ENDS_WITH_IGNORE_CASE`, `EQUALS`, `EQUALS_IGNORE_CASE`, etc.) |
 | `targetField` | `""` | Target path relative to association/embedded field or absolute path |
 | `name` | `""` (resolves to `"search"`) | Search parameter name in the filter DTO |
 

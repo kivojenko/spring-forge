@@ -5,6 +5,7 @@ import com.kivojenko.spring.forge.jpa.factory.EndpointRelationResolver;
 import com.kivojenko.spring.forge.jpa.factory.FilterFieldModelFactory;
 import com.kivojenko.spring.forge.jpa.model.FilterFieldModel;
 import com.kivojenko.spring.forge.jpa.model.FilterSearchFieldModel;
+import com.kivojenko.spring.forge.jpa.model.CollectionKeyPath;
 import com.kivojenko.spring.forge.jpa.model.GetOrCreateModel;
 import com.kivojenko.spring.forge.jpa.model.relation.EndpointRelation;
 import com.kivojenko.spring.forge.jpa.utils.StringUtils;
@@ -20,8 +21,11 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
+import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 
 import javax.annotation.processing.ProcessingEnvironment;
@@ -153,18 +157,30 @@ public final class JpaEntityModel {
      * Builds a {@code <methodName>(...)} factory method that sets every given key field.
      * A single field keeps the builder/setter/ctor paths of {@link #createMethodForField(String, String)};
      * several fields are set through the builder where it exposes them and through setters otherwise.
+     * A collection key adds its value to the collection once the entity is built, initializing the collection
+     * and the {@code @Embedded} objects leading to it when they are {@code null}.
      */
     public MethodSpec createMethodForFields(List<GetOrCreateModel.KeyField> fields, String methodName) {
-        if (fields.size() == 1) return createMethodForField(fields.getFirst().fieldPath(), methodName);
+        if (fields.size() == 1 && !fields.getFirst().isCollection()) {
+            return createMethodForField(fields.getFirst().fieldPath(), methodName);
+        }
 
         var builderAssignments = new ArrayList<CodeBlock>();
         var setterAssignments = new ArrayList<CodeBlock>();
+        var collectionAdditions = new ArrayList<CodeBlock>();
+        var initialized = new HashSet<String>();
         var method = MethodSpec
                 .methodBuilder(methodName)
                 .addJavadoc("Creates a new instance of {@link $T} with the given key fields.\n", getEntityType());
 
         for (var field : fields) {
             var path = field.fieldPath();
+            if (field.isCollection()) {
+                method.addJavadoc("@param $L the value added to the $L of the entity\n", field.paramName(), path);
+                method.addParameter(field.parameter());
+                collectionAdditions.addAll(collectionAddition(field, initialized));
+                continue;
+            }
             String target;
             CodeBlock value;
             if (path.contains(".")) {
@@ -190,7 +206,7 @@ public final class JpaEntityModel {
 
         if (hasBuilder()) {
             var build = CodeBlock.of("$T.builder()$L.build()", getEntityType(), CodeBlock.join(builderAssignments, ""));
-            if (setterAssignments.isEmpty()) return method.addStatement("return $L", build).build();
+            if (setterAssignments.isEmpty() && collectionAdditions.isEmpty()) return method.addStatement("return $L", build).build();
             method.addStatement("var entity = $L", build);
         } else if (hasEmptyCtor()) {
             method.addStatement("var entity = new $T()", getEntityType());
@@ -200,7 +216,62 @@ public final class JpaEntityModel {
                     ": a builder or an empty constructor is required");
         }
         setterAssignments.forEach(method::addStatement);
+        collectionAdditions.forEach(method::addStatement);
         return method.addStatement("return entity").build();
+    }
+
+    /**
+     * The statements adding the value of a collection key to the entity being created, e.g.
+     * {@code entity.getNumberReferences().getCasNumbers().add(getOrCreateCas(number))}, preceded by the
+     * initialization of the {@code null} holders and collection; {@code initialized} keeps paths already initialized
+     * by an earlier key of the same method.
+     */
+    private List<CodeBlock> collectionAddition(GetOrCreateModel.KeyField field, Set<String> initialized) {
+        var collection = field.collection();
+        var statements = new ArrayList<CodeBlock>();
+        var owner = CodeBlock.of("entity");
+        var path = "";
+        for (int i = 0; i < collection.holders().size(); i++) {
+            var holder = collection.holders().get(i);
+            path += "." + holder;
+            if (initialized.add(path)) {
+                statements.add(CodeBlock.of("if ($L.$L() == null) $L.$L($L)", owner, StringUtils.getterName(holder),
+                        owner, StringUtils.setterName(holder), instantiate(collection.holderTypes().get(i))));
+            }
+            owner = CodeBlock.of("$L.$L()", owner, StringUtils.getterName(holder));
+        }
+
+        var collectionField = collection.collectionField();
+        if (initialized.add(path + "." + collectionField)) {
+            statements.add(CodeBlock.of("if ($L.$L() == null) $L.$L(new $T<>())", owner, StringUtils.getterName(collectionField),
+                    owner, StringUtils.setterName(collectionField), collection.collectionImplementation(env)));
+        }
+
+        CodeBlock value;
+        if (!collection.hasEntityElements()) {
+            value = CodeBlock.of("$L", field.paramName());
+        } else if (collection.elementModel().isIdGenerated()) {
+            value = CodeBlock.of("entityManager.getReference($T.class, $L)", collection.elementModel().getEntityType(), field.paramName());
+        } else {
+            value = CodeBlock.of("$L($L)", elementGetOrCreateMethodName(collection.elementModel()), field.paramName());
+        }
+        statements.add(CodeBlock.of("$L.$L().add($L)", owner, StringUtils.getterName(collectionField), value));
+        return statements;
+    }
+
+    /** The expression creating an empty instance of an {@code @Embedded} type: its no-arg constructor or its builder. */
+    private static CodeBlock instantiate(TypeElement type) {
+        var noArgsAnnotation = type.getAnnotation(NoArgsConstructor.class);
+        var hasPublicNoArgs = (noArgsAnnotation != null && noArgsAnnotation.access() == AccessLevel.PUBLIC) || type
+                .getEnclosedElements()
+                .stream()
+                .filter(e -> e.getKind() == ElementKind.CONSTRUCTOR)
+                .map(ExecutableElement.class::cast)
+                .anyMatch(c -> c.getParameters().isEmpty() && c.getModifiers().contains(Modifier.PUBLIC));
+        if (hasPublicNoArgs) return CodeBlock.of("new $T()", ClassName.get(type));
+        if (type.getAnnotation(Builder.class) != null) return CodeBlock.of("$T.builder().build()", ClassName.get(type));
+        throw new IllegalStateException("Cannot instantiate " + type.getSimpleName() + " for a @GetOrCreate collection key: "
+                + "a public no-arg constructor or a builder is required");
     }
 
     /**
@@ -247,28 +318,48 @@ public final class JpaEntityModel {
         return "getOrCreate" + StringUtils.capitalize(path.split("\\.")[0]);
     }
 
+    private static String elementGetOrCreateMethodName(JpaEntityModel elementModel) {
+        return "getOrCreate" + elementModel.getEntityType().simpleName();
+    }
+
     /**
      * Builds the helpers that fetch or create the related entities of the given key fields by their ID,
      * one per relation, so that get-or-create also creates a missing related entity.
      * Relations whose ID is database-generated are linked by reference and get no helper.
+     * Collection keys over entities get one helper per element type, e.g. {@code getOrCreateCas}.
      */
     public List<MethodSpec> relationGetOrCreateMethods(List<GetOrCreateModel.KeyField> fields) {
         var methods = new ArrayList<MethodSpec>();
         for (var field : fields) {
             var path = field.fieldPath();
+            if (field.isCollection()) {
+                var elementModel = field.collection().elementModel();
+                if (elementModel == null || elementModel.isIdGenerated()) continue;
+                var elementName = elementModel.getEntityType().simpleName();
+                methods.addAll(getOrCreateByIdMethods(elementModel, elementGetOrCreateMethodName(elementModel), "new" + elementName,
+                        "a " + elementName + " element"));
+                continue;
+            }
             if (!path.contains(".")) continue;
             var relationModel = resolveRelationIdTarget(path);
             if (relationModel.isIdGenerated()) continue;
 
             var relationField = path.split("\\.")[0];
-            var relationType = relationModel.getEntityType();
-            var idName = relationModel.getJpaId().name();
-            var newMethodName = "new" + StringUtils.capitalize(relationField);
-            methods.add(relationModel.createMethodForField(idName, newMethodName));
-            methods.add(MethodSpec
-                    .methodBuilder(relationGetOrCreateMethodName(path))
+            methods.addAll(getOrCreateByIdMethods(relationModel, relationGetOrCreateMethodName(path),
+                    "new" + StringUtils.capitalize(relationField), relationField));
+        }
+        return methods;
+    }
+
+    private static List<MethodSpec> getOrCreateByIdMethods(JpaEntityModel relationModel, String getOrCreateName, String newMethodName, String description) {
+        var relationType = relationModel.getEntityType();
+        var idName = relationModel.getJpaId().name();
+        return List.of(
+            relationModel.createMethodForField(idName, newMethodName),
+            MethodSpec
+                    .methodBuilder(getOrCreateName)
                     .addJavadoc("Retrieves the {@link $T} with the given ID or creates it if it does not exist.\n", relationType)
-                    .addJavadoc("@param $L the ID of $L\n", idName, relationField)
+                    .addJavadoc("@param $L the ID of $L\n", idName, description)
                     .addJavadoc("@return the retrieved or newly created related entity\n")
                     .addModifiers(Modifier.PROTECTED)
                     .returns(relationType)
@@ -281,8 +372,16 @@ public final class JpaEntityModel {
                     .addStatement("entityManager.persist(created)")
                     .addStatement("return created")
                     .build());
-        }
-        return methods;
+    }
+
+    /**
+     * Resolves a key path going through a collection.
+     *
+     * @param path the key path, e.g. {@code numberReferences.casNumbers.number}
+     * @return the resolved path, or {@code null} when the path is single-valued
+     */
+    public CollectionKeyPath resolveCollectionKeyPath(String path) {
+        return CollectionKeyPath.resolve(env, getElement(), path);
     }
 
     /** @return whether the ID of this entity is assigned by the database ({@link GeneratedValue}) */
@@ -621,9 +720,11 @@ public final class JpaEntityModel {
             builder.beginControlFlow("if ($L != null && !$L.isBlank())", searchParamName, searchParamName);
             var searchSink = "__" + searchParamName + "Builder";
             builder.addStatement("var $L = new $T()", searchSink, BooleanBuilder.class);
-            for (var sf : searchFieldList) {
+            for (int i = 0; i < searchFieldList.size(); i++) {
+                var sf = searchFieldList.get(i);
                 var op = FilterFieldModel.stringOperator(sf.getStringMatchMode());
-                builder.addStatement("$L.or(entity.$L." + op + "($L))", searchSink, sf.getTargetFieldName(), searchParamName);
+                sf.addSearchPredicate(
+                        builder, searchSink, searchParamName, i, op, getEntityPathType(), getJpaId().name());
             }
             builder.beginControlFlow("if ($L.hasValue())", searchSink);
             builder.addStatement("$L.and($L)", BUILDER_VAR_NAME, searchSink);

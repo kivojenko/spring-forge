@@ -12,6 +12,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.kivojenko.spring.forge.example.WithPostgres;
 import com.kivojenko.spring.forge.example.model.filter.Post;
+import com.kivojenko.spring.forge.example.model.filter.PostAlias;
+import com.kivojenko.spring.forge.example.model.filter.PostLink;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
@@ -42,6 +44,8 @@ public class PostControllerSearchFilterTest extends WithPostgres {
         .content("Build complex dynamic SQL predicates easily.")
         .slug("querydsl-patterns")
         .tags(List.of("sql", "jpa"))
+        .aliases(List.of(new PostAlias("Typesafe Queries"), new PostAlias("Queries Without Strings")))
+        .links(List.of(new PostLink("Reference manual", "https://querydsl.com")))
         .published(true)
         .authorName("Jane Smith")
         .build());
@@ -132,6 +136,33 @@ public class PostControllerSearchFilterTest extends WithPostgres {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.content", hasSize(1)))
         .andExpect(jsonPath("$.content[0].title", is("Getting Started with Spring Boot")));
+  }
+
+  @Test
+  void testSearchMatchingEntityCollection() throws Exception {
+    // "typesafe" matches an alias of post 2
+    mockMvc.perform(get("/posts").param("search", "typesafe"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(1)))
+        .andExpect(jsonPath("$.content[0].title", is("Advanced QueryDSL Patterns")));
+  }
+
+  @Test
+  void testSearchMatchingSeveralElementsReturnsPostOnce() throws Exception {
+    // "queries" matches both aliases of post 2 — the id subquery must not duplicate the row
+    mockMvc.perform(get("/posts").param("search", "queries"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(1)))
+        .andExpect(jsonPath("$.content[0].title", is("Advanced QueryDSL Patterns")));
+  }
+
+  @Test
+  void testSearchMatchingEmbeddableCollection() throws Exception {
+    // "manual" matches a link label of post 2
+    mockMvc.perform(get("/posts").param("search", "manual"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(1)))
+        .andExpect(jsonPath("$.content[0].title", is("Advanced QueryDSL Patterns")));
   }
 
   @Test

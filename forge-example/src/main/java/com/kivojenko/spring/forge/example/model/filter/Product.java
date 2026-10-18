@@ -59,7 +59,7 @@ public class Product {
   @FilterField
   private Boolean active;
 
-  @FilterField(name = "manufacturer")
+  @FilterField(name = "manufacturer", stringMatchMode = StringMatchMode.STARTS_WITH_IGNORE_CASE)
   private String brand;
 
   @FilterField(orNull = true)

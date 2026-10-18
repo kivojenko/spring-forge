@@ -20,7 +20,9 @@ import java.util.stream.Collectors;
  * @param fields         key fields used for lookup and creation, in declaration order
  * @param path           endpoint path relative to the resource
  * @param suffix         method name suffix; empty when the entity declares a single get-or-create
- * @param findMethodName repository finder used for lookup, e.g. {@code findByBrandIgnoreCaseAndCountry_Code}
+ * @param findMethodName repository finder used for lookup, e.g. {@code findByBrandIgnoreCaseAndCountry_Code};
+ *                       {@code findFirstBy...OrderByIdAsc} when the key goes through a collection, since several
+ *                       entities (or several elements of one entity) may then match
  */
 public record GetOrCreateModel(
     List<KeyField> fields,
@@ -33,11 +35,17 @@ public record GetOrCreateModel(
    * A single field of a get-or-create key.
    *
    * @param fieldPath  entity field (possibly nested, e.g. {@code country.code})
-   * @param fieldType  type of the field
+   * @param fieldType  type of the field; for a collection key, the type of a single element value
    * @param paramName  Java-safe parameter name (e.g. {@code countryCode})
    * @param ignoreCase whether the lookup on this field is case-insensitive
+   * @param collection the collection the path goes through, or {@code null} for a single-valued field
    */
-  public record KeyField(String fieldPath, TypeName fieldType, String paramName, boolean ignoreCase) {
+  public record KeyField(String fieldPath, TypeName fieldType, String paramName, boolean ignoreCase, CollectionKeyPath collection) {
+    /** @return whether the key matches any element of a collection */
+    public boolean isCollection() {
+      return collection != null;
+    }
+
     /** @return the method parameter for this field */
     public ParameterSpec parameter() {
       return ParameterSpec.builder(fieldType, paramName).build();
@@ -76,9 +84,10 @@ public record GetOrCreateModel(
       }
 
       var fields = fieldPaths.stream().map(fieldPath -> {
-        var fieldType = model.resolveFieldTypeName(fieldPath);
+        var collection = model.resolveCollectionKeyPath(fieldPath);
+        var fieldType = collection != null ? collection.leafType() : model.resolveFieldTypeName(fieldPath);
         var ignoreCase = fieldType.equals(ClassName.get(String.class)) && annotation.ignoreCase();
-        return new KeyField(fieldPath, fieldType, toSafeParamName(fieldPath), ignoreCase);
+        return new KeyField(fieldPath, fieldType, toSafeParamName(fieldPath), ignoreCase, collection);
       }).toList();
 
       var path = annotation.path().isEmpty() ? "/get-or-create" : annotation.path();
@@ -86,8 +95,16 @@ public record GetOrCreateModel(
           ? "By" + fields.stream().map(f -> capitalize(f.paramName())).collect(Collectors.joining("And"))
           : "";
       var propertyPath = fields.stream().map(KeyField::propertyPath).collect(Collectors.joining("And"));
-      // A filter field may already own findBy<Field> (returning a List); fall back to the equivalent findOneBy<Field>.
-      var findMethodName = filterFinders.contains("findBy" + propertyPath) ? "findOneBy" + propertyPath : "findBy" + propertyPath;
+      String findMethodName;
+      if (fields.stream().anyMatch(KeyField::isCollection)) {
+        // Matching any element joins the collection, so several rows may match: take the lowest ID for a stable result.
+        findMethodName = "findFirstBy" + propertyPath + "OrderBy" + capitalize(model.getJpaId().name()) + "Asc";
+      } else if (filterFinders.contains("findBy" + propertyPath)) {
+        // A filter field may already own findBy<Field> (returning a List); fall back to the equivalent findOneBy<Field>.
+        findMethodName = "findOneBy" + propertyPath;
+      } else {
+        findMethodName = "findBy" + propertyPath;
+      }
       return new GetOrCreateModel(fields, path, suffix, findMethodName);
     }).toList();
   }
