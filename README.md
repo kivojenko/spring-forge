@@ -371,6 +371,7 @@ Each one implies the layers below it, so you only ever annotate for the topmost 
 | `listView` | `Void.class` | Jackson JSON view (`@JsonView`) applied to list endpoints (e.g. `/entities` / `findAll`) |
 | `detailView` | `Void.class` | Jackson JSON view (`@JsonView`) applied to detail endpoints (e.g. `/entities/{id}` / `getById`) |
 | `sort` | `{}` | Default sort properties applied to list endpoints (e.g. `{"name"}`, `{"name,desc"}`) |
+| `listType` | `ListType.PAGE` | Return type of `GET /{path}`: `PAGE` returns a `Page` (accepts `page`, `size`, `sort`); `LIST` returns a plain `List` of every match (accepts `sort` only) |
 
 **`@GetOrCreate`**
 
@@ -589,7 +590,7 @@ For a resource mapped at `/{path}`:
 
 | Method | Path | Success | Description |
 |:---|:---|:---:|:---|
-| `GET` | `/{path}` | 200 | Paged list — accepts `page`, `size`, `sort` and every filter parameter |
+| `GET` | `/{path}` | 200 | Paged list — accepts `page`, `size`, `sort` and every filter parameter (plain list with `sort` only when `listType = LIST`) |
 | `POST` | `/{path}` | 201 | Create |
 | `GET` | `/{path}/{id}` | 200 | Read one |
 | `HEAD` | `/{path}/{id}` | 200 | Existence check |

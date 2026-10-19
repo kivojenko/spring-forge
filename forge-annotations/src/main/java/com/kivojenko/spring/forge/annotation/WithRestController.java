@@ -72,4 +72,12 @@ public @interface WithRestController {
      * @return the default sort properties
      */
     String[] sort() default {};
+
+    /**
+     * The return type of the list endpoint (e.g. {@code /entities} / {@code findAll}):
+     * a paged result or a plain list of all entities.
+     *
+     * @return the list return type
+     */
+    ListType listType() default ListType.PAGE;
 }

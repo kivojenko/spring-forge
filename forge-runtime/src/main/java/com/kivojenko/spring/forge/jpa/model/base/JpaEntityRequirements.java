@@ -1,6 +1,7 @@
 package com.kivojenko.spring.forge.jpa.model.base;
 
 import com.kivojenko.spring.forge.annotation.GetOrCreate;
+import com.kivojenko.spring.forge.annotation.ListType;
 import com.kivojenko.spring.forge.annotation.WithJpaRepository;
 import com.kivojenko.spring.forge.annotation.WithRestController;
 import com.kivojenko.spring.forge.annotation.WithService;
@@ -212,6 +213,10 @@ public record JpaEntityRequirements(
 
     public String[] sort() {
         return controllerAnnotation != null ? controllerAnnotation.sort() : new String[0];
+    }
+
+    public ListType listType() {
+        return controllerAnnotation != null ? controllerAnnotation.listType() : ListType.PAGE;
     }
 
 }

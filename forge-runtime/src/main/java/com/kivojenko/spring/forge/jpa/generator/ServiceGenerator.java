@@ -163,7 +163,26 @@ public final class ServiceGenerator {
           )
           .build();
 
-      builder.addMethod(findAllPagedFiltered).addMethod(findAllFiltered);
+      var findAllSortedFiltered = MethodSpec
+          .methodBuilder("findAll")
+          .addJavadoc("Retrieves all {@link $T} entities matching the filter criteria in the given order.\n", model.getEntityType())
+          .addJavadoc("@param sort the sort criteria\n")
+          .addJavadoc("@param filter the filter criteria\n")
+          .addJavadoc("@return a sorted list of entities matching the filter\n")
+          .addModifiers(Modifier.PUBLIC)
+          .returns(ParameterizedTypeName.get(ARRAY_LIST, model.getEntityType()))
+          .addParameter(ParameterSpec.builder(SORT, "sort").build())
+          .addParameter(filterParam)
+          .addStatement("var result = repository.findAll(filter.toPredicate(), sort)")
+          .addStatement(
+              "return $T.stream(result.spliterator(), false).collect($T.toCollection($T::new))",
+              ClassName.get(StreamSupport.class),
+              ClassName.get(Collectors.class),
+              ARRAY_LIST
+          )
+          .build();
+
+      builder.addMethod(findAllPagedFiltered).addMethod(findAllFiltered).addMethod(findAllSortedFiltered);
     }
 
     model.getEndpointRelations().forEach(r -> r.addMethod(builder));

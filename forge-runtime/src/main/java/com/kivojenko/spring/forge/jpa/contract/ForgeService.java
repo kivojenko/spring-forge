@@ -8,6 +8,7 @@ import jakarta.persistence.PersistenceContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -250,6 +251,16 @@ public abstract class ForgeService<E, ID, R extends JpaRepository<E, ID>> {
    */
   public Page<E> findAll(Pageable pageable) {
     return repository.findAll(pageable);
+  }
+
+  /**
+   * Finds all entities in the given order.
+   *
+   * @param sort the sort criteria
+   * @return a sorted list of all entities
+   */
+  public List<E> findAll(Sort sort) {
+    return repository.findAll(sort);
   }
 
   /**

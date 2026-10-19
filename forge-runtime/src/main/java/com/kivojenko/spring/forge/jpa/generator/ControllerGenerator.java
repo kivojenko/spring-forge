@@ -6,6 +6,7 @@ import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.FORGE_CONTROLL
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.GET_MAPPING;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.HTTP_STATUS;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.JSON_VIEW;
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.LIST;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.PAGE;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.PAGEABLE;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.PAGEABLE_DEFAULT;
@@ -19,8 +20,10 @@ import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.REQUEST_METHOD
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.REQUEST_PARAM;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.RESPONSE_STATUS;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.REST_CONTROLLER;
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.SORT;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.VALID;
 
+import com.kivojenko.spring.forge.annotation.ListType;
 import com.kivojenko.spring.forge.config.SpringForgeConfig;
 import com.kivojenko.spring.forge.jpa.model.GetOrCreateModel;
 import com.kivojenko.spring.forge.jpa.model.base.JpaEntityModel;
@@ -129,21 +132,41 @@ public final class ControllerGenerator {
       builder.addMethod(getOrCreateBuilder.build());
     }
 
-    var pageableAnnotation = AnnotationSpec
-        .builder(PAGEABLE_DEFAULT)
-        .addMember("size", "$L", SpringForgeConfig.getAllPageSize);
-    if (model.getRequirements().sort() != null && model.getRequirements().sort().length > 0) {
-      EndpointRelation.applySortValues(pageableAnnotation, model.getRequirements().sort());
-    }
-    var pageableParam = ParameterSpec.builder(PAGEABLE, "pageable").addAnnotation(pageableAnnotation.build()).build();
+    var sortValues = model.getRequirements().sort();
+    var hasSort = sortValues != null && sortValues.length > 0;
     var findAllBuilder = MethodSpec
         .methodBuilder("findAll")
-        .addJavadoc("Retrieves a paged result of all {@link $T} entities.\n", model.getEntityType())
-        .addJavadoc("@param pageable the pagination information\n")
         .addModifiers(Modifier.PUBLIC)
-        .addAnnotation(GET_MAPPING)
-        .returns(ParameterizedTypeName.get(PAGE, model.getEntityType()))
-        .addParameter(pageableParam);
+        .addAnnotation(GET_MAPPING);
+    String pagingArg;
+    String resultNoun;
+    if (model.getRequirements().listType() == ListType.LIST) {
+      var sortParam = ParameterSpec.builder(SORT, "sort");
+      if (hasSort) {
+        sortParam.addAnnotation(EndpointRelation.buildSortDefaultAnnotation(sortValues));
+      }
+      findAllBuilder
+          .addJavadoc("Retrieves a sorted list of all {@link $T} entities.\n", model.getEntityType())
+          .addJavadoc("@param sort the sort criteria\n")
+          .returns(ParameterizedTypeName.get(LIST, model.getEntityType()))
+          .addParameter(sortParam.build());
+      pagingArg = "sort";
+      resultNoun = "a list";
+    } else {
+      var pageableAnnotation = AnnotationSpec
+          .builder(PAGEABLE_DEFAULT)
+          .addMember("size", "$L", SpringForgeConfig.getAllPageSize);
+      if (hasSort) {
+        EndpointRelation.applySortValues(pageableAnnotation, sortValues);
+      }
+      findAllBuilder
+          .addJavadoc("Retrieves a paged result of all {@link $T} entities.\n", model.getEntityType())
+          .addJavadoc("@param pageable the pagination information\n")
+          .returns(ParameterizedTypeName.get(PAGE, model.getEntityType()))
+          .addParameter(ParameterSpec.builder(PAGEABLE, "pageable").addAnnotation(pageableAnnotation.build()).build());
+      pagingArg = "pageable";
+      resultNoun = "a page";
+    }
 
     if (model.getRequirements().effectiveListView() != null) {
       findAllBuilder.addAnnotation(
@@ -160,13 +183,13 @@ public final class ControllerGenerator {
       findAllBuilder
           .addParameter(filterParam)
           .addJavadoc("@param filter the filter criteria\n")
-          .addJavadoc("@return a page of entities matching the filter criteria\n")
-          .addStatement("return service.findAll(pageable, filter)");
+          .addJavadoc("@return $L of entities matching the filter criteria\n", resultNoun)
+          .addStatement("return service.findAll($L, filter)", pagingArg);
       builder.addMethod(findAllBuilder.build());
     } else {
       findAllBuilder
-          .addJavadoc("@return a page of entities\n")
-          .addStatement("return service.findAll(pageable)");
+          .addJavadoc("@return $L of entities\n", resultNoun)
+          .addStatement("return service.findAll($L)", pagingArg);
       builder.addMethod(findAllBuilder.build());
     }
 
