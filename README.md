@@ -788,6 +788,7 @@ The DTO field name *is* the query parameter name, and it is not always the entit
 | single association, no `targetField` | pluralised set of **ids** — `country` → `countries` |
 | collection association, no `targetField` | set of **ids**, name unchanged — `tags` |
 | any association **with** `targetField` | scalar of the target's type, **name unchanged** — `category` |
+| collection association **with** `targetField` and `iterableMatchMode = ALL` | set of the target's type, **name unchanged** — `ingredients` |
 | collection of scalars / `@ElementCollection` | scalar of the element type, **name unchanged** — `keywords` |
 | any field with `isPresent = true` | `Boolean` named `has<Field>` — `description` → `hasDescription` |
 | `@DiscriminatorColumn` | `List` named after the column — `vehicle_type` → `vehicleType` |
@@ -1061,6 +1062,25 @@ private ProductCategory category;
 @FilterField(targetField = "name")        // → entity.alternativeNames.any().name
 private Set<IngredientAlternativeName> alternativeNames;
 ```
+
+On a collection association the default (`ANY`) takes a **single** value matched against any element.
+`iterableMatchMode = ALL` turns the parameter into a **set** of the target's type, and every value must be
+found on *some* element. One `any()` per value is AND-ed, so the values may sit on different elements. Each
+value is compared with `eq`, whatever the `stringMatchMode`. Blank values are skipped, and `orNull` also
+matches rows whose collection is empty:
+
+```java
+@OneToMany(mappedBy = "product")
+@FilterField(name = "ingredients", targetField = "ingredient.id", iterableMatchMode = IterableMatchMode.ALL)
+private Set<ProductToIngredient> productIngredients;
+// ?ingredients=a,b (or ?ingredients=a&ingredients=b) → Set<String> ingredients
+// → entity.productIngredients.any().ingredient.id.eq("a") AND entity.productIngredients.any().ingredient.id.eq("b")
+```
+
+To match **any** of several values instead, keep the default `ANY` and use a `*_ANY` string match mode
+(`stringMatchMode = StringMatchMode.EQUALS_ANY`): the values are OR-ed. This works for `String` targets only.
+`ALL` does not apply to a target that is itself a collection (`targetField` ending at an `@ElementCollection`),
+which keeps the single-value behaviour described below.
 
 When the **target itself** is a collection of scalars — an `@ElementCollection`, whether reached through
 `targetField` or annotated directly — the filter takes a single value of the *element* type and matches it

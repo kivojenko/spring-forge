@@ -75,6 +75,11 @@ public class FilterFieldModel {
   boolean scalarCollection;
   /** Whether this is a {@code String} filter taking several values — a {@code *_ANY} string match mode. */
   boolean multiString;
+  /**
+   * Whether this filter takes a set of target values that must all be matched — {@link IterableMatchMode#ALL}
+   * through a {@code targetField} of an entity collection. Each value may be matched by a different element.
+   */
+  boolean allValues;
   boolean required;
   boolean orNull;
   boolean present;
@@ -180,6 +185,15 @@ public class FilterFieldModel {
   }
 
   public TypeSpec.Builder addFieldSpec(TypeSpec.Builder builder) {
+    if (allValues) {
+      var field = FieldSpec.builder(ParameterizedTypeName.get(SET, typeName), getName(), PRIVATE)
+          .addAnnotation(BUILDER_DEFAULT)
+          .initializer("new $T<>()", HASH_SET);
+      if (required) {
+        field.addAnnotation(NOT_EMPTY);
+      }
+      return builder.addField(field.build());
+    }
     if (NUMERIC_TYPES.contains(typeName) || DATE_TYPES.contains(typeName)) {
       if (annotation.comparisonMatchMode() == ComparisonMatchMode.EXACT
           || annotation.comparisonMatchMode() == ComparisonMatchMode.EXACT_OR_RANGE) {
@@ -329,6 +343,10 @@ public class FilterFieldModel {
       builder.endControlFlow();
       return;
     }
+    if (allValues) {
+      addAllValuesFiltering(builder, sink, combinator);
+      return;
+    }
     var fieldName = pluralize(decapitalize(getName()));
 
     if (typeName.equals(STRING)) {
@@ -460,6 +478,39 @@ public class FilterFieldModel {
       builder.addStatement(exists.append(")").toString(), args.toArray());
     } else if (orNull) {
       builder.addStatement("$L.$L($L.or(entity.$L.isNull()))", sink, combinator, valueSink, getTargetFieldName());
+    } else {
+      builder.addStatement("$L.$L($L)", sink, combinator, valueSink);
+    }
+    builder.endControlFlow();
+    builder.endControlFlow();
+  }
+
+  /**
+   * Matches an {@link #allValues} filter: every value supplied for the parameter must equal the target of
+   * some element of the collection — one {@code any()} per value, AND-ed together — so the values may be
+   * spread across different elements. Missing (and, for strings, blank) values contribute nothing.
+   */
+  private void addAllValuesFiltering(MethodSpec.Builder builder, String sink, String combinator) {
+    var values = getName();
+    var valueSink = multiValueSink();
+    var value = multiValueVar();
+
+    builder.beginControlFlow("if ($L != null && !$L.isEmpty())", values, values);
+    builder.addStatement("var $L = new $T()", valueSink, BOOLEAN_BUILDER);
+    builder.beginControlFlow("for (var $L : $L)", value, values);
+    if (STRING.equals(typeName)) {
+      builder.beginControlFlow("if ($L == null || $L.isBlank())", value, value);
+    } else {
+      builder.beginControlFlow("if ($L == null)", value);
+    }
+    builder.addStatement("continue");
+    builder.endControlFlow();
+    builder.addStatement("$L.and(entity.$L.eq($L))", valueSink, getTargetFieldName(), value);
+    builder.endControlFlow();
+
+    builder.beginControlFlow("if ($L.hasValue())", valueSink);
+    if (orNull) {
+      builder.addStatement("$L.$L($L.or(entity.$L.isEmpty()))", sink, combinator, valueSink, getOriginalName());
     } else {
       builder.addStatement("$L.$L($L)", sink, combinator, valueSink);
     }
