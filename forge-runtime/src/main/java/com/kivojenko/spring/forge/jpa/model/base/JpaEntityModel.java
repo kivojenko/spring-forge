@@ -759,7 +759,7 @@ public final class JpaEntityModel {
         // Duplicates present: for String-typed filters, OR all mapped targets using the primary's match mode.
         // Collection targets need an exists-subquery rather than a plain path, so they keep their own filtering.
         if (!field.getTypeName().equals(ClassName.get(String.class))
-                || group.stream().anyMatch(FilterFieldModel::isScalarCollection)) {
+                || group.stream().anyMatch(f -> f.isScalarCollection() || f.isAllValues())) {
             // Non-string or unsupported types — fall back to primary mapping only
             field.addFiltering(builder, sink, combinator);
             return;

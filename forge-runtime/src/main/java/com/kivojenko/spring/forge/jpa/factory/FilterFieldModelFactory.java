@@ -257,6 +257,7 @@ public class FilterFieldModelFactory {
           var originalSingleEntity = singleEntity;
           var targetPath = targetField;
           var scalarCollection = false;
+          var allValues = false;
 
           TargetPath resolvedTarget = null;
           if (!targetField.isEmpty()) {
@@ -278,6 +279,15 @@ public class FilterFieldModelFactory {
             isIterable = false;
             singleEntity = false;
             scalarCollection = false;
+          } else if (annotation.iterableMatchMode() == IterableMatchMode.ALL && resolvedTarget != null && isIterable
+              && elementIsEntity && !resolvedTarget.collectionLeaf()) {
+            // ALL through a targetField of an entity collection: the parameter is a set of target values,
+            // and each of them must be matched by some element (not necessarily the same one)
+            filterType = resolvedTarget.type();
+            filterTypeName = TypeName.get(filterType).box();
+            isIterable = false;
+            singleEntity = false;
+            allValues = true;
           } else if (resolvedTarget != null && (singleEntity || isIterable || embedded)) {
             filterType = resolvedTarget.type();
             filterTypeName = TypeName.get(filterType);
@@ -292,7 +302,7 @@ public class FilterFieldModelFactory {
           }
 
           // A *_ANY string match mode turns the parameter into a collection of values, OR-ed with each other
-          var multiString = !annotation.isPresent()
+          var multiString = !annotation.isPresent() && !allValues
               && STRING.equals(filterTypeName)
               && annotation.stringMatchMode().isMultiValue();
 
@@ -313,6 +323,7 @@ public class FilterFieldModelFactory {
                                .targetPath(targetPath)
                                .scalarCollection(scalarCollection)
                                .multiString(multiString)
+                               .allValues(allValues)
                                .required(annotation.required())
                                .orNull(annotation.orNull())
                                .present(annotation.isPresent())
