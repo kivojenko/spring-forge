@@ -56,6 +56,10 @@ public @interface FilterField {
    * The name of the parameter in the filter DTO.
    * If empty, the name of the annotated field is used ({@code has<Field>} when {@link #isPresent()} is set).
    *
+   * <p>Several mappings may share a name. A {@code String} parameter then matches any of their targets, and a
+   * {@code Boolean} one asks whether any of them is set: {@code true} matches rows with at least one target set,
+   * {@code false} rows with none set. Any other type reads only the first mapping.
+   *
    * @return the filter parameter name
    */
   String name() default "";

@@ -891,6 +891,31 @@ single value:
 > Only `toPredicate()` takes several values. The derived query stays single-valued — `findByName(String)` —
 > so the repository is unchanged by the mode.
 
+#### One parameter, several targets
+
+`@FilterField` is repeatable, and mappings may share a `name`. A `String` parameter then matches any of its
+targets. A `Boolean` one asks whether any of them is set: `true` matches rows with at least one target set,
+`false` rows with none set. Any other type reads only the first mapping.
+
+```java
+@FilterField(name = "uvFilter")
+@FilterField
+private boolean chemicalUvFilter;
+
+@FilterField(name = "uvFilter")
+@FilterField
+private boolean mineralUvFilter;
+```
+
+```
+GET /lotions?uvFilter=true          # a chemical or a mineral UV filter, or both
+GET /lotions?uvFilter=false         # neither
+GET /lotions?chemicalUvFilter=true  # a chemical UV filter, whatever else
+```
+
+The repository gets one finder per property, however many parameters read it — here `findByChemicalUvFilter`
+and `findByMineralUvFilter`.
+
 ### Families
 
 Filters are AND-ed together by default. `family` groups a set of them so they are OR-ed with each other

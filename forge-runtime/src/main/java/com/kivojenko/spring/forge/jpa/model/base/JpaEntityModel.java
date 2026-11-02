@@ -43,6 +43,7 @@ import static com.kivojenko.spring.forge.jpa.generator.FilterGenerator.ENTITY_VA
 import static com.kivojenko.spring.forge.jpa.model.base.JpaEntityPackageNames.resolvePackageNames;
 import static com.kivojenko.spring.forge.jpa.model.base.JpaEntityRequirements.resolveRequirements;
 import static com.kivojenko.spring.forge.jpa.model.base.JpaId.resolveId;
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.BOOLEAN_TYPES;
 import static com.kivojenko.spring.forge.jpa.utils.StringUtils.pluralize;
 import static java.beans.Introspector.decapitalize;
 
@@ -740,7 +741,7 @@ public final class JpaEntityModel {
      * ({@code and} for a plain filter, {@code or} for a member of a family).
      *
      * <p>When several mappings share the same exposed name, a String filter matches any of their targets;
-     * every other type falls back to the primary mapping.
+     * a Boolean filter asks whether any of them is set; every other type falls back to the primary mapping.
      */
     private void addFieldFiltering(
             MethodSpec.Builder builder,
@@ -753,6 +754,11 @@ public final class JpaEntityModel {
         if (group == null || group.size() <= 1) {
             // No duplicates — generate default filtering for the primary mapping
             field.addFiltering(builder, sink, combinator);
+            return;
+        }
+
+        if (group.stream().allMatch(JpaEntityModel::isPlainBooleanMapping)) {
+            addBooleanFieldFiltering(builder, field, group, sink, combinator);
             return;
         }
 
@@ -793,6 +799,41 @@ public final class JpaEntityModel {
                     field.getName()
             );
         }
+        builder.addStatement("$L.$L($L)", sink, combinator, expr);
+        builder.endControlFlow();
+    }
+
+    /** Whether a mapping compares a Boolean target with the parameter — not a presence check or a collection. */
+    private static boolean isPlainBooleanMapping(FilterFieldModel field) {
+        return BOOLEAN_TYPES.contains(field.getTypeName()) && !field.isPresent() && !field.isScalarCollection();
+    }
+
+    /**
+     * Emits a Boolean filter whose exposed name maps to several targets, as the question "is any of them
+     * set?": {@code true} matches rows with at least one target set, {@code false} those with none set, so
+     * the two values always split the rows between them.
+     */
+    private void addBooleanFieldFiltering(
+            MethodSpec.Builder builder,
+            FilterFieldModel field,
+            List<FilterFieldModel> group,
+            String sink,
+            String combinator
+    ) {
+        var param = field.getName();
+        var expr = "__" + param + "Expr";
+
+        builder.beginControlFlow("if ($L != null)", param);
+        builder.addStatement("var $L = new $T()", expr, BooleanBuilder.class);
+        builder.beginControlFlow("if ($L)", param);
+        for (var member : group) {
+            builder.addStatement("$L.or(entity.$L.isTrue())", expr, member.getTargetFieldName());
+        }
+        builder.nextControlFlow("else");
+        for (var member : group) {
+            builder.addStatement("$L.and(entity.$L.isFalse())", expr, member.getTargetFieldName());
+        }
+        builder.endControlFlow();
         builder.addStatement("$L.$L($L)", sink, combinator, expr);
         builder.endControlFlow();
     }

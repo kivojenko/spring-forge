@@ -14,6 +14,7 @@ import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeSpec;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -93,12 +94,15 @@ public final class RepositoryGenerator {
     }
 
     private static List<FilterFieldModel> filterFinderFields(JpaEntityModel model) {
+        // Several parameters may read one property (uvFilter and chemicalUvFilter), which is still one finder
+        var finderNames = new HashSet<String>();
         return model.getFilterableFields().stream()
                 .filter(field -> !(field.isIterable() || field.isSingleEntity() || field.isDiscriminator() || field.isPresent()))
                 .filter(field -> !(model.getRequirements().hasName() && field.getOriginalName().equals("name")))
                 // Name the query after the property it actually reads (category.name → findByCategory_Name);
                 // paths Spring Data cannot derive (collections, size()) are left to the QueryDSL predicate.
                 .filter(field -> field.getDerivedQueryPath() != null)
+                .filter(field -> finderNames.add(filterFinderName(field)))
                 .toList();
     }
 
