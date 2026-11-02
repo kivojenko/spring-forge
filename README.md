@@ -939,6 +939,39 @@ member alone, and a family whose members are all absent leaves the query untouch
 join a family, including `targetField` paths, collection targets, presence filters and the discriminator
 filter; a family with one member behaves exactly like an ungrouped filter.
 
+A range member's min and max describe one condition, so they are AND-ed with each other first and the
+resulting range joins the family as a whole:
+
+```java
+@FilterField(family = "protection")            // spf, minSpf, maxSpf
+private Integer spf;
+
+@FilterField(family = "protection", comparisonMatchMode = ComparisonMatchMode.RANGE) // minMinSpf, maxMinSpf
+private Integer minSpf;
+
+@FilterField(family = "protection", comparisonMatchMode = ComparisonMatchMode.RANGE) // minMaxSpf, maxMaxSpf
+private Integer maxSpf;
+```
+
+```
+GET /sunscreens?minSpf=25&maxSpf=35&minMaxSpf=35&maxMaxSpf=45
+```
+
+```java
+var __familyProtection = new BooleanBuilder();
+if (minSpf != null || maxSpf != null) {
+  var __spfRange = new BooleanBuilder();
+  if (minSpf != null) {
+    __spfRange.and(entity.spf.goe(minSpf));
+  }
+  if (maxSpf != null) {
+    __spfRange.and(entity.spf.loe(maxSpf));
+  }
+  __familyProtection.or(__spfRange);
+}
+// … the same for minSpf and maxSpf: (spf in 25..35) OR (maxSpf in 35..45)
+```
+
 `@FilterFamily` on the entity switches a family to `AND`, so every member that *is* sent has to match.
 It is optional — an undeclared family is `OR`:
 

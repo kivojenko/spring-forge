@@ -349,21 +349,7 @@ public class FilterFieldModel {
       }
       if (annotation.comparisonMatchMode() == ComparisonMatchMode.RANGE
           || annotation.comparisonMatchMode() == ComparisonMatchMode.EXACT_OR_RANGE) {
-        builder.beginControlFlow("if ($L != null)", minName(getName()));
-
-        if (annotation.minBoundMode() == RangeBoundMode.INCLUDES) {
-          addAnd(builder, sink, combinator, "$L.goe($L)", subject(), minName(getName()));
-        } else {
-          addAnd(builder, sink, combinator, "$L.gt($L)", subject(), minName(getName()));
-        }
-        builder.endControlFlow();
-        builder.beginControlFlow("if ($L != null)", maxName(getName()));
-        if (annotation.maxBoundMode() == RangeBoundMode.INCLUDES) {
-          addAnd(builder, sink, combinator, "$L.loe($L)", subject(), maxName(getName()));
-        } else {
-          addAnd(builder, sink, combinator, "$L.lt($L)", subject(), maxName(getName()));
-        }
-        builder.endControlFlow();
+        addRangeFiltering(builder, sink, combinator);
       }
     } else if (BOOLEAN_TYPES.contains(typeName)) {
       builder.beginControlFlow("if ($L != null)", getName());
@@ -392,6 +378,42 @@ public class FilterFieldModel {
       addAnd(builder, sink, combinator, "$L.in($L)", subject(), fieldName);
       builder.endControlFlow();
     }
+  }
+
+  /**
+   * Matches the bounds of a range filter. A min and a max describe one condition, so inside an {@code OR}
+   * family they are AND-ed with each other first and only the resulting range is OR-ed with the other
+   * members.
+   */
+  private void addRangeFiltering(MethodSpec.Builder builder, String sink, String combinator) {
+    if (!OR.equals(combinator)) {
+      addRangeBounds(builder, sink, combinator);
+      return;
+    }
+    var rangeSink = "__" + getName() + "Range";
+    builder.beginControlFlow("if ($L != null || $L != null)", minName(getName()), maxName(getName()));
+    builder.addStatement("var $L = new $T()", rangeSink, BOOLEAN_BUILDER);
+    addRangeBounds(builder, rangeSink, AND);
+    builder.addStatement("$L.$L($L)", sink, combinator, rangeSink);
+    builder.endControlFlow();
+  }
+
+  private void addRangeBounds(MethodSpec.Builder builder, String sink, String combinator) {
+    builder.beginControlFlow("if ($L != null)", minName(getName()));
+
+    if (annotation.minBoundMode() == RangeBoundMode.INCLUDES) {
+      addAnd(builder, sink, combinator, "$L.goe($L)", subject(), minName(getName()));
+    } else {
+      addAnd(builder, sink, combinator, "$L.gt($L)", subject(), minName(getName()));
+    }
+    builder.endControlFlow();
+    builder.beginControlFlow("if ($L != null)", maxName(getName()));
+    if (annotation.maxBoundMode() == RangeBoundMode.INCLUDES) {
+      addAnd(builder, sink, combinator, "$L.loe($L)", subject(), maxName(getName()));
+    } else {
+      addAnd(builder, sink, combinator, "$L.lt($L)", subject(), maxName(getName()));
+    }
+    builder.endControlFlow();
   }
 
   /**

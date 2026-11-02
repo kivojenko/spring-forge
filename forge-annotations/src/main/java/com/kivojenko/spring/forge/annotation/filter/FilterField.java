@@ -86,7 +86,8 @@ public @interface FilterField {
    *
    * <p>Each member keeps its own parameter, type and match modes — only the way their predicates are
    * combined changes. Parameters that are not sent contribute nothing to the family, and a family with a
-   * single member behaves exactly like an ungrouped filter.
+   * single member behaves exactly like an ungrouped filter. A member's min and max form one range: they are
+   * {@code AND}-ed with each other before the range joins the family.
    *
    * <p>For example, {@code family = "search"} on both a {@code title} and a {@code summary} field makes
    * {@code ?title=phone&summary=phone} match rows whose title <em>or</em> summary matches — while a filter
