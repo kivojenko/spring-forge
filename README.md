@@ -789,6 +789,7 @@ The DTO field name *is* the query parameter name, and it is not always the entit
 | collection association, no `targetField` | set of **ids**, name unchanged — `tags` |
 | any association **with** `targetField` | scalar of the target's type, **name unchanged** — `category` |
 | collection association **with** `targetField` and `iterableMatchMode = ALL` | set of the target's type, **name unchanged** — `ingredients` |
+| collection association with `iterableMatchMode = CHOOSE` | the set above, plus a `String` named `<name>MatchMode` — `tags`, `tagsMatchMode` |
 | collection of scalars / `@ElementCollection` | scalar of the element type, **name unchanged** — `keywords` |
 | any field with `isPresent = true` | `Boolean` named `has<Field>` — `description` → `hasDescription` |
 | `@DiscriminatorColumn` | `List` named after the column — `vehicle_type` → `vehicleType` |
@@ -812,7 +813,8 @@ private String brand;              // ?manufacturer=Acme
 | `stringMatchMode` | `EQUALS`, `EQUALS_IGNORE_CASE`, `CONTAINS`, `CONTAINS_IGNORE_CASE`, `STARTS_WITH`, `STARTS_WITH_IGNORE_CASE`, `ENDS_WITH`, `ENDS_WITH_IGNORE_CASE` | `CONTAINS` |
 | `stringMatchMode`, several values | `EQUALS_ANY`, `EQUALS_ANY_IGNORE_CASE`, `CONTAINS_ANY`, `CONTAINS_ANY_IGNORE_CASE`, `STARTS_WITH_ANY`, `STARTS_WITH_ANY_IGNORE_CASE`, `ENDS_WITH_ANY`, `ENDS_WITH_ANY_IGNORE_CASE` | — |
 | `comparisonMatchMode` | `EXACT`, `RANGE`, `EXACT_OR_RANGE` | `EXACT_OR_RANGE` |
-| `iterableMatchMode` | `ANY`, `ALL` | `ANY` |
+| `iterableMatchMode` | `ANY`, `ALL`, `AMOUNT`, `CHOOSE` | `ANY` |
+| `defaultIterableMatchMode` | `ANY`, `ALL` — used by `CHOOSE` when the request does not pick one | `ANY` |
 | `minBoundMode` / `maxBoundMode` | `INCLUDES`, `EXCLUDES` | `INCLUDES` |
 
 Other attributes:
@@ -1139,6 +1141,29 @@ To match **any** of several values instead, keep the default `ANY` and use a `*_
 (`stringMatchMode = StringMatchMode.EQUALS_ANY`): the values are OR-ed. This works for `String` targets only.
 `ALL` does not apply to a target that is itself a collection (`targetField` ending at an `@ElementCollection`),
 which keeps the single-value behaviour described below.
+
+`iterableMatchMode = CHOOSE` lets **each request** pick between `ANY` and `ALL`. The parameter is a set of
+values (ids, or the target's type with `targetField`), and the filter DTO gets an extra `String`
+parameter `<name>MatchMode`: `ALL` or `AND` requires every value to be found on some element, `ANY` or `OR`
+at least one of them. The value is case-insensitive; when it is missing or not recognised,
+`defaultIterableMatchMode` applies (`ANY` unless set):
+
+```java
+@ManyToMany
+@FilterField(name = "tagIds", iterableMatchMode = IterableMatchMode.CHOOSE)
+private Set<Tag> tags;
+// ?tagIds=1,2                       → ANY (the default): products with tag 1 or 2
+// ?tagIds=1,2&tagIdsMatchMode=ALL   → products with both tags
+
+@OneToMany(mappedBy = "recipe")
+@FilterField(name = "spices", targetField = "spice.id",
+    iterableMatchMode = IterableMatchMode.CHOOSE, defaultIterableMatchMode = IterableMatchMode.ALL)
+private Set<RecipeSpice> recipeSpices;
+// ?spices=1,2                       → ALL (the default here)
+// ?spices=1,2&spicesMatchMode=or    → recipes with spice 1 or 2
+```
+
+`CHOOSE` applies to collection associations only; a match mode sent without any values filters nothing.
 
 When the **target itself** is a collection of scalars — an `@ElementCollection`, whether reached through
 `targetField` or annotated directly — the filter takes a single value of the *element* type and matches it

@@ -32,6 +32,15 @@ public @interface FilterField {
   IterableMatchMode iterableMatchMode() default IterableMatchMode.ANY;
 
   /**
+   * The mode used by an {@link IterableMatchMode#CHOOSE} filter when the request does not send a
+   * {@code <name>MatchMode} parameter (or sends an unrecognised one). Must be {@link IterableMatchMode#ANY}
+   * or {@link IterableMatchMode#ALL}; ignored by every other iterable match mode.
+   *
+   * @return the iterable match mode applied when the request does not choose one
+   */
+  IterableMatchMode defaultIterableMatchMode() default IterableMatchMode.ANY;
+
+  /**
    * Defines how comparable values (numbers, dates) are matched: exact value, range, or either.
    *
    * @return the comparison match mode

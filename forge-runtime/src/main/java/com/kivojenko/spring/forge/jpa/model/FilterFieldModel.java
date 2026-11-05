@@ -34,6 +34,7 @@ import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.DATE_TYPES;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.EXPRESSIONS;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.JPA_EXPRESSIONS;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.HASH_SET;
+import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.ITERABLE_MATCH_MODES;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.NOT_BLANK;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.NOT_EMPTY;
 import static com.kivojenko.spring.forge.jpa.utils.ClassNameUtils.NOT_NULL;
@@ -80,6 +81,11 @@ public class FilterFieldModel {
    * through a {@code targetField} of an entity collection. Each value may be matched by a different element.
    */
   boolean allValues;
+  /**
+   * Whether the request chooses between {@code ANY} and {@code ALL} through an extra {@code <name>MatchMode}
+   * parameter — {@link IterableMatchMode#CHOOSE} on a collection association.
+   */
+  boolean chooseMode;
   boolean required;
   boolean orNull;
   boolean present;
@@ -184,7 +190,26 @@ public class FilterFieldModel {
     return element != null && element.getKind() == javax.lang.model.element.ElementKind.ENUM;
   }
 
+  /** The name of the request parameter a {@link #chooseMode} filter reads its match mode from. */
+  public String matchModeParamName() {
+    return getName() + "MatchMode";
+  }
+
+  /** The local holding whether a {@link #chooseMode} filter must match all of its values. */
+  private String matchAllVar() {
+    return "__" + getName() + "MatchAll";
+  }
+
+  /** Declares {@link #matchAllVar()}, resolved from the request parameter and the annotation's default. */
+  private void addMatchAllVar(MethodSpec.Builder builder) {
+    builder.addStatement("var $L = $T.matchAll($L, $L)", matchAllVar(), ITERABLE_MATCH_MODES,
+                         matchModeParamName(), annotation.defaultIterableMatchMode() == IterableMatchMode.ALL);
+  }
+
   public TypeSpec.Builder addFieldSpec(TypeSpec.Builder builder) {
+    if (chooseMode) {
+      builder.addField(FieldSpec.builder(STRING, matchModeParamName(), PRIVATE).build());
+    }
     if (allValues) {
       var field = FieldSpec.builder(ParameterizedTypeName.get(SET, typeName), getName(), PRIVATE)
           .addAnnotation(BUILDER_DEFAULT)
@@ -381,7 +406,9 @@ public class FilterFieldModel {
     } else if (isIterable()) {
       var relation = JpaEntityModelFactory.get(typeElement);
       builder.beginControlFlow("if ($L != null && !$L.isEmpty())", getName(), getName());
-      if (annotation.iterableMatchMode() == IterableMatchMode.ALL) {
+      if (chooseMode) {
+        addChosenIdFiltering(builder, sink, combinator, relation.getJpaId().name());
+      } else if (annotation.iterableMatchMode() == IterableMatchMode.ALL) {
         builder.beginControlFlow("for (var $L : $L)", "sub", getName());
         // Use the base field name for collection navigation and add any() here exactly once
         addAnd(builder, sink, combinator, "entity.$L.any().$L.eq($L)", getOriginalName(), relation.getJpaId().name(), "sub");
@@ -508,6 +535,26 @@ public class FilterFieldModel {
   }
 
   /**
+   * Matches a {@link #chooseMode} filter on the ids of a collection association: with {@code ALL} every
+   * supplied id must be found on some element — one {@code any()} per id, AND-ed — and with {@code ANY} at
+   * least one of them, through a single {@code in}.
+   */
+  private void addChosenIdFiltering(MethodSpec.Builder builder, String sink, String combinator, String idName) {
+    var valueSink = multiValueSink();
+    var value = multiValueVar();
+    addMatchAllVar(builder);
+    builder.beginControlFlow("if ($L)", matchAllVar());
+    builder.addStatement("var $L = new $T()", valueSink, BOOLEAN_BUILDER);
+    builder.beginControlFlow("for (var $L : $L)", value, getName());
+    builder.addStatement("$L.and(entity.$L.any().$L.eq($L))", valueSink, getOriginalName(), idName, value);
+    builder.endControlFlow();
+    addAnd(builder, sink, combinator, "$L", valueSink);
+    builder.nextControlFlow("else");
+    addAnd(builder, sink, combinator, "entity.$L.any().$L.in($L)", getOriginalName(), idName, getName());
+    builder.endControlFlow();
+  }
+
+  /**
    * Matches an {@link #allValues} filter: every value supplied for the parameter must equal the target of
    * some element of the collection — one {@code any()} per value, AND-ed together — so the values may be
    * spread across different elements. Missing (and, for strings, blank) values contribute nothing.
@@ -518,6 +565,9 @@ public class FilterFieldModel {
     var value = multiValueVar();
 
     builder.beginControlFlow("if ($L != null && !$L.isEmpty())", values, values);
+    if (chooseMode) {
+      addMatchAllVar(builder);
+    }
     builder.addStatement("var $L = new $T()", valueSink, BOOLEAN_BUILDER);
     builder.beginControlFlow("for (var $L : $L)", value, values);
     if (STRING.equals(typeName)) {
@@ -527,7 +577,16 @@ public class FilterFieldModel {
     }
     builder.addStatement("continue");
     builder.endControlFlow();
-    builder.addStatement("$L.and(entity.$L.eq($L))", valueSink, getTargetFieldName(), value);
+    if (chooseMode) {
+      // The request decides whether every value has to be found on some element, or any one of them
+      builder.beginControlFlow("if ($L)", matchAllVar());
+      builder.addStatement("$L.and(entity.$L.eq($L))", valueSink, getTargetFieldName(), value);
+      builder.nextControlFlow("else");
+      builder.addStatement("$L.or(entity.$L.eq($L))", valueSink, getTargetFieldName(), value);
+      builder.endControlFlow();
+    } else {
+      builder.addStatement("$L.and(entity.$L.eq($L))", valueSink, getTargetFieldName(), value);
+    }
     builder.endControlFlow();
 
     builder.beginControlFlow("if ($L.hasValue())", valueSink);

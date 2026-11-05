@@ -86,11 +86,8 @@ public class FilterFieldModelFactory {
 
       for (var field : fields) {
         var annotations = field.getAnnotationsByType(FilterSearchField.class);
-        if (annotations.length == 0) {
-          continue;
-        }
 
-        for (var annotation : annotations) {
+          for (var annotation : annotations) {
           var type = field.asType();
           boolean isIterable = typeUtils.isAssignable(typeUtils.erasure(field.asType()), iterableElement.asType());
 
@@ -119,8 +116,6 @@ public class FilterFieldModelFactory {
               && isFilterableScalar(entityCandidate, env);
 
           var targetField = annotation.targetField();
-          var originalIterable = isIterable;
-          var originalSingleEntity = singleEntity;
           var targetPath = targetField;
           var scalarCollection = false;
           // Element types of the collections between the entity and the searched value, in path order
@@ -149,8 +144,8 @@ public class FilterFieldModelFactory {
               .stringMatchMode(annotation.stringMatchMode())
               .targetField(targetField)
               .targetPath(targetPath)
-              .originalIterable(originalIterable)
-              .originalSingleEntity(originalSingleEntity)
+              .originalIterable(isIterable)
+              .originalSingleEntity(singleEntity)
               .originalEmbedded(embedded)
               .scalarCollection(scalarCollection)
               .joinAliasTypes(joinAliasTypes(collectionElements, env))
@@ -209,10 +204,8 @@ public class FilterFieldModelFactory {
 
       for (var field : fields) {
         var annotations = field.getAnnotationsByType(FilterField.class);
-        if (annotations.length == 0)
-          continue;
 
-        for (var annotation : annotations) {
+          for (var annotation : annotations) {
           if (uniqueByName) {
             // Skip if a field with the same exposed name was already added — we keep the first one for DTO uniqueness
             var fieldName = FilterFieldModel.exposedName(field.getSimpleName().toString(), annotation);
@@ -258,6 +251,13 @@ public class FilterFieldModelFactory {
           var targetPath = targetField;
           var scalarCollection = false;
           var allValues = false;
+          var chooseMode = annotation.iterableMatchMode() == IterableMatchMode.CHOOSE;
+          if (chooseMode && annotation.defaultIterableMatchMode() != IterableMatchMode.ANY
+              && annotation.defaultIterableMatchMode() != IterableMatchMode.ALL) {
+            throw new IllegalStateException(
+                "@FilterField defaultIterableMatchMode must be ANY or ALL on field: " + field.getSimpleName()
+                    + " in " + current.getQualifiedName());
+          }
 
           TargetPath resolvedTarget = null;
           if (!targetField.isEmpty()) {
@@ -279,10 +279,11 @@ public class FilterFieldModelFactory {
             isIterable = false;
             singleEntity = false;
             scalarCollection = false;
-          } else if (annotation.iterableMatchMode() == IterableMatchMode.ALL && resolvedTarget != null && isIterable
-              && elementIsEntity && !resolvedTarget.collectionLeaf()) {
+          } else if ((annotation.iterableMatchMode() == IterableMatchMode.ALL || chooseMode)
+              && resolvedTarget != null && isIterable && elementIsEntity && !resolvedTarget.collectionLeaf()) {
             // ALL through a targetField of an entity collection: the parameter is a set of target values,
-            // and each of them must be matched by some element (not necessarily the same one)
+            // and each of them must be matched by some element (not necessarily the same one).
+            // CHOOSE takes the same set, the request deciding whether all or any of the values must match
             filterType = resolvedTarget.type();
             filterTypeName = TypeName.get(filterType).box();
             isIterable = false;
@@ -324,6 +325,8 @@ public class FilterFieldModelFactory {
                                .scalarCollection(scalarCollection)
                                .multiString(multiString)
                                .allValues(allValues)
+                               // Only collection associations can be chosen per request: by id or as a value set
+                               .chooseMode(chooseMode && !annotation.isPresent() && (allValues || isIterable))
                                .required(annotation.required())
                                .orNull(annotation.orNull())
                                .present(annotation.isPresent())

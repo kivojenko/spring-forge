@@ -87,6 +87,8 @@ public class Product {
   @ManyToMany
   @FilterField(iterableMatchMode = IterableMatchMode.ANY)
   @FilterField(name = "hasTags", isPresent = true)
+  // CHOOSE: ?tagIds=1,2&tagIdsMatchMode=ALL — the request picks ANY (the default here) or ALL
+  @FilterField(name = "tagIds", iterableMatchMode = IterableMatchMode.CHOOSE)
   @Builder.Default
   private Set<Tag> tags = new HashSet<>();
 }

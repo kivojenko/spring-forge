@@ -132,6 +132,36 @@ public class RecipeFilterAllThroughTargetFieldTest extends WithPostgres {
   }
 
   @Test
+  void shouldLetTheRequestChooseTheIterableMatchMode() throws Exception {
+    assertEquals(Set.class, RecipeForgeFilter.class.getDeclaredField("chosenSpices").getType());
+    assertEquals(String.class, RecipeForgeFilter.class.getDeclaredField("chosenSpicesMatchMode").getType());
+
+    var cuminAndChili = cumin.getId() + "," + chili.getId();
+
+    // Default ALL: only Curry has both
+    mockMvc.perform(get("/recipes").param("chosenSpices", cuminAndChili))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(1)))
+        .andExpect(jsonPath("$.content[0].name").value("Curry"));
+
+    // ANY: every recipe with cumin or chili
+    mockMvc.perform(get("/recipes").param("chosenSpices", cuminAndChili).param("chosenSpicesMatchMode", "ANY"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(2)))
+        .andExpect(jsonPath("$.content[?(@.name == 'Curry')]").exists())
+        .andExpect(jsonPath("$.content[?(@.name == 'Chili con carne')]").exists());
+
+    // OR is an alias of ANY, AND of ALL
+    var cuminAndSaffron = cumin.getId() + "," + saffron.getId();
+    mockMvc.perform(get("/recipes").param("chosenSpices", cuminAndSaffron).param("chosenSpicesMatchMode", "or"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(2)));
+    mockMvc.perform(get("/recipes").param("chosenSpices", cuminAndSaffron).param("chosenSpicesMatchMode", "and"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(0)));
+  }
+
+  @Test
   void shouldKeepTheSingleValueDefault() throws Exception {
     mockMvc.perform(get("/recipes").param("spiceName", "affr"))
         .andExpect(status().isOk())

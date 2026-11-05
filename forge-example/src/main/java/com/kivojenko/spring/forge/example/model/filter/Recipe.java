@@ -43,6 +43,9 @@ public class Recipe {
   @FilterField(name = "spiceNames", targetField = "spice.name", iterableMatchMode = IterableMatchMode.ALL)
   // ANY of several values: a *_ANY string match mode OR-s the values instead
   @FilterField(name = "anySpiceNames", targetField = "spice.name", stringMatchMode = StringMatchMode.EQUALS_ANY)
+  // CHOOSE through a targetField: ?chosenSpices=1,2&chosenSpicesMatchMode=ANY, ALL when the request does not say
+  @FilterField(name = "chosenSpices", targetField = "spice.id", iterableMatchMode = IterableMatchMode.CHOOSE,
+      defaultIterableMatchMode = IterableMatchMode.ALL)
   // The default stays a single value matched against any element
   @FilterField(name = "spiceName", targetField = "spice.name")
   private Set<RecipeSpice> recipeSpices = new HashSet<>();

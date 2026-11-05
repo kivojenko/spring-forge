@@ -89,6 +89,7 @@ public interface ClassNameUtils {
   ClassName ITERABLE = ClassName.get(Iterable.class);
   ClassName SET = ClassName.get(Set.class);
   ClassName HASH_SET = ClassName.get(HashSet.class);
+  ClassName ITERABLE_MATCH_MODES = ClassName.get(com.kivojenko.spring.forge.jpa.contract.IterableMatchModes.class);
   ClassName LIST = ClassName.get(List.class);
   ClassName ARRAY_LIST = ClassName.get(ArrayList.class);
   ClassName STRING = ClassName.get(String.class);

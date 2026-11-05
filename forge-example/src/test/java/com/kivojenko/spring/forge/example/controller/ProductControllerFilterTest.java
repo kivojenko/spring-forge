@@ -190,6 +190,41 @@ public class ProductControllerFilterTest extends WithPostgres {
   }
 
   @Test
+  void shouldFilterProductsByTags_iterableCHOOSE() throws Exception {
+    var both = featuredTagId + "," + onSaleTagId;
+
+    // No match mode sent: the default ANY applies
+    mockMvc.perform(get("/products").param("tagIds", both))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(3)));
+
+    // ALL / AND: only the product carrying both tags
+    for (var mode : new String[] { "ALL", "and", " All " }) {
+      mockMvc.perform(get("/products").param("tagIds", both).param("tagIdsMatchMode", mode))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.content", hasSize(1)))
+          .andExpect(jsonPath("$.content[0].name").value("Laptop"));
+    }
+
+    // ANY / OR: the union
+    for (var mode : new String[] { "ANY", "or" }) {
+      mockMvc.perform(get("/products").param("tagIds", both).param("tagIdsMatchMode", mode))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.content", hasSize(3)));
+    }
+
+    // An unknown mode falls back to the default
+    mockMvc.perform(get("/products").param("tagIds", both).param("tagIdsMatchMode", "SOME"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(3)));
+
+    // A match mode without values filters nothing
+    mockMvc.perform(get("/products").param("tagIdsMatchMode", "ALL"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content", hasSize(3)));
+  }
+
+  @Test
   void shouldFilterProductsByPresence_viaIsPresent() throws Exception {
     mockMvc.perform(post("/products")
             .contentType(MediaType.APPLICATION_JSON)
