@@ -22,16 +22,6 @@ public abstract class ForgeAbstractController<E, ID, R extends JpaRepository<E, 
   protected S service;
 
   /**
-   * Delegates to {@link ForgeService#count()}.
-   *
-   * @return total number of entities
-   */
-  @GetMapping("/count")
-  public long count() {
-    return service.count();
-  }
-
-  /**
    * Delegates to {@link ForgeService#getById(Object)}.
    *
    * @param id the ID of the entity to retrieve

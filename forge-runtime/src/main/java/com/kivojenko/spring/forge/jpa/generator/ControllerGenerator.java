@@ -176,10 +176,22 @@ public final class ControllerGenerator {
       );
     }
 
+    var countBuilder = MethodSpec
+        .methodBuilder("count")
+        .addModifiers(Modifier.PUBLIC)
+        .addAnnotation(AnnotationSpec.builder(GET_MAPPING).addMember("value", "$S", "/count").build())
+        .returns(TypeName.LONG);
+
     if (model.wantsFilter()) {
       var filterParam = ParameterSpec.builder(model.getFilterType(), "filter")
           .addAnnotation(VALID)
           .build();
+      countBuilder
+          .addJavadoc("Counts {@link $T} entities matching the same filter criteria as {@code findAll}.\n", model.getEntityType())
+          .addJavadoc("@param filter the filter criteria\n")
+          .addJavadoc("@return the number of entities matching the filter criteria\n")
+          .addParameter(filterParam)
+          .addStatement("return service.count(filter)");
       findAllBuilder
           .addParameter(filterParam)
           .addJavadoc("@param filter the filter criteria\n")
@@ -187,11 +199,16 @@ public final class ControllerGenerator {
           .addStatement("return service.findAll($L, filter)", pagingArg);
       builder.addMethod(findAllBuilder.build());
     } else {
+      countBuilder
+          .addJavadoc("Counts all {@link $T} entities.\n", model.getEntityType())
+          .addJavadoc("@return the total number of entities\n")
+          .addStatement("return service.count()");
       findAllBuilder
           .addJavadoc("@return $L of entities\n", resultNoun)
           .addStatement("return service.findAll($L)", pagingArg);
       builder.addMethod(findAllBuilder.build());
     }
+    builder.addMethod(countBuilder.build());
 
     addStandardOverrides(builder, model);
 

@@ -182,7 +182,22 @@ public final class ServiceGenerator {
           )
           .build();
 
-      builder.addMethod(findAllPagedFiltered).addMethod(findAllFiltered).addMethod(findAllSortedFiltered);
+      var countFiltered = MethodSpec
+          .methodBuilder("count")
+          .addJavadoc("Counts {@link $T} entities matching the filter criteria.\n", model.getEntityType())
+          .addJavadoc("@param filter the filter criteria\n")
+          .addJavadoc("@return the number of entities matching the filter\n")
+          .addModifiers(Modifier.PUBLIC)
+          .returns(TypeName.LONG)
+          .addParameter(filterParam)
+          .addStatement("return repository.count(filter.toPredicate())")
+          .build();
+
+      builder
+          .addMethod(findAllPagedFiltered)
+          .addMethod(findAllFiltered)
+          .addMethod(findAllSortedFiltered)
+          .addMethod(countFiltered);
     }
 
     model.getEndpointRelations().forEach(r -> r.addMethod(builder));

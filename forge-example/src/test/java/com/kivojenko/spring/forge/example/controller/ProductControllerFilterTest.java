@@ -1,6 +1,7 @@
 package com.kivojenko.spring.forge.example.controller;
 
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -164,6 +165,29 @@ public class ProductControllerFilterTest extends WithPostgres {
     mockMvc.perform(get("/products").param("category", "Furniture"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.content", hasSize(0)));
+  }
+
+  @Test
+  void shouldCountProductsWithSameFilterAsFindAll() throws Exception {
+    mockMvc.perform(get("/products/count"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$", is(3)));
+
+    mockMvc.perform(get("/products/count").param("category", "Electronics"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$", is(2)));
+
+    mockMvc.perform(get("/products/count").param("tags", String.valueOf(onSaleTagId)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$", is(2)));
+
+    mockMvc.perform(get("/products/count").param("category", "Books").param("tags", String.valueOf(onSaleTagId)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$", is(1)));
+
+    mockMvc.perform(get("/products/count").param("category", "Furniture"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$", is(0)));
   }
 
   @Test
