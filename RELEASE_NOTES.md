@@ -2,6 +2,7 @@
 
 All release notes have been moved to separate files in the `docs/releases` directory.
 
+ - [Version 0.1.34 (2026-11-06)](docs/releases/v0.1.34.md)
  - [Version 0.1.33 (2026-11-02)](docs/releases/v0.1.33.md)
  - [Version 0.1.32 (2026-10-26)](docs/releases/v0.1.32.md)
  - [Version 0.1.31 (2026-10-12)](docs/releases/v0.1.31.md)

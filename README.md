@@ -597,7 +597,7 @@ For a resource mapped at `/{path}`:
 | `PUT` | `/{path}/{id}` | 201 | Full update |
 | `PATCH` | `/{path}/{id}` | 200 | Partial update from a JSON object |
 | `DELETE` | `/{path}/{id}` | 204 | Delete |
-| `GET` | `/{path}/count` | 200 | Total row count |
+| `GET` | `/{path}/count` | 200 | Row count — accepts the same filter parameters as `GET /{path}` |
 | `POST` | `/{path}/get-or-create` | 200 | Only with `@GetOrCreate` |
 
 `GET /{path}` returns a Spring `Page`, so the payload is `{ "content": [...], "totalElements": …, … }`.

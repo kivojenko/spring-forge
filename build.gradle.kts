@@ -24,7 +24,7 @@ plugins {
 
 allprojects {
     group = "com.kivojenko.spring.forge"
-    version = "0.1.33"
+    version = "0.1.34"
 
     repositories {
         mavenCentral()
